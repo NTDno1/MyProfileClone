@@ -4,6 +4,7 @@ import React from 'react';
 import SectionTitle from '@/components/shared/SectionTitle';
 import { services } from '@/data/services';
 import Link from 'next/link';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const bgClasses = [
   'bg-indigo-500 text-indigo-100',
@@ -22,11 +23,31 @@ const getBackgroundClass = (index: number) => {
 };
 
 const ServiceSection = () => {
+  const { t } = useLanguage();
+  
+  const serviceData = [
+    {
+      name: t('services.backend.name'),
+      description: t('services.backend.description'),
+      image: services[0].image
+    },
+    {
+      name: t('services.database.name'),
+      description: t('services.database.description'),
+      image: services[1].image
+    },
+    {
+      name: t('services.integration.name'),
+      description: t('services.integration.description'),
+      image: services[2].image
+    }
+  ];
+  
   return (
     <>
-      <SectionTitle>Services</SectionTitle>
+      <SectionTitle>{t('services.title')}</SectionTitle>
       <div className="mt-10 grid gap-8 md:grid-cols-3">
-        {services.map((service, index) => (
+        {serviceData.map((service, index) => (
           <div
             key={index}
             className={classNames('rounded-2xl py-8 px-4 text-center shadow-md md:px-8', getBackgroundClass(index))}
@@ -38,9 +59,9 @@ const ServiceSection = () => {
         ))}
       </div>
       <p className="mt-8 text-center">
-        Looking for a custom service?{' '}
+        {t('services.custom')}{' '}
         <Link href="/contact">
-          <a>Click here to contact me! &#128079;</a>
+          <a>{t('services.contact')} &#128079;</a>
         </Link>
       </p>
     </>

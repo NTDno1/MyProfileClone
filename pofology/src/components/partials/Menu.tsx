@@ -6,11 +6,15 @@ import { useRouter } from 'next/router';
 import { Fragment, useState } from 'react';
 import { BsMoonStars, BsSun } from 'react-icons/bs';
 import { HiMenuAlt3 } from 'react-icons/hi';
+import LanguageSwitcher from '@/components/shared/LanguageSwitcher';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const Menu = () => {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { t } = useLanguage();
+  
   return (
     <header className="header text-gray-700 dark:text-gray-200">
       <div className="mx-auto flex h-16 max-w-7xl items-center px-4 md:px-6">
@@ -31,7 +35,7 @@ const Menu = () => {
                   }
                 )}
               >
-                Works
+                {t('nav.works')}
               </a>
             </Link>
           </li>
@@ -45,7 +49,7 @@ const Menu = () => {
                   }
                 )}
               >
-                Blog
+                {t('nav.blog')}
               </a>
             </Link>
           </li>
@@ -59,14 +63,15 @@ const Menu = () => {
                   }
                 )}
               >
-                Contact
+                {t('nav.contact')}
               </a>
             </Link>
           </li>
         </ul>
+        <LanguageSwitcher />
         <button
           type="button"
-          className="ml-auto transition-colors duration-150 hover:text-primary-500 md:-mt-0.5 md:ml-3"
+          className="ml-2 transition-colors duration-150 hover:text-primary-500 md:-mt-0.5"
           onClick={() => toggleTheme()}
         >
           {theme === Theme.LIGHT ? <BsMoonStars size={20} /> : <BsSun size={20} />}
@@ -140,7 +145,7 @@ const Menu = () => {
                         { 'text-primary-500': router.asPath == '/works' }
                       )}
                     >
-                      Works
+                      {t('nav.works')}
                     </a>
                   </Link>
                   <Link href="/blog">
@@ -150,7 +155,7 @@ const Menu = () => {
                         'group flex items-center px-2 py-2 text-base font-medium transition-colors duration-150 hover:text-primary-600'
                       )}
                     >
-                      Blog
+                      {t('nav.blog')}
                     </a>
                   </Link>
                   <Link href="/contact">
@@ -160,7 +165,7 @@ const Menu = () => {
                         'group flex items-center px-2 py-2 text-base font-medium transition-colors duration-150 hover:text-primary-600 '
                       )}
                     >
-                      Contact
+                      {t('nav.contact')}
                     </a>
                   </Link>
                 </nav>

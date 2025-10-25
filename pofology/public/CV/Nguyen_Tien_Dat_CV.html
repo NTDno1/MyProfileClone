@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nguyễn Tiến Đạt - CV</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #3b82f6;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #1e40af;
+            margin: 0;
+            font-size: 2.5em;
+        }
+        .header h2 {
+            color: #64748b;
+            margin: 10px 0;
+            font-weight: normal;
+        }
+        .contact-info {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 15px;
+        }
+        .contact-info span {
+            color: #64748b;
+            font-size: 0.9em;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h3 {
+            color: #1e40af;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .experience-item, .education-item {
+            margin-bottom: 20px;
+            padding-left: 20px;
+            border-left: 3px solid #e5e7eb;
+        }
+        .experience-item:last-child, .education-item:last-child {
+            border-left: 3px solid #3b82f6;
+        }
+        .job-title, .degree {
+            font-weight: bold;
+            color: #1e40af;
+            font-size: 1.1em;
+        }
+        .company, .school {
+            color: #64748b;
+            font-style: italic;
+            margin: 5px 0;
+        }
+        .period {
+            color: #9ca3af;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        .description {
+            color: #374151;
+            margin-top: 10px;
+        }
+        .skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .skill-tag {
+            background-color: #3b82f6;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        .project-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8fafc;
+            border-radius: 8px;
+            border-left: 4px solid #3b82f6;
+        }
+        .project-title {
+            font-weight: bold;
+            color: #1e40af;
+            margin-bottom: 5px;
+        }
+        .project-tech {
+            color: #64748b;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        .project-description {
+            color: #374151;
+        }
+        .goals {
+            background-color: #f0f9ff;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #0ea5e9;
+        }
+        .goals h4 {
+            color: #0369a1;
+            margin-top: 0;
+        }
+        .goals ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .goals li {
+            color: #374151;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Nguyễn Tiến Đạt</h1>
+            <h2>Backend Developer</h2>
+            <div class="contact-info">
+                <span>📧 datt19112001@gmail.com</span>
+                <span>📱 098387462</span>
+                <span>📍 Thanh Mỹ - Sơn Tây - Hà Nội</span>
+                <span>🎂 19/11/2001</span>
+                <span>💼 github.com/NTDno1</span>
+                <span>🔗 linkedin.com/in/ntd1911</span>
+                <span>📘 facebook.com/nguyen.tien.at.85731</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🎯 Mục tiêu nghề nghiệp</h3>
+            <div class="goals">
+                <h4>Mục tiêu ngắn hạn:</h4>
+                <ul>
+                    <li>IELTS 6.5 - 7.0</li>
+                    <li>Nâng cao kỹ năng Fullstack Development</li>
+                </ul>
+                <h4>Mục tiêu dài hạn:</h4>
+                <ul>
+                    <li>Trở thành Senior Fullstack Developer</li>
+                    <li>Làm việc trong môi trường quốc tế</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>💼 Kinh nghiệm làm việc</h3>
+            
+            <div class="experience-item">
+                <div class="job-title">Back-End Developer</div>
+                <div class="company">VNR Software</div>
+                <div class="period">Tháng 1/2024 - Hiện tại</div>
+                <div class="description">
+                    Phát triển và triển khai ứng dụng ERP sử dụng .NET 9 và Angular, áp dụng kiến trúc CQRS và các thực hành DevOps hiện đại. Tích hợp Redis, RabbitMQ và SignalR để hỗ trợ giao tiếp thời gian thực, tin nhắn phân tán và xác thực đa thiết bị an toàn. Tối ưu hóa hiệu suất hệ thống với LINQ, stored procedures và background jobs sử dụng Quartz. Tích hợp AWS S3 để lưu trữ file và triển khai ứng dụng trên cả Windows (IIS) và Ubuntu (Docker, Docker Compose), đảm bảo tính khả dụng cao và khả năng mở rộng.
+                </div>
+                <div class="skills">
+                    <span class="skill-tag">.NET 9</span>
+                    <span class="skill-tag">PostgreSQL</span>
+                    <span class="skill-tag">Angular</span>
+                    <span class="skill-tag">Redis</span>
+                    <span class="skill-tag">RabbitMQ</span>
+                    <span class="skill-tag">SignalR</span>
+                    <span class="skill-tag">AWS S3</span>
+                    <span class="skill-tag">Docker</span>
+                    <span class="skill-tag">Quartz</span>
+                </div>
+            </div>
+
+            <div class="experience-item">
+                <div class="job-title">Fullstack Developer</div>
+                <div class="company">HOP LONG TECH</div>
+                <div class="period">Tháng 8/2022 - Tháng 12/2023</div>
+                <div class="description">
+                    Có kinh nghiệm phát triển các hệ thống doanh nghiệp có thể mở rộng sử dụng .NET và các mẫu kiến trúc hiện đại. Thành công trong việc cung cấp các giải pháp ERP và tích hợp với trọng tâm mạnh mẽ về hiệu suất, khả năng bảo trì và kiến trúc sạch. Dẫn đầu việc phát triển và bảo trì ứng dụng ERP toàn diện bao gồm các module kinh doanh chính như Tài chính, Chuỗi cung ứng, Hàng tồn kho, Nhân sự và CRM.
+                </div>
+                <div class="skills">
+                    <span class="skill-tag">.NET</span>
+                    <span class="skill-tag">SQL Server</span>
+                    <span class="skill-tag">AngularJS</span>
+                    <span class="skill-tag">Dapper</span>
+                    <span class="skill-tag">LINQ</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🎓 Học vấn</h3>
+            
+            <div class="education-item">
+                <div class="degree">Cử nhân Kỹ thuật Phần mềm</div>
+                <div class="school">Đại học FPT</div>
+                <div class="period">Tháng 9/2019 - Tháng 9/2024</div>
+                <div class="description">
+                    Học tập Kỹ thuật Phần mềm với trọng tâm vào các thực hành phát triển hiện đại, thiết kế hệ thống và kiến trúc phần mềm.
+                </div>
+            </div>
+
+            <div class="education-item">
+                <div class="degree">Thạc sĩ Hệ thống Thông tin</div>
+                <div class="school">Đại học PTIT</div>
+                <div class="period">Tháng 7/2025 - Tháng 7/2027</div>
+                <div class="description">
+                    Theo học bằng Thạc sĩ Hệ thống Thông tin để nâng cao kiến thức về hệ thống doanh nghiệp và quản lý dữ liệu.
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🚀 Dự án cá nhân</h3>
+            
+            <div class="project-item">
+                <div class="project-title">E-Commerce Platform</div>
+                <div class="project-tech">GitHub: github.com/NTDno1/BaseProject</div>
+                <div class="description">
+                    Đây là một nền tảng thương mại điện tử mạnh mẽ được xây dựng với .NET 9, sử dụng ASP.NET Core, Entity Framework Core và MediatR. Nó tuân theo các mẫu thiết kế Clean Architecture và CQRS để có khả năng mở rộng và bảo trì. Các tính năng chính bao gồm xác thực người dùng an toàn với JWT, quản lý sản phẩm toàn diện và xác thực mạnh mẽ với FluentValidation. Dự án sử dụng PostgreSQL để lưu trữ dữ liệu, tích hợp logging và xử lý lỗi toàn diện, và hỗ trợ unit testing và integration testing để đảm bảo độ tin cậy.
+                </div>
+                <div class="skills">
+                    <span class="skill-tag">.NET 9</span>
+                    <span class="skill-tag">C# 13</span>
+                    <span class="skill-tag">ASP.NET Core</span>
+                    <span class="skill-tag">EF Core</span>
+                    <span class="skill-tag">PostgreSQL</span>
+                    <span class="skill-tag">Clean Architecture</span>
+                    <span class="skill-tag">CQRS</span>
+                    <span class="skill-tag">FluentValidation</span>
+                    <span class="skill-tag">AutoMapper</span>
+                    <span class="skill-tag">Serilog</span>
+                </div>
+            </div>
+
+            <div class="project-item">
+                <div class="project-title">System Integration với E-commerce Platform</div>
+                <div class="project-tech">Công nghệ: .NET, SQL Server</div>
+                <div class="description">
+                    Xây dựng từ đầu một dịch vụ middleware để tích hợp TikTok platform APIs và đồng bộ hóa dữ liệu với hệ thống ERP. Giải pháp được thiết kế dựa trên kiến trúc cơ sở và triển khai sử dụng Kiến trúc Ba lớp (Presentation, Business Logic, Data Access) để đảm bảo khả năng mở rộng, bảo trì và khả năng mở rộng cho các nền tảng thương mại điện tử trong tương lai.
+                </div>
+                <div class="skills">
+                    <span class="skill-tag">.NET</span>
+                    <span class="skill-tag">SQL Server</span>
+                    <span class="skill-tag">API Integration</span>
+                    <span class="skill-tag">ETL</span>
+                    <span class="skill-tag">TikTok API</span>
+                    <span class="skill-tag">Facebook Ads API</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🛠️ Kỹ năng</h3>
+            <div class="skills">
+                <span class="skill-tag">.NET</span>
+                <span class="skill-tag">C#</span>
+                <span class="skill-tag">SQL Server</span>
+                <span class="skill-tag">PostgreSQL</span>
+                <span class="skill-tag">Entity Framework Core</span>
+                <span class="skill-tag">LINQ</span>
+                <span class="skill-tag">Clean Architecture</span>
+                <span class="skill-tag">CQRS</span>
+                <span class="skill-tag">Redis</span>
+                <span class="skill-tag">RabbitMQ</span>
+                <span class="skill-tag">SignalR</span>
+                <span class="skill-tag">Docker</span>
+                <span class="skill-tag">AWS S3</span>
+                <span class="skill-tag">Angular</span>
+                <span class="skill-tag">AngularJS</span>
+                <span class="skill-tag">Problem Solving</span>
+                <span class="skill-tag">Learning Ability</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

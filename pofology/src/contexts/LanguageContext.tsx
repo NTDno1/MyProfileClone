@@ -22,7 +22,7 @@ const translations = {
     'nav.contact': 'Contact',
     
     // Hero Section
-    'hero.title': "I'm a",
+    'hero.title': 'I\'m a',
     'hero.hire': 'Hire Me',
     'hero.scroll': 'Scroll Down',
     
@@ -77,14 +77,14 @@ const translations = {
     
     // Contact Section
     'contact.title': 'Get In Touch',
-    'contact.description': "Don't like forms? Send me an email. 👋",
+    'contact.description': 'Don\'t like forms? Send me an email. 👋',
     'contact.email': 'Email',
     'contact.phone': 'Phone',
     'contact.location': 'Location',
     'contact.github': 'GitHub',
     'contact.linkedin': 'LinkedIn',
     'contact.facebook': 'Facebook',
-    'contact.talk': "Let's talk about everything!",
+    'contact.talk': 'Let\'s talk about everything!',
     
     // Contact Page
     'contact.page.title': 'Contact Me',
@@ -97,7 +97,7 @@ const translations = {
     'contact.page.form.submit': 'Send Message',
     'contact.page.address': 'Address',
     'contact.page.social': 'Social Media',
-    'contact.page.greeting': "Don't like forms? Send me an email. 👋",
+    'contact.page.greeting': 'Don\'t like forms? Send me an email. 👋',
     
     // CV Page
     'cv.name': 'Nguyễn Tiến Đạt',

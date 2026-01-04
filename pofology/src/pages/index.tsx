@@ -5,7 +5,6 @@ import ExperienceSection from '@/components/partials/ExperienceSection';
 import HeroSection from '@/components/partials/HeroSection';
 import RecentWorkSection from '@/components/partials/RecentWorkSection';
 import ServiceSection from '@/components/partials/ServiceSection';
-import TestimonialSection from '@/components/partials/TestimonialSection';
 import AppLayout from '@/layouts/AppLayout';
 import { api } from '@/lib/api';
 import type { GetServerSideProps, NextPage } from 'next';
@@ -29,9 +28,6 @@ const Home: NextPage = () => {
       </section>
       <section className="container py-16">
         <RecentWorkSection />
-      </section>
-      <section className="container py-16">
-        <TestimonialSection />
       </section>
       <section className="container py-16">
         <BlogSection />

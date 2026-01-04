@@ -38,6 +38,7 @@ const HeroSection = () => {
             loop
           />
         </div>
+        <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">WEB DEVELOPER</p>
         <div className="mt-4  flex gap-5">
           <Link href="https://www.facebook.com/nguyen.tien.at.85731">
             <a className="text-gray-700 transition-colors duration-150 hover:text-primary-500">

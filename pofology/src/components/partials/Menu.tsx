@@ -67,6 +67,20 @@ const Menu = () => {
               </a>
             </Link>
           </li>
+          <li>
+            <Link href="/cv">
+              <a
+                className={classNames(
+                  'inline-block px-4 font-semibold  transition-colors duration-150 hover:text-primary-600 hover:underline',
+                  {
+                    'text-primary-500': router.asPath == '/cv',
+                  }
+                )}
+              >
+                CV
+              </a>
+            </Link>
+          </li>
         </ul>
         <LanguageSwitcher />
         <button
@@ -166,6 +180,16 @@ const Menu = () => {
                       )}
                     >
                       {t('nav.contact')}
+                    </a>
+                  </Link>
+                  <Link href="/cv">
+                    <a
+                      className={classNames(
+                        { 'text-primary-500': router.asPath == '/cv' },
+                        'group flex items-center px-2 py-2 text-base font-medium transition-colors duration-150 hover:text-primary-600 '
+                      )}
+                    >
+                      CV
                     </a>
                   </Link>
                 </nav>

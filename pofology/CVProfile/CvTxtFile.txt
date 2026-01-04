@@ -1,0 +1,122 @@
+Nguyễn Tiến Đạt
+WEB DEVELOPER
+
+📞 0983877462 ✉ datt19112001@gmail.com 🔗 facebook.com/datntd01  Thanh Mỹ - Sơn Tây - Hà Nội  datnguyentien.publicvm.com
+
+ABOUT ME
+Full-Stack Developer with over 4 years of experience specializing in the .NET ecosystem and modern frontend frameworks. I excel at writing
+clean, maintainable code using Design Patterns (CQRS, DDD) and optimizing database performance for high-traffic applications. Passionate about
+technical precision, I have successfully led small teams to deliver stable ERP solutions nd complex API integrations.
+I am a continuous learner who enjoys researching and applying new technologies to enhance system efficiency and deliver innovative software
+solutions.
+EDUCATION
+FPT University (Bachelor's)
+
+06/2019 - 12/2023
+
+Information Technology
+• Software Engineer
+PTIT University (Master)
+
+07/2025 - Now
+
+Information Technology
+• Information System
+
+TECHNICAL SKILLS
+Backend Development
+
+.NET Core, ASP.NET Web API, C#, Entity Framework Core, Dapper, Clean Architecture, CQRS,
+DDD Pattern
+
+Database & Optimization
+
+SQL Server (Strong), MySQL, Stored Procedures Optimisation, Deadlock Resolution, Database Indexing & Tuning, Redis.
+
+Frontend Development
+
+Angular, JS, CSS, HTML
+
+Tools & Integration
+
+Docker, RabitMq, Git (CI/CD basics), Postman, Visual
+
+WORK EXPERIENCE
+MobiFoneIT
+
+05/2025 - Now
+
+Backend Developer
+Document Management System for the Ministry of Finance
+Document Management System – Ministry of Finance
+• System Architecture: Designed a multi-layer system using RESTful APIs, LINQ, Dapper, and stored procedures for scalable and maintainable
+data access.
+• High Availability & Load Balancing: Deployed the system on parallel IIS servers with load balancing and implemented SQL Server read/write
+replication to ensure high availability, scalability, and optimized performance for concurrent users.
+• File Storage, Security & Deployment: Built a dedicated file storage server with digital signature and automated PDF conversion, ensuring
+secure document handling and stable, maintainable on-premise infrastructure.
+AgileTech
+
+1/2024 - 05/2025
+
+Backend Developer
+• Technical Leadership: Led a 4-member team, establishing coding standards using Clean Architecture and Fluent Validation to reduce bugs and
+technical debt.
+• System Development: Developed and deployed an ERP application using .NET 9 and Angular, implementing the CQRS architecture and
+modern DevOps practices.
+• Real-time & Distributed Messaging: Integrated Redis, RabbitMQ, and SignalR to enable real-time communication and distributed messaging.
++ Designed and implemented Redis-based authentication to manage access tokens and prevent unauthorized logins across multiple devices.
++ Utilized RabbitMQ and SignalR to process background jobs and push real-time notifications to users.
+• Performance Optimization: Optimized system performance with LINQ, stored procedures, and Quartz for background job scheduling.
+• Deployment & Scalability: Integrated AWS S3 for file storage and deployed the application on both Windows (IIS) and Ubuntu
+(Docker/Docker Compose), ensuring flexible, consistent, and highly available environments.
+
+HopLongTech
+
+08/2022 - 12/2023
+
+Fullstack Developer
+• ERP System: Managed the development and maintenance of a full-scale ERP application covering core business modules (Finance, Supply
+Chain, Inventory, HR, CRM).
++ Applied Dapper and LINQ for efficient data access and manipulation, resulting in optimized database queries and improved throughput.
++ Database Optimization: Handled complex data scenarios involving large tables. Successfully resolved critical database deadlocks and
+optimized Stored Procedures, significantly reducing report generation time.
++ Built responsive and user-friendly frontend modules with AngularJS, ensuring smooth interaction and real-time updates.
++ Ensured high system stability by applying clean architecture principles and performance tuning.
+• E-commerce Integration: Built a middleware service from scratch to integrate Tik Tok platform APIs and synchronize data with the ERP
+system.
++ Designed the solution based on a Three-Layer Architecture (Presentation, Business Logic, Data Access) to ensure extensibility and
+scalability.
++ Implemented a bi-directional API integration with Tik Tok, leveraging webhook support for real-time synchronization of orders, inventory,
+and customer data.
++ Developed a Facebook Ads data pipeline to extract, transform, and load campaign performance metrics into the ERP system.
+
+PROJECT
+Base Structure (Backend Template)
+
+-
+
+Link git: https://github.com/NTDno1/BaseProject
+• Tech Stack:
++ Core, Data: .NET 9, C# 13, ASP.NET Core, EF Core, PostgreSQL.
++ Patterns: Clean Architecture, CQRS.
++ Utilities: FluentValidation, AutoMapper, Serilog.
+• Description: This is a robust e-commerce platform built with .NET 9, utilizing ASP.NET Core, Entity Framework Core, and MediatR. It
+follows Clean Architecture and CQRS design patterns for scalability and maintainability. Key features include secure user authentication with
+JWT, comprehensive product management, and robust validation with FluentValidation. The project use PostgreSQL for data storage,
+integrates extensive logging and error handling, and supports unit and integration testing for reliability. It is designed to handle high-traffic
+environments with a strong focus on security and performance optimization.
+Education Management System
+
+-
+
+Link git: https://gitlab.com/NTDno1/sep490_g22
+• Tech Stack : .NET, ReactJS, SQL, JWT Token
+• Description: This project is developed with a back-end using C# based on a 3-layer architecture. It integrates JWT Token for authentication,
+FluentValidation for input data validation, Entity Framework for data retrieval, AutoMapper for data standardization and mapping, and SQL
+Server as the database management system.
+On the front-end, the project utilizes React.js to fetch data from the API and provides an interactive, flexible user interface.
+
+© topcv.vn
+
+

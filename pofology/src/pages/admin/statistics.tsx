@@ -157,7 +157,7 @@ const Statistics: NextPage = () => {
               </button>
             ))}
             <button
-              onClick={fetchStats}
+              onClick={() => fetchStats(true)}
               className="px-4 py-2 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
             >
               Refresh
@@ -169,7 +169,7 @@ const Statistics: NextPage = () => {
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
               <p className="mt-4 text-gray-600 dark:text-gray-400">Loading statistics...</p>
             </div>
-          ) : stats ? (
+          ) : stats && stats.totalPageViews > 0 ? (
             <>
               {/* Main Stats */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -357,11 +357,7 @@ const Statistics: NextPage = () => {
                 </p>
               </div>
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-gray-600 dark:text-gray-400">Loading data...</p>
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
     </>

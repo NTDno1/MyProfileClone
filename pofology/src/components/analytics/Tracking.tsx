@@ -204,15 +204,21 @@ async function trackPageView(page: string, timeOnPage?: number) {
   const isNew = isNewVisitor();
   
   // Get location info, but don't wait if it takes too long
-  let locationInfo = { ip: 'unknown' };
+  let locationInfo: { ip: string; country?: string; city?: string } = { ip: 'unknown' };
   try {
     // Use Promise.race to timeout location fetch after 3 seconds
-    locationInfo = await Promise.race([
+    const result = await Promise.race<{ country?: string; city?: string; ip?: string }>([
       getLocationInfo(),
-      new Promise<{ ip: string }>((resolve) => 
+      new Promise<{ country?: string; city?: string; ip?: string }>((resolve) => 
         setTimeout(() => resolve({ ip: 'unknown' }), 3000)
       ),
     ]);
+    // Ensure ip is always a string and handle optional properties
+    locationInfo = {
+      ip: result?.ip || 'unknown',
+      country: result?.country,
+      city: result?.city,
+    };
   } catch (error) {
     console.warn('Location fetch timeout or error, using default:', error);
   }

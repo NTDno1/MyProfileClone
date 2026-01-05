@@ -17,9 +17,9 @@ const Menu = () => {
   
   return (
     <header className="header text-gray-700 dark:text-gray-200">
-      <div className="mx-auto flex h-16 max-w-7xl items-center px-4 md:px-6">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
         <Link href="/">
-          <a className="text-3xl  font-bold">
+          <a className="text-xl md:text-3xl font-bold">
             <span>Pofology</span>
             <span className="text-primary-500">.</span>
           </a>
@@ -82,21 +82,23 @@ const Menu = () => {
             </Link>
           </li>
         </ul>
-        <LanguageSwitcher />
-        <button
-          type="button"
-          className="ml-2 transition-colors duration-150 hover:text-primary-500 md:-mt-0.5"
-          onClick={() => toggleTheme()}
-        >
-          {theme === Theme.LIGHT ? <BsMoonStars size={20} /> : <BsSun size={20} />}
-        </button>
-        <button
-          type="button"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="ml-5 flex text-gray-700 dark:text-gray-200 md:hidden"
-        >
-          <HiMenuAlt3 size={24} />
-        </button>
+        <div className="flex items-center gap-2 md:gap-0">
+          <LanguageSwitcher />
+          <button
+            type="button"
+            className="ml-2 transition-colors duration-150 hover:text-primary-500 md:-mt-0.5"
+            onClick={() => toggleTheme()}
+          >
+            {theme === Theme.LIGHT ? <BsMoonStars size={20} /> : <BsSun size={20} />}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="ml-2 flex text-gray-700 dark:text-gray-200 md:hidden"
+          >
+            <HiMenuAlt3 size={24} />
+          </button>
+        </div>
       </div>
 
       {/* Mobile menu */}

@@ -6,11 +6,12 @@ interface Props {
   className?: string;
   children: React.ReactNode;
   onClick?: () => void;
+  disabled?: boolean;
 }
 
-const Button: React.FC<Props> = ({ type = 'submit', children, className, onClick }) => {
+const Button: React.FC<Props> = ({ type = 'submit', children, className, onClick, disabled }) => {
   return (
-    <button type={type} className={classNames(['btn', className])} onClick={onClick}>
+    <button type={type} className={classNames(['btn', className])} onClick={onClick} disabled={disabled}>
       {children}
     </button>
   );

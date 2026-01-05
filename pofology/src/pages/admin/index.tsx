@@ -1,6 +1,7 @@
 import { NextPage } from 'next';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import { isValidAuthToken, getAuthToken } from '@/lib/auth';
 import AppLayout from '@/layouts/AppLayout';
 
@@ -55,12 +56,11 @@ const Dashboard: NextPage = () => {
         </div>
         <div className="rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
           <p className="mb-4 text-gray-600 dark:text-gray-300">Chào mừng đến với trang quản trị!</p>
-          <a
-            href="/admin/statistics"
-            className="inline-block rounded bg-primary-500 px-6 py-2 text-white hover:bg-primary-600"
-          >
-            Xem Thống Kê Truy Cập
-          </a>
+          <Link href="/admin/statistics">
+            <a className="inline-block rounded bg-primary-500 px-6 py-2 text-white hover:bg-primary-600">
+              Xem Thống Kê Truy Cập
+            </a>
+          </Link>
         </div>
       </div>
     </AppLayout>

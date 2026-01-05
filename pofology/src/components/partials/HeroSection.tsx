@@ -17,8 +17,8 @@ const HeroSection = () => {
   return (
     <div className="hero relative -mt-16 flex items-center justify-center">
       <HeroBackground />
-      <div className="flex flex-col items-center">
-        <div className="overflow-hidden rounded-full w-[180px] h-[180px]">
+      <div className="flex flex-col items-center px-4">
+        <div className="overflow-hidden rounded-full w-[140px] h-[140px] md:w-[180px] md:h-[180px]">
           <Image 
             src="/images/avatar/ava1.jpg" 
             width={180} 
@@ -27,10 +27,9 @@ const HeroSection = () => {
             className="object-cover w-full h-full"
           />
         </div>
-        <h1 className="mt-4 text-3xl font-bold ">Nguyễn Tiến Đạt</h1>
-        <div className="mt-2 flex gap-1">
-          {' '}
-          {t('hero.title')}{' '}
+        <h1 className="mt-4 text-2xl md:text-3xl font-bold text-center">Nguyễn Tiến Đạt</h1>
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-1 text-sm md:text-base">
+          {t('hero.title')}
           <Typed
             strings={typedStrings}
             typeSpeed={60}
@@ -38,8 +37,8 @@ const HeroSection = () => {
             loop
           />
         </div>
-        <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">WEB DEVELOPER</p>
-        <div className="mt-4  flex gap-5">
+        <p className="mt-2 text-base md:text-lg text-gray-600 dark:text-gray-400">WEB DEVELOPER</p>
+        <div className="mt-4 flex gap-5">
           <Link href="https://www.facebook.com/nguyen.tien.at.85731">
             <a className="text-gray-700 transition-colors duration-150 hover:text-primary-500">
               <FiFacebook size={25} />

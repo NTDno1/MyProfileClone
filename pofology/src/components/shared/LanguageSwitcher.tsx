@@ -12,11 +12,11 @@ const LanguageSwitcher: React.FC = () => {
   return (
     <button
       onClick={toggleLanguage}
-      className="flex items-center space-x-2 px-3 py-2 text-gray-700 transition-colors duration-150 hover:text-primary-500 dark:text-gray-300 dark:hover:text-primary-400"
+      className="flex items-center space-x-2 px-2 md:px-3 py-2 text-gray-700 transition-colors duration-150 hover:text-primary-500 dark:text-gray-300 dark:hover:text-primary-400"
       title={`Switch to ${language === 'en' ? 'Vietnamese' : 'English'}`}
     >
       <FiGlobe size={18} />
-      <span className="text-sm font-medium">
+      <span className="hidden md:inline text-sm font-medium">
         {language === 'en' ? 'EN' : 'VI'}
       </span>
     </button>

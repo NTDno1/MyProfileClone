@@ -265,7 +265,7 @@ const Statistics: NextPage = () => {
                         className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0"
                       >
                         <span className="text-gray-900 dark:text-white capitalize">
-                          {item.device}
+                          {item.device === 'undefined' ? 'Unknown' : item.device}
                         </span>
                         <span className="text-gray-700 dark:text-gray-300 font-medium">
                           {formatNumber(item.count)}
@@ -287,7 +287,9 @@ const Statistics: NextPage = () => {
                       key={index}
                       className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
                     >
-                      <span className="text-gray-900 dark:text-white">{item.browser}</span>
+                      <span className="text-gray-900 dark:text-white">
+                        {item.browser === 'undefined' ? 'Unknown' : item.browser}
+                      </span>
                       <span className="text-gray-700 dark:text-gray-300 font-medium">
                         {formatNumber(item.count)}
                       </span>

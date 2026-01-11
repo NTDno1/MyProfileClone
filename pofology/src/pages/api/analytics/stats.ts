@@ -41,28 +41,72 @@ export default async function handler(
     try {
       const collection = await getAnalyticsCollection();
       console.log('[API Stats] 🔍 Querying MongoDB from:', startDate.toISOString());
-      data = await collection
+      const allData = await collection
         .find({
           timestamp: { $gte: startDate },
         })
         .toArray();
-      console.log('[API Stats] 📊 Found', data.length, 'records from MongoDB');
+      // Filter out admin pages
+      data = allData.filter((item: any) => !item.page?.startsWith('/admin'));
+      console.log('[API Stats] 📊 Found', data.length, 'records from MongoDB (excluding admin pages)');
+      console.log('[API Stats] 🔍 Sample records:', data.slice(0, 3).map((d: any) => ({
+        page: d.page,
+        timeOnPage: d.timeOnPage,
+        browser: d.browser,
+        country: d.country,
+        timestamp: d.timestamp
+      })));
     } catch (mongoError: any) {
       console.warn('[API Stats] ⚠️ MongoDB unavailable, using in-memory storage:', mongoError?.message);
       console.log('[API Stats] 🔍 Querying in-memory storage from:', startDate.toISOString());
-      data = inMemoryStorage.find({
+      const allData = inMemoryStorage.find({
         timestamp: { $gte: startDate },
       });
-      console.log('[API Stats] 📊 Found', data.length, 'records from memory (total:', inMemoryStorage.count(), ')');
+      // Filter out admin pages
+      data = allData.filter((item: any) => !item.page?.startsWith('/admin'));
+      console.log('[API Stats] 📊 Found', data.length, 'records from memory (total:', inMemoryStorage.count(), ', excluding admin pages)');
+      console.log('[API Stats] 🔍 Sample records:', data.slice(0, 3).map((d: any) => ({
+        page: d.page,
+        timeOnPage: d.timeOnPage,
+        browser: d.browser,
+        country: d.country,
+        timestamp: d.timestamp
+      })));
     }
 
     // Calculate statistics
-    const totalPageViews = data.length;
-    const uniqueVisitors = new Set(data.map((d) => d.sessionId)).size;
-    const uniqueIPs = new Set(data.map((d) => d.ip)).size;
+    // Filter out records with timeOnPage > 0 that are updates (not new page views)
+    // Only count records where timeOnPage is 0, null, or undefined as actual page views
+    // Also filter out records that are duplicates (same page, same sessionId, within 5 seconds)
+    const actualPageViews = data.filter((d, index) => {
+      const timeOnPage = d.timeOnPage;
+      // Only count if timeOnPage is 0, null, undefined, or not set (new page views, not updates)
+      if (timeOnPage !== 0 && timeOnPage !== null && timeOnPage !== undefined && timeOnPage !== '') {
+        return false;
+      }
+      
+      // Additional check: filter out potential duplicates (same page + sessionId within 5 seconds)
+      const currentTime = new Date(d.timestamp).getTime();
+      const isDuplicate = data.slice(0, index).some((prev: any) => {
+        if (prev.page === d.page && prev.sessionId === d.sessionId) {
+          const prevTime = new Date(prev.timestamp).getTime();
+          return Math.abs(currentTime - prevTime) < 5000; // Within 5 seconds
+        }
+        return false;
+      });
+      
+      return !isDuplicate;
+    });
+    
+    console.log('[API Stats] 🔍 Total records:', data.length, 'Actual page views (after filtering):', actualPageViews.length);
+    const totalPageViews = actualPageViews.length;
+    
+    // Unique visitors = unique sessionIds from actual page views (not updates)
+    const uniqueVisitors = new Set(actualPageViews.map((d) => d.sessionId)).size;
+    const uniqueIPs = new Set(actualPageViews.map((d) => d.ip)).size;
 
-    // Top pages
-    const pageViews = data.reduce((acc: Record<string, number>, item) => {
+    // Top pages - only count actual page views, not updates
+    const pageViews = actualPageViews.reduce((acc: Record<string, number>, item) => {
       acc[item.page] = (acc[item.page] || 0) + 1;
       return acc;
     }, {});
@@ -71,9 +115,10 @@ export default async function handler(
       .sort((a, b) => b.views - a.views)
       .slice(0, 10);
 
-    // Top countries
-    const countryViews = data.reduce((acc: Record<string, number>, item) => {
-      const country = item.country || 'Unknown';
+    // Top countries - only count actual page views, not updates
+    const countryViews = actualPageViews.reduce((acc: Record<string, number>, item) => {
+      // Handle null, undefined, empty string
+      const country = (item.country && item.country !== 'null' && item.country !== 'undefined') ? item.country : 'Unknown';
       acc[country] = (acc[country] || 0) + 1;
       return acc;
     }, {});
@@ -82,26 +127,50 @@ export default async function handler(
       .sort((a, b) => b.visitors - a.visitors)
       .slice(0, 10);
 
-    // Top devices
-    const deviceCounts = data.reduce((acc: Record<string, number>, item) => {
-      acc[item.device] = (acc[item.device] || 0) + 1;
+    // Top devices - normalize undefined values, only count actual page views
+    const deviceCounts = actualPageViews.reduce((acc: Record<string, number>, item) => {
+      const device = item.device || 'Unknown';
+      acc[device] = (acc[device] || 0) + 1;
       return acc;
     }, {});
     const topDevices = Object.entries(deviceCounts)
       .map(([device, count]) => ({ device, count }))
-      .sort((a, b) => b.count - a.count);
+      .sort((a, b) => b.count - a.count)
+      .filter(item => item.device !== 'undefined'); // Filter out literal "undefined" string
 
-    // Top browsers
-    const browserCounts = data.reduce((acc: Record<string, number>, item) => {
-      acc[item.browser] = (acc[item.browser] || 0) + 1;
+    // Top browsers - normalize undefined/null values, only count actual page views
+    const browserCounts = actualPageViews.reduce((acc: Record<string, number>, item) => {
+      let browser = item.browser;
+      // Handle null, undefined, empty string, or literal "undefined" string
+      if (!browser || browser === 'undefined' || browser === 'null' || browser === '') {
+        // Try to detect from userAgent as fallback
+        const ua = item.userAgent || '';
+        if (ua.indexOf('Edg') > -1 || ua.indexOf('Edge') > -1) {
+          browser = 'Edge';
+        } else if (ua.indexOf('Chrome') > -1 && ua.indexOf('Edg') === -1) {
+          browser = 'Chrome';
+        } else if (ua.indexOf('Firefox') > -1) {
+          browser = 'Firefox';
+        } else if (ua.indexOf('Safari') > -1 && ua.indexOf('Chrome') === -1) {
+          browser = 'Safari';
+        } else if (ua.indexOf('Opera') > -1 || ua.indexOf('OPR') > -1) {
+          browser = 'Opera';
+        } else {
+          browser = 'Unknown';
+        }
+      }
+      acc[browser] = (acc[browser] || 0) + 1;
       return acc;
     }, {});
+    
+    console.log('[API Stats] 🔍 Browser counts:', browserCounts);
     const topBrowsers = Object.entries(browserCounts)
       .map(([browser, count]) => ({ browser, count }))
       .sort((a, b) => b.count - a.count)
+      .filter(item => item.browser !== 'undefined') // Filter out literal "undefined" string
       .slice(0, 10);
 
-    // Average time on page
+    // Average time on page - use all data (including updates) for accurate time calculation
     const timesOnPage = data
       .filter((d) => d.timeOnPage && d.timeOnPage > 0)
       .map((d) => d.timeOnPage);
@@ -110,8 +179,8 @@ export default async function handler(
         ? timesOnPage.reduce((a, b) => a + b, 0) / timesOnPage.length
         : 0;
 
-    // Visitors by date
-    const visitorsByDateMap = data.reduce(
+    // Visitors by date - only count actual page views, not updates
+    const visitorsByDateMap = actualPageViews.reduce(
       (acc: Record<string, { visitors: Set<string>; pageViews: number }>, item) => {
         const date = new Date(item.timestamp).toISOString().split('T')[0];
         if (!acc[date]) {

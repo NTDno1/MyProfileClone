@@ -6,7 +6,8 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import { NextPage } from 'next';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { FiMenu, FiX } from 'react-icons/fi';
+import { FiMenu, FiX, FiHome } from 'react-icons/fi';
+import Link from 'next/link';
 
 const CVPage: NextPage = () => {
   const router = useRouter();
@@ -57,7 +58,7 @@ const CVPage: NextPage = () => {
     } catch (error) {
       console.error('Error generating PDF:', error);
       // Fallback to print if html2pdf fails
-      window.print();
+    window.print();
     }
   };
 
@@ -80,6 +81,16 @@ const CVPage: NextPage = () => {
       }`}>
         {/* Language Switcher */}
         <CVLanguageSwitcher />
+        
+        {/* Back to Home Button */}
+        <Link href="/">
+          <a
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2 shadow-lg text-sm md:text-base"
+          >
+            <FiHome className="w-5 h-5" />
+            <span className="hidden md:inline">Home</span>
+          </a>
+        </Link>
         
         {/* Print & Download Buttons */}
         <div className="flex gap-3">
@@ -116,17 +127,17 @@ const CVPage: NextPage = () => {
       <div id="cv-content" className="bg-white min-h-screen print:bg-white">
         {/* Header Section */}
         <CVHeader />
-        
-        {/* Two Column Layout */}
-        <div className="flex flex-col md:flex-row">
-          {/* Left Sidebar */}
-          <div className="w-full md:w-[35%] lg:w-[30%] print:w-[35%]">
-            <CVSidebar />
-          </div>
 
-          {/* Right Content */}
+      {/* Two Column Layout */}
+        <div className="flex flex-col md:flex-row">
+        {/* Left Sidebar */}
+          <div className="w-full md:w-[35%] lg:w-[30%] print:w-[35%]">
+          <CVSidebar />
+        </div>
+
+        {/* Right Content */}
           <div className="w-full md:w-[65%] lg:w-[70%] print:w-[65%]">
-            <CVMainContent />
+          <CVMainContent />
           </div>
         </div>
       </div>

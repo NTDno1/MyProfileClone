@@ -53,6 +53,10 @@ class InMemoryStorage {
     this.data = [];
     console.log('[InMemoryStorage] 🗑️ Cleared all records');
   }
+
+  getAll(): AnalyticsRecord[] {
+    return [...this.data];
+  }
 }
 
 export const inMemoryStorage = new InMemoryStorage();

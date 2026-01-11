@@ -35,21 +35,21 @@ const CVSidebar = () => {
               {t('cv.skills.backend.content')}
             </p>
           </div>
-          
+
           <div>
             <h3 className="text-sm print:text-[9px] font-semibold text-gray-800 mb-0 print:mb-0">{t('cv.skills.database.title')}</h3>
             <p className="text-xs print:text-[8px] text-gray-700 leading-tight print:leading-[1.1]">
               {t('cv.skills.database.content')}
             </p>
           </div>
-          
+
           <div>
             <h3 className="text-sm print:text-[9px] font-semibold text-gray-800 mb-0 print:mb-0">{t('cv.skills.frontend.title')}</h3>
             <p className="text-xs print:text-[8px] text-gray-700 leading-tight print:leading-[1.1]">
               {t('cv.skills.frontend.content')}
             </p>
           </div>
-          
+
           <div>
             <h3 className="text-sm print:text-[9px] font-semibold text-gray-800 mb-0 print:mb-0">{t('cv.skills.tools.title')}</h3>
             <p className="text-xs print:text-[8px] text-gray-700 leading-tight print:leading-[1.1]">

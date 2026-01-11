@@ -16,42 +16,131 @@ export default async function handler(
       req.socket.remoteAddress ||
       'unknown';
 
-    // Try to get location from ipapi.co server-side (no CORS)
+    // Try to get location from multiple APIs (fallback chain)
     // Skip if IP is localhost or private
-    if (ip && ip !== 'unknown' && !ip.startsWith('127.') && !ip.startsWith('192.168.') && !ip.startsWith('10.')) {
+    const isPrivateIP = ip && (
+      ip.startsWith('127.') || 
+      ip.startsWith('192.168.') || 
+      ip.startsWith('10.') ||
+      ip.startsWith('172.16.') ||
+      ip.startsWith('172.17.') ||
+      ip.startsWith('172.18.') ||
+      ip.startsWith('172.19.') ||
+      ip.startsWith('172.20.') ||
+      ip.startsWith('172.21.') ||
+      ip.startsWith('172.22.') ||
+      ip.startsWith('172.23.') ||
+      ip.startsWith('172.24.') ||
+      ip.startsWith('172.25.') ||
+      ip.startsWith('172.26.') ||
+      ip.startsWith('172.27.') ||
+      ip.startsWith('172.28.') ||
+      ip.startsWith('172.29.') ||
+      ip.startsWith('172.30.') ||
+      ip.startsWith('172.31.') ||
+      ip === '::1' ||
+      ip === 'localhost' ||
+      ip === '0.0.0.0'
+    );
+    
+    if (ip && ip !== 'unknown' && !isPrivateIP) {
+      // Try ipapi.co first
       try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 3000);
+        const controller1 = new AbortController();
+        const timeout1 = setTimeout(() => controller1.abort(), 3000);
         
-        const response = await fetch(`https://ipapi.co/${ip}/json/`, {
-          signal: controller.signal,
+        const response1 = await fetch(`https://ipapi.co/${ip}/json/`, {
+          signal: controller1.signal,
           headers: {
             'Accept': 'application/json',
           },
         });
 
-        clearTimeout(timeout);
+        clearTimeout(timeout1);
 
-        if (response.ok) {
-          const data = await response.json();
+        if (response1.ok) {
+          const data1 = await response1.json();
           
-          // Check for rate limit error
-          if (data.error && data.reason === 'RateLimited') {
-            console.warn('ipapi.co rate limited, returning IP only');
-          } else if (!data.error) {
+          if (!data1.error && (data1.country_name || data1.country)) {
+            console.log('[Location API] ✅ Got location from ipapi.co:', data1.country_name || data1.country);
             return res.status(200).json({
-              ip: data.ip || ip,
-              country: data.country_name || data.country || undefined,
-              city: data.city || undefined,
+              ip: data1.ip || ip,
+              country: data1.country_name || data1.country || undefined,
+              city: data1.city || undefined,
             });
           }
         }
       } catch (error: any) {
-        // If ipapi.co fails (rate limit, timeout, etc), just return IP
         if (error?.name !== 'AbortError') {
-          console.warn('Location API failed, returning IP only:', error?.message || error);
+          console.warn('[Location API] ⚠️ ipapi.co failed:', error?.message || error);
         }
       }
+
+      // Fallback: Try ip-api.com
+      try {
+        const controller2 = new AbortController();
+        const timeout2 = setTimeout(() => controller2.abort(), 3000);
+        
+        const response2 = await fetch(`http://ip-api.com/json/${ip}?fields=status,message,country,countryCode,city,query`, {
+          signal: controller2.signal,
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+
+        clearTimeout(timeout2);
+
+        if (response2.ok) {
+          const data2 = await response2.json();
+          
+          if (data2.status === 'success' && data2.country) {
+            console.log('[Location API] ✅ Got location from ip-api.com:', data2.country);
+            return res.status(200).json({
+              ip: data2.query || ip,
+              country: data2.country || undefined,
+              city: data2.city || undefined,
+            });
+          }
+        }
+      } catch (error: any) {
+        if (error?.name !== 'AbortError') {
+          console.warn('[Location API] ⚠️ ip-api.com failed:', error?.message || error);
+        }
+      }
+
+      // Fallback: Try ipgeolocation.io (free tier)
+      try {
+        const controller3 = new AbortController();
+        const timeout3 = setTimeout(() => controller3.abort(), 2000);
+        
+        const response3 = await fetch(`https://api.ipgeolocation.io/ipgeo?ip=${ip}`, {
+          signal: controller3.signal,
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+
+        clearTimeout(timeout3);
+
+        if (response3.ok) {
+          const data3 = await response3.json();
+          
+          if (data3.country_name) {
+            console.log('[Location API] ✅ Got location from ipgeolocation.io:', data3.country_name);
+            return res.status(200).json({
+              ip: data3.ip || ip,
+              country: data3.country_name || undefined,
+              city: data3.city || undefined,
+            });
+          }
+        }
+      } catch (error: any) {
+        if (error?.name !== 'AbortError') {
+          console.warn('[Location API] ⚠️ ipgeolocation.io failed:', error?.message || error);
+        }
+      }
+    } else if (isPrivateIP) {
+      console.log('[Location API] ⚠️ Private IP detected, cannot get location:', ip);
     }
 
     // Fallback: return IP only

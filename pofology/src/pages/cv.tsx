@@ -58,7 +58,7 @@ const CVPage: NextPage = () => {
     } catch (error) {
       console.error('Error generating PDF:', error);
       // Fallback to print if html2pdf fails
-    window.print();
+      window.print();
     }
   };
 
@@ -128,16 +128,16 @@ const CVPage: NextPage = () => {
         {/* Header Section */}
         <CVHeader />
 
-      {/* Two Column Layout */}
+        {/* Two Column Layout */}
         <div className="flex flex-col md:flex-row">
-        {/* Left Sidebar */}
+          {/* Left Sidebar */}
           <div className="w-full md:w-[35%] lg:w-[30%] print:w-[35%]">
-          <CVSidebar />
-        </div>
+            <CVSidebar />
+          </div>
 
-        {/* Right Content */}
+          {/* Right Content */}
           <div className="w-full md:w-[65%] lg:w-[70%] print:w-[65%]">
-          <CVMainContent />
+            <CVMainContent />
           </div>
         </div>
       </div>

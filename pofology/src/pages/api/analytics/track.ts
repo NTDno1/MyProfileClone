@@ -100,7 +100,9 @@ export default async function handler(
     const acceptLanguage = req.headers['accept-language'] as string || undefined;
     const acceptEncoding = req.headers['accept-encoding'] as string || undefined;
     const host = req.headers['host'] as string || undefined;
-    const protocol = req.connection?.encrypted ? 'HTTPS' : 'HTTP';
+    // Determine protocol from headers or connection
+    const protocol = (req.headers['x-forwarded-proto'] as string)?.includes('https') || 
+                     (req as any).connection?.encrypted ? 'HTTPS' : 'HTTP';
     const method = req.method || 'GET';
     const statusCode = 200; // Success response
     
@@ -144,7 +146,7 @@ export default async function handler(
       proxyDetected: proxyDetected || req.body?.proxyDetected,
       isp: req.body?.isp || null, // Will be populated by location API if available
       asn: req.body?.asn || null, // Will be populated by location API if available
-      tlsVersion: req.connection?.getPeerCertificate?.()?.version || undefined,
+      tlsVersion: (req as any).connection?.getPeerCertificate?.()?.version || undefined,
       requestFingerprint: requestFingerprint || req.body?.requestFingerprint,
       botScore: botScore || req.body?.botScore,
     };

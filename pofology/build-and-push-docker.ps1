@@ -60,5 +60,6 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "`n✅ Successfully pushed to DockerHub!" -ForegroundColor Green
 Write-Host "   Image: $ImageTag" -ForegroundColor Cyan
-Write-Host "   Latest: ${FullImageName}:latest" -ForegroundColor Cyan
+$LatestTag = "$FullImageName:latest"
+Write-Host "   Latest: $LatestTag" -ForegroundColor Cyan
 

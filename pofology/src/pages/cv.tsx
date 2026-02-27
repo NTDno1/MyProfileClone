@@ -30,34 +30,23 @@ const CVPage: NextPage = () => {
   const handleDownload = async () => {
     setMobileMenuOpen(false);
     try {
-      // Dynamic import html2pdf để giảm bundle size
-      const html2pdf = (await import('html2pdf.js')).default;
-      
-      const element = document.getElementById('cv-content');
-      if (!element) return;
+      const response = await fetch('/api/download-cv');
+      if (!response.ok) {
+        throw new Error('Failed to download CV');
+      }
 
-      // Simple configuration - just capture everything as is
-      const opt = {
-        margin: [5, 5, 5, 5] as [number, number, number, number],
-        filename: 'CV_Nguyen_Tien_Dat.pdf',
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { 
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff'
-        },
-        jsPDF: { 
-          unit: 'mm' as const, 
-          format: 'a4' as const, 
-          orientation: 'portrait' as const
-        }
-      };
-
-      await html2pdf().set(opt).from(element).save();
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'NguyenTienDatCV.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      // Fallback to print if html2pdf fails
+      console.error('Error downloading CV:', error);
+      // Fallback: mở dialog in nếu download thất bại
       window.print();
     }
   };

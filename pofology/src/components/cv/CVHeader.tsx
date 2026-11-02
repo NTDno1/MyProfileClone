@@ -4,7 +4,7 @@ const CVHeader = () => {
   return (
     <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 text-center print:p-1 print:pb-0.5 print-keep-together">
       <h1 className="text-4xl font-bold mb-1 print:text-base print:mb-0">Nguyễn Tiến Đạt</h1>
-      <h2 className="text-xl text-blue-100 mb-2 print:text-[10px] print:mb-0">WEB DEVELOPER</h2>
+      <h2 className="text-xl text-blue-100 mb-2 print:text-[10px] print:mb-0">SENIOR BACKEND DEVELOPER</h2>
       
       <div className="flex flex-wrap items-center justify-center gap-4 text-sm print:text-[7px] print:gap-0.5 print:mt-0.5">
         <div className="flex items-center gap-2">

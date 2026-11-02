@@ -1,5 +1,24 @@
 # Pofology
 
+## Portfolio developer (VI / EN)
+
+Giao diện portfolio mới có hai chế độ sáng/tối, menu mobile, bộ lọc dự án và nội dung Việt/Anh sử dụng i18next. Ngôn ngữ và giao diện được ghi nhớ trên trình duyệt.
+
+```powershell
+npm install --legacy-peer-deps
+npm run dev
+```
+
+`--legacy-peer-deps` xử lý peer dependency React cũ của `react-typed` trong template. Chạy `npm run build` để kiểm tra bản production.
+
+- Trang chủ: `src/components/portfolio/DeveloperPortfolio.tsx`.
+- Giao diện responsive: `src/styles/partials/_developer.scss`.
+- Nội dung giao diện: `src/locales/vi.json` và `src/locales/en.json`.
+- Nội dung bài viết song ngữ: `src/locales/articles.vi.json` và `src/locales/articles.en.json`.
+- Dữ liệu dự án: `src/data/works.ts`; bản dịch chi tiết: `src/locales/projects.vi.json`.
+- Form liên hệ mở ứng dụng email bằng `mailto:`; người dùng kiểm tra và gửi bản nháp trong ứng dụng email.
+
+
 Pofology – is a personal portfolio template build with Typescript, NextJS and Tailwindcss. This template is designed for building beautiful personal portfolio website. It has a great customisable option. Fully responsive and looks great on any devices. This template contains custom made pages for your portfolios & blog posts. It’s suitable for designers, developers or freelancers who want to show their projects and services, share their thoughts and knowledge with their own platform. Finally it’s a clean & minimal design.
 
 Demo live at: [https://pofology.bdlancers.com/](https://pofology.bdlancers.com/)

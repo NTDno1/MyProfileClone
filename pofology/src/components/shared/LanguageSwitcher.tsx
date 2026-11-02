@@ -1,26 +1,21 @@
-import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { FiGlobe } from 'react-icons/fi';
-
-const LanguageSwitcher: React.FC = () => {
-  const { language, setLanguage } = useLanguage();
-
-  const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'vi' : 'en');
-  };
-
+export default function LanguageSwitcher() {
+  const { language, setLanguage, t } = useLanguage();
   return (
-    <button
-      onClick={toggleLanguage}
-      className="flex items-center space-x-2 px-2 md:px-3 py-2 text-gray-700 transition-colors duration-150 hover:text-primary-500 dark:text-gray-300 dark:hover:text-primary-400"
-      title={`Switch to ${language === 'en' ? 'Vietnamese' : 'English'}`}
-    >
-      <FiGlobe size={18} />
-      <span className="hidden md:inline text-sm font-medium">
-        {language === 'en' ? 'EN' : 'VI'}
-      </span>
-    </button>
+    <div className="dev-language" role="group" aria-label={t('ui.language')}>
+      {(['vi', 'en'] as const).map((lang) => (
+        <button
+          key={lang}
+          type="button"
+          lang={lang}
+          aria-label={lang === 'vi' ? 'Tiếng Việt' : 'English'}
+          aria-pressed={language === lang}
+          onClick={() => setLanguage(lang)}
+          className={language === lang ? 'is-active' : ''}
+        >
+          {lang.toUpperCase()}
+        </button>
+      ))}
+    </div>
   );
-};
-
-export default LanguageSwitcher;
+}

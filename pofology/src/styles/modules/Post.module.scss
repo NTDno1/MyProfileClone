@@ -1,19 +1,7 @@
 .post {
-  @apply transform overflow-hidden rounded-2xl shadow-lg transition-transform duration-500;
+  @apply transition-all duration-300;
 
   &:hover {
-    @apply -translate-y-3;
-  }
-
-  &-image {
-    img {
-      @apply transform transition-transform duration-300;
-    }
-
-    &:hover {
-      img {
-        @apply scale-110;
-      }
-    }
+    @apply shadow-card-hover -translate-y-1;
   }
 }

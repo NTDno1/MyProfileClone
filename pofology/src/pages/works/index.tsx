@@ -1,41 +1,43 @@
-import Button from '@/components/form/Button';
-import PageTitle from '@/components/shared/PageTitle';
-import Portfolio from '@/components/shared/Portfolio';
-import { works } from '@/data/works';
+import { useState } from 'react';
 import AppLayout from '@/layouts/AppLayout';
-
-const work = () => {
+import { useLanguage } from '@/contexts/LanguageContext';
+import { works } from '@/data/works';
+import ProjectCard from '@/components/portfolio/ProjectCard';
+import { SectionHeading } from '@/components/portfolio/DeveloperPortfolio';
+const filters = ['all', 'backend', 'ai', 'fullstack'] as const;
+export default function Works() {
+  const { t } = useLanguage();
+  const [filter, setFilter] = useState<typeof filters[number]>('all');
+  const groups = { all: [1, 2, 3, 4, 5, 6], ai: [6], fullstack: [2, 3], backend: [1, 4, 5] };
+  const visible = [...works].reverse().filter((work) => groups[filter].includes(work.id));
   return (
     <AppLayout title="Works">
-      <PageTitle
-        breadcrumb={[
-          { label: 'Home', path: '/' },
-          { label: 'Works', path: '' },
-        ]}
-      >
-        Works
-      </PageTitle>
-
-      <div className="container py-10">
-        <div className="grid gap-4 xs:grid-cols-2 md:grid-cols-3 md:gap-8">
-          {works.map((work) => (
-            <Portfolio
-              key={work.id}
-              imageUrl={work.thumbnailUrl}
-              category={work.category}
-              title={work.title}
-              href={`/works/${work.id}`}
-            />
+      <div className="dev-container dev-listing">
+        <SectionHeading
+          number="03"
+          label={t('section.projects')}
+          title={t('section.projectsTitle')}
+          description={t('section.projectsDescription')}
+        />
+        <div className="dev-filters" role="group" aria-label={t('nav.works')}>
+          {filters.map((item) => (
+            <button
+              type="button"
+              key={item}
+              className={item === filter ? 'is-active' : ''}
+              aria-pressed={item === filter}
+              onClick={() => setFilter(item)}
+            >
+              {t('ui.' + item)}
+            </button>
           ))}
         </div>
-        <div className="mt-10 flex items-center justify-center">
-          <Button className="mt-5 bg-primary-500 px-8 font-semibold text-white hover:bg-primary-600 focus:ring-2 focus:ring-primary-200">
-            Load More
-          </Button>
+        <div className="dev-project-grid">
+          {visible.map((work) => (
+            <ProjectCard key={work.id} work={work} />
+          ))}
         </div>
       </div>
     </AppLayout>
   );
-};
-
-export default work;
+}

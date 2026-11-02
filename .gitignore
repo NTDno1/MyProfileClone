@@ -1,0 +1,7 @@
+# MCP & API Keys
+.cursor/
+.agents/**/mcp_config.json
+
+# Local Environment
+.env*
+node_modules/

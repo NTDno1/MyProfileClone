@@ -13,17 +13,29 @@ type Props = {
 
 const Post = ({ thumbnailUrl, title, publishedAt, href }: Props) => {
   return (
-    <div className={classNames(styles['post'], 'bg-white dark:bg-gray-700')}>
+    <div className={classNames(styles['post'], 'group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300')}>
       <Link href={href}>
-        <a className={styles['post-image']}>
-          <Image src={thumbnailUrl} height={384} width={512} layout="responsive" alt={title} />
+        <a className="block overflow-hidden">
+          <div className="relative aspect-[16/9]">
+            <Image
+              src={thumbnailUrl}
+              layout="fill"
+              alt={title}
+              className="object-cover transition-transform duration-500 group-hover:scale-110"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-900/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+          </div>
         </a>
       </Link>
-      <div className="p-6">
+      <div className="p-5">
         <Link href={href}>
-          <a className="block text-xl font-semibold hover:text-primary-500 hover:underline">{title}</a>
+          <a className="block text-sm font-bold text-gray-900 hover:text-indigo-600 transition-colors leading-snug">
+            {title}
+          </a>
         </Link>
-        <time className="mt-2 inline-block text-gray-500">{publishedAt}</time>
+        <time className="mt-3 inline-block text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          {publishedAt}
+        </time>
       </div>
     </div>
   );

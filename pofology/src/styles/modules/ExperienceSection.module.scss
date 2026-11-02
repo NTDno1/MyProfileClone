@@ -1,12 +1,12 @@
 .experience,
 .education {
   @apply relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
 
-  &-item {
-    @apply ml-7;
-  }
-
-  &-item:not(:last-child) {
-    @apply mb-10;
-  }
+.experience-item,
+.education-item {
+  @apply relative pl-8 mb-8 last:mb-0;
 }

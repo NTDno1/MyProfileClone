@@ -1,11 +1,16 @@
 import React from 'react';
-import DotBg from '@/components/partials/DotBg';
 
-const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface SectionTitleProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+const SectionTitle: React.FC<SectionTitleProps> = ({ children, className = '' }) => {
   return (
-    <div className="relative">
-      <DotBg className="absolute bottom-5 h-8 w-8 fill-current" />
-      <h3 className="pl-3 text-4xl font-bold">{children}</h3>
+    <div className={`text-center mb-8 ${className}`}>
+      <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
+        {children}
+      </h2>
     </div>
   );
 };

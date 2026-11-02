@@ -1,0 +1,225 @@
+Nguyễn Tiến Đạt
+WEB DEVELOPER
+📞0983877462 ✉datt19112001@gmail.com 🔗facebook.com/datntd01 Tùng Thiện - Sơn Tây - Hà Nội datnguyentien.online
+ABOUT ME
+Backend Developer with 4 years of experience building enterprise applications using .NET technologies. Experienced in DMS, ERP, CRM, AI
+platforms, and system integrations.
+Strong in ASP.NET Core, Clean Architecture, CQRS, SQL Server, PostgreSQL, Redis, RabbitMQ, and Docker. Skilled in designing scalable
+systems, optimizing databases, and integrating third-party services.
+Interested in software architecture, system performance, and AI technologies, with hands-on experience in RAG, Semantic Search, and AI
+integration.
+TECHNICAL SKILLS
+Backend Development
+ASP.NET Core, Web API, C#, .Net Framework, Dapper, Clean Architecture, CQRS, MediatR, DDD Pattern.
+Database & Optimization
+SQL Server, PostgreSQL, MongoDB, Stored Procedures Optimization, Database Indexing & Tuning,
+Deadlock Resolution, Replication, HA, Redis.
+Distributed Systems & Integration
+RabbitMQ, SignalR, Ocelot API Gateway, RESTful APIs, Webhooks, Digital Signature
+Integration, UnitOfWork & Repository, Singleton, Outbox pattern
+Cloud, DevOps & Monitoring
+Docker, Docker Compose, Docker Swarm, IIS, NGINX, AWS (S3,EC2), MinIO, Jenkin, GitHub Actions
+(CI/CD), Experience with Grafana.
+Frontend & Tools
+AngularJs, Experience with React, Experience with Next.js, JavaScript, Postman, Swagger, Cursor,
+Antigravity, Claude
+WORK EXPERIENCE
+MobiFone (OnSite)
+09/2025 - Now
+Backend Developer
+Document Management System for the Ministry of Finance
+• Tech Stack:
+• ASP.NET Core, C#, LINQ, Dapper, SQL Server, Stored Procedures
+• IIS, SQL Server, Dedicated File Storage Server
+• Digital Signature, PDF Conversion, RESTful APIs, Swagger
+• Multi-Layer Architecture, RBAC
+• Overview:
+Designed and developed a large-scale Document Management System (DMS) for the Ministry of Finance, supporting secure document processing,
+workflow automation, and inter-department collaboration with high availability and enterprise-grade security.
+   System Architecture:
+Built a multi-layer architecture using .NET Framework, Dapper, and SQL Server stored procedures to ensure maintainability, performance, and
+scalable data processing.
+   Workflow & Document Management:
+Developed configurable workflow management capabilities supporting multi-stage approvals, document routing, delegation mechanisms, and role-
+based access control for government document processing.
+   File Storage & Security:
+Implemented dedicated document storage infrastructure with digital signature integration and automated PDF conversion to support secure
+document lifecycle management.
+   High Availability & Performance:
+Deployed the system across multiple IIS servers with load balancing and SQL Server Always On (AAG) to improve availability, scalability, and
+performance under high concurrent workloads.
+   Reporting & Analytics:
+Built dynamic reporting and analytics modules with export capabilities, providing real-time visibility into document processing status and
+operational performance.
+Document Management System Modernization:
+• Tech Stack:
+• .NET 8, ASP.NET Core, Clean Architecture, CQRS, MediatR
+• React, Next.js, PostgreSQL, Redis, RabbitMQ
+• Docker Swarm, Ocelot API Gateway, NGINX
+• ELK Stack, OpenTelemetry, Prometheus, Grafana
+• Overview:
+Designed and modernized a government-scale Document Management System (DMS) using microservices architecture to improve scalability,
+security, and system reliability.
+   Microservices Architecture:
+Designed and implemented 7 core microservices for document management, workflow processing, reporting, notifications, storage, and external
+integrations.
+   API Gateway & Communication:
+Implemented Ocelot API Gateway, NGINX load balancing, and RabbitMQ event-driven messaging for secure and scalable service
+communication.
+   Infrastructure & Observability:
+Containerized services with Docker Swarm, implemented Redis caching, centralized logging with ELK Stack, and distributed tracing using
+OpenTelemetry.
+   Security & High Availability:
+Integrated LDAP authentication, HSM-based digital signatures, and database replication to ensure enterprise-grade security and high availability.
+   CI/CD & Monitoring:
+• Established automated CI/CD pipelines with Jenkin and implemented monitoring dashboards using Grafana.
+AgileTech
+1/2024 - Now
+Backend Developer
+CRM System:
+• Tech Stack:
+• .NET 9, ASP.NET Core, Angular, Clean Architecture, CQRS
+• SQL Server, Redis, RabbitMQ, SignalR, Quartz
+• AWS S3, Docker, Docker Compose, IIS
+• Fluent Validation, RESTful APIs
+• Overview:
+Designed and developed an enterprise CRM/ERP system to support business operations, workflow management, real-time communication, and
+scalable deployment across multiple environments.
+   System Architecture:
+Implemented Clean Architecture, CQRS, and Fluent Validation to improve maintainability, reduce technical debt, and establish consistent
+development standards across the project.
+   Real-Time Communication & Messaging:
+Integrated Redis, RabbitMQ, and SignalR to support distributed messaging, background job processing, real-time notifications, and secure
+authentication management.
+   Performance & Reliability:
+Optimized application performance using LINQ, stored procedures, caching strategies, and Quartz-based job scheduling for efficient background
+processing.
+   File Management & Security:
+Integrated AWS S3 for scalable document storage and implemented Redis-based authentication to manage access tokens and enhance session
+security.
+   Deployment & Scalability:
+• Containerized services with Docker/Docker Compose and deployed across Windows (IIS) and Ubuntu environments to ensure consistent,
+scalable, and highly available deployments.
+Education Management System:
+• Tech Stack:
+• ASP.NET Core, C#, React, SQL Server
+• RESTful APIs, JWT Authentication
+• FluentValidation, AutoMapper
+• + 3-Layer Architecture
+• Overview:
+Designed and developed an Education Management System to support student records, course management, enrollment processes, and academic
+reporting through a centralized web platform.
+   System Architecture:
+Built the application using a 3-layer architecture (Presentation, Business Logic, Data Access) to ensure maintainability, scalability, and separation
+of concerns.
+   Frontend & User Experience:
+Developed responsive user interfaces with React, providing efficient workflows and seamless user interactions across academic management
+modules.
+   Backend & Security:
+Implemented RESTful APIs with ASP.NET Core, JWT-based authentication, and SQL Server to ensure secure and reliable data management.
+   Validation & Data Processing:
+Applied FluentValidation for request validation and AutoMapper for DTO-to-entity mapping, improving code quality, reducing boilerplate code,
+and maintaining data integrity.
+HopLongTech
+08/2022  - 12/2023
+Fullstack Developer
+ERP System:
+• Tech Stack:
+• ASP.NET Core, C#, AngularJS
+• SQL Server, Dapper, LINQ, Stored Procedures
+• Clean Architecture, RESTful APIs
+• Overview:
+Developed and maintained an enterprise ERP system supporting core business operations, including Finance, Supply Chain, Inventory
+Management, Human Resources, and Customer Relationship Management (CRM).
+   System Architecture:
+Applied Clean Architecture principles to improve maintainability, scalability, and long-term system stability across multiple business modules.
+   Data Access & Performance:
+Utilized Dapper, LINQ, and SQL Server stored procedures to optimize data access, improve query performance, and support large-scale
+transactional workloads.
+   Database Optimization:
+Resolved critical database deadlocks, optimized complex queries and stored procedures, and significantly improved reporting and data processing
+performance.
+   Frontend Development:
+Developed responsive and user-friendly interfaces with AngularJS, enabling efficient workflows and real-time interaction across ERP modules.
+   System Reliability:
+Performed performance tuning and continuous system enhancements to ensure high availability, reliability, and operational efficiency.
+E-commerce Integration: 
+• Tech Stack:
+• ASP.NET Core, C#
+• RESTful APIs, Webhooks
+• SQL Server
+• Three-Layer Architecture
+• Overview:
+Designed and developed an E-commerce Integration Platform to synchronize data between third-party marketplaces, advertising platforms, and
+enterprise ERP systems.
+   Integration Architecture:
+Built a middleware service based on Three-Layer Architecture to ensure maintainability, scalability, and seamless integration with external
+platforms.
+   Marketplace Integration:
+Implemented bi-directional API integration with TikTok Shop, leveraging webhooks for real-time synchronization of orders, inventory, and
+customer information between the marketplace and ERP system.
+   Data Synchronization & Automation:
+Developed automated data synchronization workflows to ensure consistency and accuracy across multiple business systems.
+   Advertising Data Analytics:
+Built a Facebook Ads data pipeline to extract, transform, and load campaign performance metrics into the ERP platform, enabling centralized
+reporting and business analysis.
+PROJECT
+Base Structure (Backend Template)
+
+- 
+• Tech Stack:
+• .NET 9, C# 13, ASP.NET Core, EF Core, PostgreSQL
+• Clean Architecture, CQRS, MediatR
+• FluentValidation, AutoMapper, Serilog
+• JWT Authentication, Unit Testing, Integration Testing
+• Overview:
+Designed and developed a scalable E-commerce Platform to support secure online transactions, product management, and high-volume business
+operations with a strong focus on performance, security, and maintainability.
+   System Architecture:
+Implemented Clean Architecture and CQRS patterns using MediatR to improve modularity, maintainability, and scalability across business
+domains.
+   Authentication & Security:
+Developed JWT-based authentication and authorization mechanisms to ensure secure access control and protection of business resources.
+   Product & Business Management:
+Built core e-commerce functionalities including product management, order processing, and business workflows to support enterprise-level
+operations.
+   Data Access & Validation:
+Utilized EF Core with PostgreSQL for efficient data management, FluentValidation for request validation, and AutoMapper for streamlined object
+mapping and data transformation.
+   Logging & Reliability:
+Implemented centralized logging with Serilog, comprehensive error handling, and unit/integration testing to improve system reliability,
+observability, and maintainability.
+Master's Thesis – AI Base Framework for Enterprise Systems
+-
+• Tech Stack:
+• .NET 8, ASP.NET Core, Clean Architecture, CQRS, MediatR
+• Next.js 14, React 18, TailwindCSS, Zustand
+• PostgreSQL + pgvector, Redis, MinIO, Docker
+• Ollama (llama3.2, nomic-embed-text), Multi-provider AI Gateway
+• Overview:
+      Designed and developed an enterprise AI platform (AI Base Framework) as a Master's Thesis project, integrating AI capabilities into
+enterprise systems such as ERP, DMS, CRM, and HRM through RAG, Semantic Search, AI Agents, and multi-provider AI integration.
+   AI Platform Architecture: Built modular monolith architecture with plugin-based extensibility and agent-based AI capabilities for seamless
+integration into existing enterprise systems.
+   RAG & Semantic Search: Implemented RAG pipeline with semantic search using PostgreSQL + pgvector (HNSW index) for high-accuracy
+vector similarity search across enterprise documents.
+   AI Integration & Multi-Provider Gateway: Integrated multi-provider AI gateway supporting Ollama (local offline), OpenAI GPT, Claude,
+Gemini, Azure OpenAI, and DeepSeek for flexible AI model deployment.
+   AI Agent Runtime: Built AI Agent runtime with tool calling, human-in-the-loop approval, and comprehensive audit logging for enterprise-grade
+compliance.
+   NL-to-SQL Engine: Developed NL-to-SQL engine with SQL injection protection and RBAC-aware query generation, enabling natural language
+database queries with security.
+   Voice AI: Implemented Speech-to-Text (Whisper) and Text-to-Speech for voice AI interactions, enabling voice-enabled enterprise workflows.
+   Infrastructure: Used Redis for distributed caching and session management, MinIO (S3-compatible) for document storage, and Docker/Docker
+Compose for containerized deployment.
+   Deployment: Containerized all services with Docker/Docker Compose, deployed with Nginx as reverse proxy, and configured health checks for
+production readiness.
+EDUCATION
+FPT University (Bachelor's)
+06/2019 - 12/2023
+Information Technology
+• Software Engineer
+PTIT University (Master)
+07/2025 - Now
+Information Technology
+• Information System

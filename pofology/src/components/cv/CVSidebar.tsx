@@ -32,28 +32,35 @@ const CVSidebar = () => {
           <div>
             <h3 className="text-sm print:text-[9px] font-semibold text-gray-800 mb-0 print:mb-0">{t('cv.skills.backend.title')}</h3>
             <p className="text-xs print:text-[8px] text-gray-700 leading-tight print:leading-[1.1]">
-              {t('cv.skills.backend.content')}
+              .NET Core, ASP.NET Web API, C#, Entity Framework Core, Dapper, Clean Architecture, CQRS, DDD, MediatR, FluentValidation
             </p>
           </div>
 
           <div>
             <h3 className="text-sm print:text-[9px] font-semibold text-gray-800 mb-0 print:mb-0">{t('cv.skills.database.title')}</h3>
             <p className="text-xs print:text-[8px] text-gray-700 leading-tight print:leading-[1.1]">
-              {t('cv.skills.database.content')}
+              SQL Server (Strong), PostgreSQL, Stored Procedures, Deadlock Resolution, Indexing & Tuning, Read/Write Replication, Redis
             </p>
           </div>
 
           <div>
             <h3 className="text-sm print:text-[9px] font-semibold text-gray-800 mb-0 print:mb-0">{t('cv.skills.frontend.title')}</h3>
             <p className="text-xs print:text-[8px] text-gray-700 leading-tight print:leading-[1.1]">
-              {t('cv.skills.frontend.content')}
+              Angular, AngularJS, TypeScript, HTML/CSS
             </p>
           </div>
 
           <div>
             <h3 className="text-sm print:text-[9px] font-semibold text-gray-800 mb-0 print:mb-0">{t('cv.skills.tools.title')}</h3>
             <p className="text-xs print:text-[8px] text-gray-700 leading-tight print:leading-[1.1]">
-              {t('cv.skills.tools.content')}
+              Docker, Docker Compose, AWS S3, RabbitMQ, SignalR, Quartz, IIS, Git
+            </p>
+          </div>
+
+          <div>
+            <h3 className="text-sm print:text-[9px] font-semibold text-gray-800 mb-0 print:mb-0">{t('cv.skills.system.title')}</h3>
+            <p className="text-xs print:text-[8px] text-gray-700 leading-tight print:leading-[1.1]">
+              Microservices, API Gateway, Load Balancing, High Availability, API Gateway, Transactional Outbox
             </p>
           </div>
         </div>

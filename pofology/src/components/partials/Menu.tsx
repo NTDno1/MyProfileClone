@@ -1,210 +1,257 @@
-import { Theme, useTheme } from '@/hooks/use-theme';
-import { Dialog, Switch, Transition } from '@headlessui/react';
-import classNames from 'classnames';
+import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { Dialog } from '@headlessui/react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Fragment, useState } from 'react';
-import { BsMoonStars, BsSun } from 'react-icons/bs';
-import { HiMenuAlt3 } from 'react-icons/hi';
-import LanguageSwitcher from '@/components/shared/LanguageSwitcher';
+import {
+  FiArrowUpRight,
+  FiDownload,
+  FiGithub,
+  FiMail,
+  FiMenu,
+  FiMoon,
+  FiPhone,
+  FiSun,
+  FiX,
+} from 'react-icons/fi';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Theme, useTheme } from '@/hooks/use-theme';
+import LanguageSwitcher from '@/components/shared/LanguageSwitcher';
 
-const Menu = () => {
-  const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { theme, toggleTheme } = useTheme();
+const links = [
+  ['nav.services', '/#services'],
+  ['nav.experience', '/#experience'],
+  ['nav.works', '/#projects'],
+  ['nav.about', '/#about'],
+  ['nav.blog', '/blog'],
+  ['nav.faq', '/#faq'],
+  ['nav.why', '/#why-us'],
+];
+
+export default function Menu() {
   const { t } = useLanguage();
-  
+  const { theme, toggleTheme } = useTheme();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [activeSection, setActiveSection] = useState('');
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (router.pathname === '/') {
+      e.preventDefault();
+      if (window.location.hash) {
+        history.replaceState(null, '', '/');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (docHeight > 0) {
+        setScrollProgress(Math.min(100, Math.max(0, (scrollTop / docHeight) * 100)));
+      }
+
+      if (router.pathname === '/') {
+        const scrollPos = window.scrollY + 180;
+        const sectionIds = ['contact', 'why-us', 'about', 'faq', 'projects', 'experience', 'services'];
+        let foundSection = '';
+        for (const id of sectionIds) {
+          const el = document.getElementById(id);
+          if (el && scrollPos >= el.offsetTop) {
+            foundSection = `/#${id}`;
+            break;
+          }
+        }
+        setActiveSection(foundSection);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [router.pathname]);
+
+  useEffect(() => {
+    const close = () => setOpen(false);
+    router.events.on('routeChangeStart', close);
+    router.events.on('hashChangeStart', close);
+    return () => {
+      router.events.off('routeChangeStart', close);
+      router.events.off('hashChangeStart', close);
+    };
+  }, [router.events]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartY(e.touches[0].clientY);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartY === null) return;
+    const deltaY = e.changedTouches[0].clientY - touchStartY;
+    if (deltaY > 60) {
+      setOpen(false);
+    }
+    setTouchStartY(null);
+  };
+
   return (
-    <header className="header text-gray-700 dark:text-gray-200">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
+    <header className="dev-header">
+      <div
+        className="dev-scroll-progress-bar"
+        style={{ width: `${scrollProgress}%` }}
+        aria-hidden="true"
+      />
+      <div className="dev-container dev-header-inner">
         <Link href="/">
-          <a className="text-xl md:text-3xl font-bold">
-            <span>Pofology</span>
-            <span className="text-primary-500">.</span>
+          <a className="dev-logo" onClick={handleLogoClick} aria-label="Nguyễn Tiến Đạt — Home">
+            <div className="dev-logo-avatar-wrap">
+              <Image
+                src="/images/avatar/ava1.jpg"
+                alt="Nguyễn Tiến Đạt"
+                width={36}
+                height={36}
+                className="dev-logo-avatar-img"
+                priority
+              />
+              <span className="dev-logo-avatar-dot" />
+            </div>
+            <span className="dev-logo-text">Nguyễn Tiến Đạt</span>
           </a>
         </Link>
-        <ul className="ml-auto hidden items-center md:flex">
-          <li>
-            <Link href="/works">
-              <a
-                className={classNames(
-                  'inline-block px-4 font-semibold  transition-colors duration-300 hover:text-primary-600 hover:underline',
-                  {
-                    'text-primary-500': router.asPath == '/works',
-                  }
-                )}
-              >
-                {t('nav.works')}
-              </a>
-            </Link>
-          </li>
-          <li>
-            <Link href="/blog">
-              <a
-                className={classNames(
-                  'inline-block px-4 font-semibold  transition-colors duration-150 hover:text-primary-600 hover:underline',
-                  {
-                    'text-primary-500': router.asPath == '/blog',
-                  }
-                )}
-              >
-                {t('nav.blog')}
-              </a>
-            </Link>
-          </li>
-          <li>
-            <Link href="/contact">
-              <a
-                className={classNames(
-                  'inline-block px-4 font-semibold  transition-colors duration-150 hover:text-primary-600 hover:underline',
-                  {
-                    'text-primary-500': router.asPath == '/contact',
-                  }
-                )}
-              >
-                {t('nav.contact')}
-              </a>
-            </Link>
-          </li>
-          <li>
-            <Link href="/cv">
-              <a
-                className={classNames(
-                  'inline-block px-4 font-semibold  transition-colors duration-150 hover:text-primary-600 hover:underline',
-                  {
-                    'text-primary-500': router.asPath == '/cv',
-                  }
-                )}
-              >
-                CV
-              </a>
-            </Link>
-          </li>
-        </ul>
-        <div className="flex items-center gap-2 md:gap-0">
+
+
+        <nav className="dev-desktop-nav" aria-label={t('ui.navigation')}>
+          {links.map(([key, href]) => {
+            const isActive = activeSection ? activeSection === href : router.asPath === href;
+            return (
+              <Link href={href} key={key}>
+                <a className={isActive ? 'is-active' : ''}>{t(key)}</a>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="dev-header-actions">
           <LanguageSwitcher />
-          <button
-            type="button"
-            className="ml-2 transition-colors duration-150 hover:text-primary-500 md:-mt-0.5"
-            onClick={() => toggleTheme()}
-          >
-            {theme === Theme.LIGHT ? <BsMoonStars size={20} /> : <BsSun size={20} />}
+          <button className="dev-icon-button" type="button" onClick={toggleTheme} aria-label={t('ui.theme')}>
+            {theme === Theme.DARK ? <FiSun /> : <FiMoon />}
           </button>
+          <Link href="/#contact">
+            <a className="dev-button dev-button-small dev-header-contact">
+              {t('ui.letsTalk')}
+              <FiArrowUpRight />
+            </a>
+          </Link>
           <button
             type="button"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="ml-2 flex text-gray-700 dark:text-gray-200 md:hidden"
+            className="dev-icon-button dev-menu-toggle"
+            aria-label={t('ui.openMenu')}
+            aria-expanded={open}
+            aria-controls="mobile-navigation"
+            onClick={() => setOpen(true)}
           >
-            <HiMenuAlt3 size={24} />
+            <FiMenu />
           </button>
         </div>
       </div>
 
-      {/* Mobile menu */}
-      <Transition.Root show={sidebarOpen} as={Fragment}>
-        <Dialog as="div" className="fixed inset-0 z-40 flex md:hidden" onClose={setSidebarOpen}>
-          <Transition.Child
-            as={Fragment}
-            enter="transition-opacity ease-linear duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="transition-opacity ease-linear duration-300"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <Dialog.Overlay className="fixed inset-0 bg-gray-600 bg-opacity-75" />
-          </Transition.Child>
-          <Transition.Child
-            as={Fragment}
-            enter="transition ease-in-out duration-300 transform origin-right"
-            enterFrom="-translate-x-full"
-            enterTo="translate-x-0"
-            leave="transition ease-in-out duration-300 transform origin-right"
-            leaveFrom="translate-x-0"
-            leaveTo="-translate-x-full"
-          >
-            <div className="relative flex h-full w-full max-w-xs flex-1 flex-col bg-[#f9f9ff] pt-5 dark:bg-gray-800">
-              <Transition.Child
-                as={Fragment}
-                enter="ease-in-out duration-300"
-                enterFrom="opacity-0"
-                enterTo="opacity-100"
-                leave="ease-in-out duration-300"
-                leaveFrom="opacity-100"
-                leaveTo="opacity-0"
-              >
-                <div className="absolute top-0 right-0 -mr-12 pt-2">
-                  <button
-                    type="button"
-                    className="ml-1 flex h-10 w-10 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    <span className="text-white">&#10006;</span>
-                  </button>
-                </div>
-              </Transition.Child>
-              <div className="flex h-full flex-col overflow-y-auto">
-                <div className="border-b px-2 pb-4 dark:border-gray-700">
-                  <Link href="/">
-                    <a className="text-3xl  font-bold">
-                      <span>Pofology</span>
-                      <span className="text-primary-500">.</span>
-                    </a>
-                  </Link>
-                </div>
-                <nav className="mt-4 space-y-1 px-2">
-                  <Link href="/works">
-                    <a
-                      className={classNames(
-                        'group flex items-center px-2 py-2 text-base font-medium transition-colors duration-150 hover:text-primary-600',
-                        { 'text-primary-500': router.asPath == '/works' }
-                      )}
-                    >
-                      {t('nav.works')}
-                    </a>
-                  </Link>
-                  <Link href="/blog">
-                    <a
-                      className={classNames(
-                        { 'text-primary-500': router.asPath == '/blog' },
-                        'group flex items-center px-2 py-2 text-base font-medium transition-colors duration-150 hover:text-primary-600'
-                      )}
-                    >
-                      {t('nav.blog')}
-                    </a>
-                  </Link>
-                  <Link href="/contact">
-                    <a
-                      className={classNames(
-                        { 'text-primary-500': router.asPath == '/contact' },
-                        'group flex items-center px-2 py-2 text-base font-medium transition-colors duration-150 hover:text-primary-600 '
-                      )}
-                    >
-                      {t('nav.contact')}
-                    </a>
-                  </Link>
-                  <Link href="/cv">
-                    <a
-                      className={classNames(
-                        { 'text-primary-500': router.asPath == '/cv' },
-                        'group flex items-center px-2 py-2 text-base font-medium transition-colors duration-150 hover:text-primary-600 '
-                      )}
-                    >
-                      CV
-                    </a>
-                  </Link>
-                </nav>
-              </div>
-            </div>
-          </Transition.Child>
-          <div className="w-14 flex-shrink-0" aria-hidden="true">
-            {/* Dummy element to force sidebar to shrink to fit close icon */}
+      <Dialog open={open} onClose={setOpen} className="dev-mobile-dialog" data-theme={theme}>
+        <div className="dev-menu-backdrop" aria-hidden="true" />
+        <Dialog.Panel
+          id="mobile-navigation"
+          className="dev-mobile-panel"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div className="dev-mobile-swipe-handle" aria-hidden="true">
+            <span className="dev-mobile-swipe-pill" />
           </div>
-        </Dialog>
-      </Transition.Root>
+
+          <div className="dev-mobile-top">
+            <Dialog.Title className="dev-logo">
+              <a
+                href="/"
+                onClick={(e) => {
+                  setOpen(false);
+                  handleLogoClick(e);
+                }}
+                className="inline-flex items-center gap-2.5"
+              >
+                <div className="dev-logo-avatar-wrap">
+                  <Image
+                    src="/images/avatar/ava1.jpg"
+                    alt="Nguyễn Tiến Đạt"
+                    width={36}
+                    height={36}
+                    className="dev-logo-avatar-img"
+                    priority
+                  />
+                  <span className="dev-logo-avatar-dot" />
+                </div>
+                <span className="dev-logo-text">Nguyễn Tiến Đạt</span>
+              </a>
+            </Dialog.Title>
+            <button
+              className="dev-icon-button"
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label={t('ui.closeMenu')}
+            >
+              <FiX />
+            </button>
+          </div>
+
+          <div className="dev-mobile-switchers">
+            <LanguageSwitcher />
+            <button className="dev-icon-button" type="button" onClick={toggleTheme} aria-label={t('ui.theme')}>
+              {theme === Theme.DARK ? <FiSun /> : <FiMoon />}
+            </button>
+          </div>
+
+          <nav aria-label={t('ui.navigation')} className="dev-mobile-nav-links">
+            {links.map(([key, href]) => (
+              <Link key={key} href={href}>
+                <a onClick={() => setOpen(false)}>
+                  {t(key)}
+                  <FiArrowUpRight />
+                </a>
+              </Link>
+            ))}
+          </nav>
+
+          <div className="dev-mobile-bottom-actions">
+            <div className="dev-mobile-action-buttons">
+              <Link href="/#contact">
+                <a className="dev-button" onClick={() => setOpen(false)}>
+                  {t('ui.letsTalk')}
+                  <FiArrowUpRight />
+                </a>
+              </Link>
+              <a
+                href="/CV/Nguyen_Tien_Dat_CV.pdf"
+                download
+                className="dev-button dev-button-outline"
+                onClick={() => setOpen(false)}
+              >
+                <FiDownload />
+                {t('ui.download')}
+              </a>
+            </div>
+            <div className="dev-mobile-contact-chips">
+              <a href="tel:0983877462" className="dev-contact-chip">
+                <FiPhone />
+                <span>0983 877 462</span>
+              </a>
+              <a href="mailto:datt19112001@gmail.com" className="dev-contact-chip">
+                <FiMail />
+                <span>datt19112001@gmail.com</span>
+              </a>
+            </div>
+          </div>
+        </Dialog.Panel>
+      </Dialog>
     </header>
   );
-};
-
-export default Menu;
+}

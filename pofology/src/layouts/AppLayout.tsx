@@ -2,38 +2,37 @@ import React from 'react';
 import Head from 'next/head';
 import Menu from '@/components/partials/Menu';
 import Footer from '@/components/partials/Footer';
-import ScrollToTop from 'react-scroll-to-top';
-import { FiArrowUp } from 'react-icons/fi';
-
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useTheme, Theme } from '@/hooks/use-theme';
 interface Props {
   title?: string;
   children: React.ReactNode;
 }
-
-const AppLayout: React.FC<Props> = ({ children, title }) => {
-  const appName = process.env.NEXT_PUBLIC_APP_NAME || 'Pofology';
-  const pageTitle = title ? `${title} - ${appName}` : appName;
+export default function AppLayout({ children, title }: Props) {
+  const { t } = useLanguage();
+  const { theme } = useTheme();
+  const titles: Record<string, string> = {
+    Home: 'nav.home',
+    Works: 'nav.works',
+    Blog: 'nav.blog',
+    contact: 'nav.contact',
+  };
+  const pageTitle = title ? t(titles[title] || title) + ' — Nguyễn Tiến Đạt' : 'Nguyễn Tiến Đạt — Backend Developer';
   return (
-    <>
+    <div className="developer-site" data-theme={theme}>
       <Head>
         <title>{pageTitle}</title>
+        <meta name="description" content={t('site.description')} />
+        <meta name="theme-color" content={theme === Theme.DARK ? '#202724' : '#faf8f4'} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={t('site.description')} />
       </Head>
-      <div className="flex min-h-screen flex-col">
-        <ScrollToTop
-          smooth
-          className="fixed bottom-16 right-8 z-10 cursor-pointer rounded-lg bg-primary-500 p-3 text-white transition-colors duration-150 hover:bg-primary-600 "
-          component={
-            <div className="flex justify-center">
-              <FiArrowUp />
-            </div>
-          }
-        />
-        <Menu />
-        <div className="mt-16">{children}</div>
-        <Footer />
-      </div>
-    </>
+      <a className="dev-skip" href="#main-content">
+        {t('ui.skip')}
+      </a>
+      <Menu />
+      <main id="main-content">{children}</main>
+      <Footer />
+    </div>
   );
-};
-
-export default AppLayout;
+}

@@ -1,0 +1,99 @@
+{
+  "1": {
+    "description": "Nền tảng thương mại điện tử được xây dựng bằng .NET 9, ASP.NET Core, Entity Framework Core và MediatR. Dự án áp dụng Clean Architecture và CQRS để dễ mở rộng, bảo trì. Các chức năng gồm xác thực JWT, quản lý sản phẩm, kiểm tra dữ liệu với FluentValidation, lưu trữ PostgreSQL, ghi log và xử lý lỗi tập trung. Bộ khung hỗ trợ kiểm thử đơn vị, kiểm thử tích hợp và triển khai Docker.",
+    "features": [
+      "Clean Architecture và CQRS",
+      "Xác thực và phân quyền JWT",
+      "Entity Framework Core kết hợp PostgreSQL",
+      "Kiểm tra dữ liệu với FluentValidation",
+      "Ánh xạ dữ liệu bằng AutoMapper",
+      "Ghi log bằng Serilog",
+      "Kiểm thử đơn vị và tích hợp",
+      "Thiết kế RESTful API",
+      "Tối ưu hiệu năng",
+      "Các thực hành bảo mật",
+      "Hỗ trợ Docker",
+      "Xử lý lỗi tập trung"
+    ]
+  },
+  "2": {
+    "description": "Hệ thống quản lý giáo dục với backend C# theo kiến trúc ba lớp. JWT đảm nhiệm xác thực, FluentValidation kiểm tra dữ liệu đầu vào, Entity Framework truy cập SQL Server và AutoMapper chuẩn hóa dữ liệu. Frontend React.js kết nối API để cung cấp giao diện tương tác linh hoạt.",
+    "features": [
+      "Kiến trúc ba lớp",
+      "Xác thực bằng JWT",
+      "Kiểm tra đầu vào với FluentValidation",
+      "Truy cập dữ liệu bằng Entity Framework",
+      "Ánh xạ dữ liệu bằng AutoMapper",
+      "Cơ sở dữ liệu SQL Server",
+      "Giao diện React.js",
+      "RESTful API",
+      "Giao diện tương tác"
+    ]
+  },
+  "3": {
+    "description": "Ứng dụng chat thời gian thực sử dụng .NET 8 và SignalR để giao tiếp qua WebSocket. PostgreSQL lưu trữ dữ liệu, RabbitMQ phụ trách hàng đợi và phân phối tin nhắn. Giao diện Angular 17 sử dụng SignalR Client để cập nhật tức thì. Ứng dụng hỗ trợ JWT, hội thoại một-một, quản lý cuộc trò chuyện, trạng thái trực tuyến và thông báo thời gian thực.",
+    "features": [
+      "Nhắn tin thời gian thực bằng SignalR WebSocket",
+      "Xác thực JWT",
+      "Cơ sở dữ liệu PostgreSQL",
+      "Hàng đợi RabbitMQ",
+      "Theo dõi trạng thái trực tuyến",
+      "Lịch sử tin nhắn có phân trang",
+      "Giao diện Angular 17",
+      "Clean Architecture",
+      "Thiết kế RESTful API",
+      "Xử lý tác vụ nền"
+    ]
+  },
+  "4": {
+    "description": "Giai đoạn đầu của hệ thống quản lý tài liệu cho Bộ Tài chính, sử dụng kiến trúc nhiều lớp, RESTful API, LINQ, Dapper và stored procedure. Hệ thống triển khai trên các máy chủ IIS song song với cân bằng tải và SQL Server replication đọc/ghi. Tính năng gồm chữ ký số, chuyển đổi PDF tự động, xử lý tài liệu an toàn và phân quyền theo vai trò.",
+    "features": [
+      "Kiến trúc nhiều lớp",
+      "Cân bằng tải với IIS",
+      "Sao chép cơ sở dữ liệu đọc/ghi",
+      "Tích hợp chữ ký số",
+      "Chuyển đổi PDF tự động",
+      "Xử lý tài liệu an toàn",
+      "Phân quyền theo vai trò",
+      "Thiết kế sẵn sàng cao",
+      "Hạ tầng triển khai nội bộ",
+      "Tối ưu stored procedure"
+    ]
+  },
+  "5": {
+    "description": "Giai đoạn hai phát triển hệ thống quản lý tài liệu cho Bộ Tài chính theo kiến trúc microservices để hỗ trợ triển khai trên nhiều cơ quan. Ocelot API Gateway và NGINX phụ trách định tuyến, cân bằng tải. Docker Swarm điều phối các dịch vụ; ELK tập trung log; Redis cung cấp cache phân tán; RabbitMQ kết nối các sự kiện. LDAP hỗ trợ xác thực thống nhất và HSM phục vụ ký số tài liệu, PDF.",
+    "features": [
+      "Ocelot API Gateway kết hợp NGINX",
+      "Các dịch vụ User, Document, Workflow, Report, Notification, Storage và Integration",
+      "Điều phối container với Docker Swarm",
+      "Giám sát và ghi log tập trung bằng ELK",
+      "Cache phân tán Redis",
+      "Giao tiếp hướng sự kiện với RabbitMQ",
+      "Xác thực thống nhất qua LDAP",
+      "Ký số bằng HSM",
+      "Cụm cơ sở dữ liệu SQL Server",
+      "Cụm lưu trữ với presigned URL",
+      "Health check và giám sát Prometheus",
+      "Kiến trúc đa đơn vị cho các cơ quan"
+    ]
+  },
+  "6": {
+    "description": "Enterprise AI Platform là nền tảng AI dùng chung để tích hợp vào ERP, DMS, CRM và HRM. Nền tảng cung cấp tìm kiếm ngữ nghĩa, chatbot RAG, AI agent, Voice AI và chuyển ngôn ngữ tự nhiên sang SQL. Công nghệ gồm .NET 8, ASP.NET Core, Next.js 14, PostgreSQL với pgvector, Redis và MinIO. Hỗ trợ suy luận cục bộ qua Ollama cùng gateway kết nối nhiều nhà cung cấp AI.",
+    "features": [
+      "Tìm kiếm ngữ nghĩa và vector với pgvector HNSW",
+      "Chatbot RAG có trích dẫn nguồn và đa ngôn ngữ",
+      "AI agent gọi công cụ và phê duyệt bởi con người",
+      "Chuyển ngôn ngữ tự nhiên sang SQL với kiểm tra truy vấn",
+      "Voice AI: nhận dạng và tổng hợp giọng nói",
+      "Gateway hỗ trợ nhiều nhà cung cấp AI",
+      "Tích hợp hệ thống qua MCP",
+      "Tìm kiếm kết hợp vector và từ khóa",
+      "Đa đơn vị với Row-Level Security",
+      "Modular Monolith kết hợp Plugin và Agent",
+      "Kiến trúc sẵn sàng tích hợp RabbitMQ",
+      "Clean Architecture, DDD, CQRS và MediatR",
+      "Suy luận AI cục bộ bằng Ollama",
+      "RBAC, nhật ký kiểm toán và phát hiện prompt injection"
+    ]
+  }
+}

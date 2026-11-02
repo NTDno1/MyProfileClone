@@ -2,6 +2,166 @@ import { Post } from '@/types';
 
 export const posts: Post[] = [
   {
+    id: 5,
+    title: 'Enterprise AI Platform - AI Base Framework: Building a Reusable AI Platform for Enterprise Systems',
+    publishedAt: '01 Jun 2026',
+    thumbnailUrl: '/images/posts/post-thumbnail-3.png',
+    imageUrl: '/images/posts/post-03.png',
+    authorName: 'Nguyen Tien Dat',
+    content: `
+    <h2>Overview</h2>
+    <p>
+      <strong>Enterprise AI Platform (AI Base Framework)</strong> is a comprehensive enterprise AI platform designed with the vision: <em>"Chỉ cần cắm AI vào hệ thống khác là có thể sử dụng được"</em> (Just plug AI into other systems and it works). The platform provides ready-to-use AI capabilities that can be integrated into ERP, DMS, CRM, HRM, Workflow, and BI systems.
+    </p>
+
+    <h2>Key Features</h2>
+
+    <h3>1. Semantic Search & RAG Chatbot</h3>
+    <ul>
+      <li><strong>Vector Search</strong>: Semantic search with pgvector HNSW index for high accuracy</li>
+      <li><strong>Hybrid Search</strong>: Combines vector and keyword search for optimal results</li>
+      <li><strong>RAG Pipeline</strong>: Retrieval Augmented Generation for accurate, source-cited answers</li>
+      <li><strong>Document Processing</strong>: Upload, chunk (512 tokens), embed, and index documents automatically</li>
+      <li><strong>Multi-language Support</strong>: Vietnamese and English</li>
+    </ul>
+
+    <h3>2. AI Agent & Tool Calling</h3>
+    <ul>
+      <li><strong>Agent Orchestrator</strong>: Multi-step task planning and execution</li>
+      <li><strong>Tool Registry</strong>: Dynamic tool registration and execution</li>
+      <li><strong>Safety Guardrails</strong>: Enterprise security for AI actions</li>
+      <li><strong>Human-in-the-loop Approval</strong>: Sensitive actions require human approval</li>
+      <li><strong>Audit & Traceability</strong>: Full action logging and rollback support</li>
+    </ul>
+
+    <h3>3. Natural Language to SQL</h3>
+    <ul>
+      <li><strong>NL to SQL Engine</strong>: Convert natural language questions to SQL queries</li>
+      <li><strong>SQL Injection Protection</strong>: Query validation, only SELECT queries allowed</li>
+      <li><strong>RBAC Integration</strong>: AI respects user permissions in database queries</li>
+    </ul>
+
+    <h3>4. Voice AI</h3>
+    <ul>
+      <li><strong>Speech-to-Text</strong>: Whisper integration for voice input</li>
+      <li><strong>Text-to-Speech</strong>: Voice output for AI responses</li>
+      <li><strong>Voice Commands</strong>: Execute AI actions via voice</li>
+    </ul>
+
+    <h3>5. AI Gateway & Multi-Provider Support</h3>
+    <ul>
+      <li><strong>Ollama (Local)</strong>: 100% offline, llama3.2:3b, nomic-embed-text</li>
+      <li><strong>OpenAI</strong>: GPT-4, GPT-3.5-turbo</li>
+      <li><strong>Claude</strong>: Anthropic Claude models</li>
+      <li><strong>Gemini</strong>: Google Gemini Pro</li>
+      <li><strong>Azure OpenAI</strong>: Enterprise Azure integration</li>
+      <li><strong>DeepSeek</strong>: Cost-effective AI</li>
+      <li><strong>Dynamic Routing</strong>: Load balancing, fallback, cost-aware, latency-aware routing</li>
+    </ul>
+
+    <h3>6. Integration - MCP (Model Context Protocol)</h3>
+    <ul>
+      <li><strong>MCP Server</strong>: AI-native protocol for external system integration</li>
+      <li><strong>REST API & gRPC</strong>: Standard API integration</li>
+      <li><strong>WebSocket</strong>: Real-time communication</li>
+      <li><strong>Event-Driven</strong>: RabbitMQ-ready for async workflows</li>
+    </ul>
+
+    <h2>Architecture</h2>
+
+    <h3>High-Level Architecture</h3>
+    <pre>
+Client Layer (Web, Mobile, Voice, CLI)
+         │
+         ▼
+API Gateway Layer (Auth, Rate Limiting, Tenant Resolution)
+         │
+         ▼
+Platform Core (Modular Monolith)
+├── Tenant Management Module
+├── Auth & Security Module
+├── AI Agent Runtime Module
+├── AI Engine Core Module
+├── Plugin Runtime Module
+├── Workflow Engine Module
+├── Document Pipeline Module
+├── Search Engine Module
+└── Integration Hub Module
+         │
+         ▼
+AI Infrastructure Layer
+├── AI Gateway (Router)
+├── Embedding Engine
+├── Vector Store
+├── Model Registry
+└── Tool Registry
+         │
+         ▼
+AI Providers (Ollama, OpenAI, Claude, Gemini, Azure, DeepSeek)
+    </pre>
+
+    <h3>Design Principles</h3>
+    <ul>
+      <li><strong>Hybrid Architecture</strong>: Modular Monolith → Gradual Microservice Extraction</li>
+      <li><strong>Plugin-based</strong>: Extensible for 3rd party integration</li>
+      <li><strong>Agent-based</strong>: AI-native autonomous actions</li>
+      <li><strong>Event-driven</strong>: Async communication patterns</li>
+      <li><strong>Domain-Driven Design</strong>: Bounded contexts, shared kernel</li>
+    </ul>
+
+    <h2>Technology Stack</h2>
+    <table>
+      <tr><th>Component</th><th>Technology</th></tr>
+      <tr><td>Backend</td><td>.NET 8, ASP.NET Core, MediatR, CQRS</td></tr>
+      <tr><td>Frontend</td><td>Next.js 14, React 18, TailwindCSS, Zustand</td></tr>
+      <tr><td>Database</td><td>PostgreSQL 16 + pgvector (Vector DB)</td></tr>
+      <tr><td>Cache</td><td>Redis 7</td></tr>
+      <tr><td>Object Storage</td><td>MinIO (S3-compatible)</td></tr>
+      <tr><td>LLM (Local)</td><td>Ollama, llama3.2:3b, nomic-embed-text, whisper</td></tr>
+      <tr><td>Logging</td><td>Serilog, Seq</td></tr>
+      <tr><td>Container</td><td>Docker, Docker Compose, Nginx</td></tr>
+    </table>
+
+    <h2>Security Features</h2>
+    <ul>
+      <li><strong>JWT Authentication</strong> with refresh tokens</li>
+      <li><strong>SQL Injection Protection</strong> with query validation</li>
+      <li><strong>Prompt Injection Detection</strong></li>
+      <li><strong>Rate Limiting</strong> per user/tenant</li>
+      <li><strong>RBAC</strong> (Role-Based Access Control)</li>
+      <li><strong>Audit Logging</strong> for compliance</li>
+      <li><strong>Human-in-the-loop Approval</strong> for sensitive actions</li>
+      <li><strong>Zero Trust Architecture</strong></li>
+    </ul>
+
+    <h2>Multi-Tenancy</h2>
+    <ul>
+      <li><strong>Row-Level Security</strong> for tenant isolation</li>
+      <li><strong>Per-tenant AI configuration</strong></li>
+      <li><strong>Tenant-specific rate limits</strong></li>
+      <li><strong>Configurable LLM models and prompts</strong></li>
+    </ul>
+
+    <h2>Roadmap</h2>
+    <ol>
+      <li><strong>Phase 1 (Current)</strong>: Core RAG, Semantic Search, Basic Chatbot</li>
+      <li><strong>Phase 2</strong>: AI Agent, Tool Calling, MCP Integration</li>
+      <li><strong>Phase 3</strong>: Voice AI, Multi-provider Gateway</li>
+      <li><strong>Phase 4</strong>: Enterprise Integration Hub, Plugin System</li>
+      <li><strong>Phase 5</strong>: Advanced Agentic AI, Autonomous Workflows</li>
+    </ol>
+
+    <h2>Vision</h2>
+    <p>
+      The goal is not just to build a single AI application, but to develop it into an <strong>Enterprise AI Platform</strong> that can be used across multiple business systems. The vision is: <em>"Chỉ cần cắm AI vào hệ thống khác là có thể sử dụng được"</em> — Just plug AI into other systems and it works.
+    </p>
+
+    <p>
+      This platform aims to serve as an <strong>AI Agent Platform</strong>, <strong>AI Copilot Platform</strong>, <strong>Internal AI Operating System</strong>, <strong>AI Integration Hub</strong>, and <strong>AI Automation Platform</strong> for enterprise systems including ERP, DMS, CRM, HRM, Workflow, and BI.
+    </p>
+    `,
+  },
+  {
     id: 1,
     title: 'BaseProject Clean Architecture, DDD Pattern',
     publishedAt: '15 Jan 2024',
@@ -232,6 +392,109 @@ export const posts: Post[] = [
     </ol>
     
     <p><strong>Repository:</strong> <a href="https://github.com/NTDno1/BTHTPT" target="_blank">https://github.com/NTDno1/BTHTPT</a></p>
+    `,
+  },
+  {
+    id: 4,
+    title: 'Document Management System - Phase 2: Microservices Architecture',
+    publishedAt: '01 May 2025',
+    thumbnailUrl: '/images/posts/post-thumbnail-3.png',
+    imageUrl: '/images/posts/post-03.png',
+    authorName: 'Nguyen Tien Dat',
+    content: `
+    <h2>Overview</h2>
+    <p>
+      Phase 2 of the Document Management System for the Ministry of Finance, evolved from a monolithic multi-layer architecture into a full <strong>Microservices Architecture</strong> to support nationwide deployment across multiple government agencies.
+    </p>
+
+    <h2>System Architecture</h2>
+    <p>The system consists of multiple layers:</p>
+
+    <h3>1. External Layer</h3>
+    <ul>
+      <li><strong>Client Applications</strong>: Web browsers, desktop clients</li>
+      <li><strong>Mobile Applications</strong>: Native mobile apps for iOS/Android</li>
+      <li><strong>Partner Systems</strong>: VBDQ (National Document Exchange), LDAP (Lightweight Directory Access Protocol)</li>
+    </ul>
+
+    <h3>2. Load Balancer - NGINX</h3>
+    <ul>
+      <li>Reverse proxy with SSL termination</li>
+      <li>Traffic distribution across multiple API Gateway instances</li>
+      <li>Rate limiting and request filtering</li>
+    </ul>
+
+    <h3>3. API Gateway - Ocelot</h3>
+    <ul>
+      <li>Single entry point for all client requests</li>
+      <li>JWT Authentication and Authorization</li>
+      <li>Request routing, rate limiting, and caching</li>
+      <li>Swagger documentation aggregation</li>
+    </ul>
+
+    <h3>4. Core Microservices</h3>
+    <ul>
+      <li><strong>User Service</strong>: Authentication, authorization, LDAP integration, role management</li>
+      <li><strong>Document Service</strong>: Document CRUD, version control, metadata management</li>
+      <li><strong>Workflow Service</strong>: Dynamic workflow engine, approval routing, digital signatures</li>
+      <li><strong>Report Service</strong>: Report generation, scheduling, export (PDF, Excel)</li>
+      <li><strong>Notification Service</strong>: Email, SMS, Push notifications via RabbitMQ</li>
+      <li><strong>Storage Service</strong>: File storage, S3-compatible storage, presigned URLs</li>
+      <li><strong>Integration Service</strong>: VBDQ integration, LDAP sync, third-party APIs</li>
+    </ul>
+
+    <h3>5. Infrastructure Layer</h3>
+    <ul>
+      <li><strong>RabbitMQ</strong>: Event-driven messaging, async communication between services, Dead Letter Queue for reliability</li>
+      <li><strong>Redis Cache</strong>: Distributed caching, session management, rate limiting</li>
+      <li><strong>ELK Stack</strong>: Elasticsearch, Logstash, Kibana for centralized logging, tracing, and monitoring</li>
+      <li><strong>Docker Swarm</strong>: Container orchestration, service discovery, load balancing, rolling updates</li>
+      <li><strong>Database Cluster</strong>: SQL Server cluster with read/write replication, failover clustering</li>
+      <li><strong>Storage Cluster</strong>: S3-compatible object storage with redundancy</li>
+    </ul>
+
+    <h3>6. Security Layer</h3>
+    <ul>
+      <li><strong>LDAP Integration</strong>: Unified authentication across government agencies</li>
+      <li><strong>Digital Signature (Ky So)</strong>: Hardware Security Module (HSM) for document signing, PDF signature verification</li>
+      <li><strong>Role-Based Access Control</strong>: Fine-grained permissions per document type and agency</li>
+    </ul>
+
+    <h2>Technology Stack</h2>
+    <table>
+      <tr><th>Component</th><th>Technology</th></tr>
+      <tr><td>Backend Framework</td><td>.NET, C#</td></tr>
+      <tr><td>API Gateway</td><td>Ocelot</td></tr>
+      <tr><td>Load Balancer</td><td>NGINX</td></tr>
+      <tr><td>Message Queue</td><td>RabbitMQ</td></tr>
+      <tr><td>Distributed Cache</td><td>Redis</td></tr>
+      <tr><td>Logging & Monitoring</td><td>ELK Stack (Elasticsearch, Logstash, Kibana)</td></tr>
+      <tr><td>Container Orchestration</td><td>Docker Swarm</td></tr>
+      <tr><td>Database</td><td>SQL Server (Cluster)</td></tr>
+      <tr><td>Object Storage</td><td>S3-Compatible (MinIO/AWS S3)</td></tr>
+      <tr><td>Authentication</td><td>LDAP, JWT</td></tr>
+      <tr><td>Digital Signature</td><td>HSM, PDF Signature</td></tr>
+      <tr><td>Health Monitoring</td><td>Prometheus, Health Checks</td></tr>
+    </table>
+
+    <h2>Key Highlights</h2>
+    <ol>
+      <li><strong>Microservices Architecture</strong>: 7 independent services, each with its own database</li>
+      <li><strong>Event-Driven Communication</strong>: RabbitMQ for async messaging, ensuring loose coupling</li>
+      <li><strong>High Availability</strong>: Docker Swarm with replicated containers, database clustering</li>
+      <li><strong>Centralized Logging</strong>: ELK Stack for log aggregation, search, and visualization</li>
+      <li><strong>Security by Design</strong>: LDAP integration, HSM-based digital signatures, JWT tokens</li>
+      <li><strong>Scalability</strong>: Horizontal scaling per service based on load</li>
+      <li><strong>Observability</strong>: Health checks, Prometheus metrics, distributed tracing</li>
+    </ol>
+
+    <h2>Challenges Solved</h2>
+    <ul>
+      <li><strong>Multi-agency deployment</strong>: Multi-tenant architecture with LDAP-based authentication</li>
+      <li><strong>Document integrity</strong>: HSM-based digital signatures ensure non-repudiation</li>
+      <li><strong>High throughput</strong>: Redis caching + RabbitMQ for async processing handles 10,000+ concurrent users</li>
+      <li><strong>Data consistency</strong>: Transactional Outbox Pattern ensures reliable event publishing</li>
+    </ul>
     `,
   },
 ];

@@ -1,4 +1,4 @@
-import { FiCode, FiDatabase, FiServer, FiBox, FiCloud } from 'react-icons/fi';
+import { FiCode, FiDatabase, FiServer, FiBox, FiCloud, FiActivity, FiCpu } from 'react-icons/fi';
 import { SiDotnet, SiPostgresql, SiMicrosoftsqlserver, SiAngular, SiDocker, SiRedis, SiRabbitmq } from 'react-icons/si';
 
 const CVSkills = () => {
@@ -22,6 +22,7 @@ const CVSkills = () => {
         { name: 'CQRS', level: 85 },
         { name: 'MediatR', level: 80 },
         { name: 'Repository Pattern', level: 85 },
+        { name: 'Domain-Driven Design', level: 75 },
       ]
     },
     {
@@ -32,6 +33,7 @@ const CVSkills = () => {
         { name: 'SQL Server', level: 85, icon: <SiMicrosoftsqlserver /> },
         { name: 'Stored Procedures', level: 80 },
         { name: 'Query Optimization', level: 75 },
+        { name: 'Read/Write Replication', level: 70 },
       ]
     },
     {
@@ -61,7 +63,29 @@ const CVSkills = () => {
         { name: 'Redis', level: 80, icon: <SiRedis /> },
         { name: 'RabbitMQ', level: 75, icon: <SiRabbitmq /> },
         { name: 'SignalR', level: 75 },
-        { name: 'Quartz', level: 70 },
+        { name: 'Quartz.NET', level: 70 },
+      ]
+    },
+    {
+      title: 'System Design',
+      icon: <FiActivity className="text-teal-600" />,
+      skills: [
+        { name: 'Microservices', level: 80 },
+        { name: 'API Gateway', level: 75 },
+        { name: 'Load Balancing', level: 75 },
+        { name: 'High Availability', level: 75 },
+        { name: 'Transactional Outbox', level: 70 },
+      ]
+    },
+    {
+      title: 'AI & Machine Learning',
+      icon: <FiCpu className="text-violet-600" />,
+      skills: [
+        { name: 'Semantic Search (RAG)', level: 80 },
+        { name: 'Vector Database (pgvector)', level: 75 },
+        { name: 'AI Agent & Tool Calling', level: 75 },
+        { name: 'AI Gateway (Multi-provider)', level: 70 },
+        { name: 'NLP & NL-to-SQL', level: 70 },
       ]
     },
   ];
@@ -85,7 +109,7 @@ const CVSkills = () => {
         Kỹ năng
       </h3>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {skillCategories.map((category, index) => (
           <div key={index} className="bg-gray-50 p-5 rounded-lg">
             <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">

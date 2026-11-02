@@ -1,0 +1,264 @@
+%-------------------------
+% CV - Nguyen Tien Dat
+% LaTeX Template - Modern Professional
+%-------------------------
+
+\documentclass[a4paper,10pt]{article}
+
+%--- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[vietnamese]{babel}
+\usepackage[margin=0.6in]{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{fontawesome5}
+\usepackage{tabularx}
+\usepackage{multicol}
+\usepackage{tikz}
+\usepackage{parskip}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+
+%--- Colors ---
+\definecolor{primary}{HTML}{1A73E8}
+\definecolor{darktext}{HTML}{1A1A2E}
+\definecolor{mediumtext}{HTML}{333333}
+\definecolor{lighttext}{HTML}{555555}
+\definecolor{accentline}{HTML}{1A73E8}
+\definecolor{lightbg}{HTML}{F0F4FF}
+
+%--- Hyperlink Setup ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primary,
+    urlcolor=primary,
+    pdftitle={CV - Nguyen Tien Dat},
+    pdfauthor={Nguyen Tien Dat},
+}
+
+%--- Header/Footer ---
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[C]{\footnotesize\color{lighttext} Nguyễn Tiến Đạt -- CV}
+
+%--- Section Formatting ---
+\titleformat{\section}{
+    \Large\bfseries\color{primary}
+}{}{0em}{}[\vspace{-0.5em}\textcolor{accentline}{\rule{\linewidth}{1.5pt}}]
+
+\titleformat{\subsection}{
+    \large\bfseries\color{darktext}
+}{}{0em}{}
+
+%--- Custom Commands ---
+\newcommand{\cventry}[4]{%
+    \noindent
+    \begin{tabularx}{\linewidth}{@{}X r@{}}
+        \textbf{\color{darktext}#1} & \textcolor{lighttext}{\small #2} \\
+        \textit{\color{primary}#3} & \\
+    \end{tabularx}
+    \vspace{-0.3em}
+    #4
+    \vspace{0.5em}
+}
+
+\newcommand{\projectentry}[2]{%
+    \noindent
+    \textbf{\color{darktext}#1}
+    \vspace{-0.3em}
+    #2
+    \vspace{0.5em}
+}
+
+\newcommand{\techstack}[1]{%
+    \vspace{-0.3em}
+    \noindent\textcolor{lighttext}{\small\textit{Tech Stack:} #1}
+    \vspace{0.2em}
+}
+
+\newcommand{\infoitem}[2]{%
+    \textcolor{primary}{#1}\hspace{0.3em}\textcolor{mediumtext}{#2}%
+}
+
+%--- Document ---
+\begin{document}
+
+%====================================
+%         HEADER
+%====================================
+\begin{center}
+    {\Huge\bfseries\color{darktext} Nguyễn Tiến Đạt}\\[0.3em]
+    {\Large\color{primary} WEB DEVELOPER}\\[0.8em]
+    \infoitem{\faPhone}{0983877462} \quad
+    \infoitem{\faEnvelope}{\href{mailto:datt19112001@gmail.com}{datt19112001@gmail.com}} \quad
+    \infoitem{\faFacebook}{\href{https://facebook.com/datntd01}{facebook.com/datntd01}} \\[0.3em]
+    \infoitem{\faMapMarkerAlt}{Tùng Thiện -- Sơn Tây -- Hà Nội} \quad
+    \infoitem{\faGlobe}{\href{https://datnguyentien.online}{datnguyentien.online}}
+\end{center}
+
+\vspace{0.5em}
+
+%====================================
+%         ABOUT ME
+%====================================
+\section{About Me}
+
+Backend Developer with 4 years of experience building enterprise applications using .NET technologies. Experienced in DMS, ERP, CRM, AI platforms, and system integrations.
+
+Strong in ASP.NET Core, Clean Architecture, CQRS, SQL Server, PostgreSQL, Redis, RabbitMQ, and Docker. Skilled in designing scalable systems, optimizing databases, and integrating third-party services.
+
+Interested in software architecture, system performance, and AI technologies, with hands-on experience in RAG, Semantic Search, and AI integration.
+
+%====================================
+%         TECHNICAL SKILLS
+%====================================
+\section{Technical Skills}
+
+\begin{tabularx}{\linewidth}{@{}>{\bfseries\color{darktext}}l X@{}}
+    Backend Development & ASP.NET Core, Web API, C\#, .NET Framework, Dapper, Clean Architecture, CQRS, MediatR, DDD Pattern \\[0.5em]
+    Database \& Optimization & SQL Server, PostgreSQL, MongoDB, Stored Procedures Optimization, Database Indexing \& Tuning, Deadlock Resolution, Replication, HA, Redis \\[0.5em]
+    Distributed Systems & RabbitMQ, SignalR, Ocelot API Gateway, RESTful APIs, Webhooks, Digital Signature Integration, UnitOfWork \& Repository, Singleton, Outbox Pattern \\[0.5em]
+    Cloud, DevOps & Docker, Docker Compose, Docker Swarm, IIS, NGINX, AWS (S3, EC2), MinIO, Jenkins, GitHub Actions (CI/CD), Grafana \\[0.5em]
+    Frontend \& Tools & AngularJS, React, Next.js, JavaScript, Postman, Swagger, Cursor, Antigravity, Claude \\
+\end{tabularx}
+
+%====================================
+%         WORK EXPERIENCE
+%====================================
+\section{Work Experience}
+
+%--- MobiFone ---
+\cventry{MobiFone (OnSite)}{09/2025 -- Present}{Backend Developer}{
+
+    \projectentry{Document Management System for the Ministry of Finance}{
+        \techstack{ASP.NET Core, C\#, LINQ, Dapper, SQL Server, Stored Procedures, IIS, Digital Signature, PDF Conversion, RESTful APIs, Swagger, Multi-Layer Architecture, RBAC}
+
+        \begin{itemize}[leftmargin=1.2em, itemsep=0.1em, topsep=0.2em]
+            \item Designed and developed a large-scale Document Management System (DMS) for the Ministry of Finance, supporting secure document processing, workflow automation, and inter-department collaboration.
+            \item Built a multi-layer architecture using .NET Framework, Dapper, and SQL Server stored procedures to ensure maintainability, performance, and scalable data processing.
+            \item Developed configurable workflow management capabilities supporting multi-stage approvals, document routing, delegation mechanisms, and role-based access control.
+            \item Implemented dedicated document storage infrastructure with digital signature integration and automated PDF conversion.
+            \item Deployed the system across multiple IIS servers with load balancing and SQL Server Always On (AAG) for high availability.
+            \item Built dynamic reporting and analytics modules with export capabilities for real-time visibility.
+        \end{itemize}
+    }
+
+    \projectentry{Document Management System Modernization}{
+        \techstack{.NET 8, ASP.NET Core, Clean Architecture, CQRS, MediatR, React, Next.js, PostgreSQL, Redis, RabbitMQ, Docker Swarm, Ocelot API Gateway, NGINX, ELK Stack, OpenTelemetry, Prometheus, Grafana}
+
+        \begin{itemize}[leftmargin=1.2em, itemsep=0.1em, topsep=0.2em]
+            \item Designed and modernized a government-scale DMS using microservices architecture (7 core microservices) to improve scalability, security, and system reliability.
+            \item Implemented Ocelot API Gateway, NGINX load balancing, and RabbitMQ event-driven messaging for secure and scalable service communication.
+            \item Containerized services with Docker Swarm, implemented Redis caching, centralized logging with ELK Stack, and distributed tracing using OpenTelemetry.
+            \item Integrated LDAP authentication, HSM-based digital signatures, and database replication for enterprise-grade security and high availability.
+            \item Established automated CI/CD pipelines with Jenkins and implemented monitoring dashboards using Grafana.
+        \end{itemize}
+    }
+}
+
+%--- AgileTech ---
+\cventry{AgileTech}{01/2024 -- Present}{Backend Developer}{
+
+    \projectentry{CRM System}{
+        \techstack{.NET 9, ASP.NET Core, Angular, Clean Architecture, CQRS, SQL Server, Redis, RabbitMQ, SignalR, Quartz, AWS S3, Docker, Docker Compose, IIS, Fluent Validation, RESTful APIs}
+
+        \begin{itemize}[leftmargin=1.2em, itemsep=0.1em, topsep=0.2em]
+            \item Designed and developed an enterprise CRM/ERP system to support business operations, workflow management, real-time communication, and scalable deployment.
+            \item Implemented Clean Architecture, CQRS, and Fluent Validation to improve maintainability and reduce technical debt.
+            \item Integrated Redis, RabbitMQ, and SignalR to support distributed messaging, background job processing, and real-time notifications.
+            \item Optimized application performance using LINQ, stored procedures, caching strategies, and Quartz-based job scheduling.
+            \item Integrated AWS S3 for scalable document storage and implemented Redis-based authentication management.
+            \item Containerized services with Docker/Docker Compose and deployed across Windows (IIS) and Ubuntu environments.
+        \end{itemize}
+    }
+
+    \projectentry{Education Management System}{
+        \techstack{ASP.NET Core, C\#, React, SQL Server, RESTful APIs, JWT Authentication, FluentValidation, AutoMapper, 3-Layer Architecture}
+
+        \begin{itemize}[leftmargin=1.2em, itemsep=0.1em, topsep=0.2em]
+            \item Designed and developed an Education Management System supporting student records, course management, enrollment processes, and academic reporting.
+            \item Built the application using a 3-layer architecture (Presentation, Business Logic, Data Access).
+            \item Developed responsive user interfaces with React for efficient workflows across academic management modules.
+            \item Implemented RESTful APIs with JWT-based authentication and SQL Server for secure data management.
+            \item Applied FluentValidation and AutoMapper to improve code quality and reduce boilerplate code.
+        \end{itemize}
+    }
+}
+
+%--- HopLongTech ---
+\cventry{HopLongTech}{08/2022 -- 12/2023}{Fullstack Developer}{
+
+    \projectentry{ERP System}{
+        \techstack{ASP.NET Core, C\#, AngularJS, SQL Server, Dapper, LINQ, Stored Procedures, Clean Architecture, RESTful APIs}
+
+        \begin{itemize}[leftmargin=1.2em, itemsep=0.1em, topsep=0.2em]
+            \item Developed and maintained an enterprise ERP system supporting Finance, Supply Chain, Inventory Management, HR, and CRM.
+            \item Applied Clean Architecture principles to improve maintainability and scalability across multiple business modules.
+            \item Utilized Dapper, LINQ, and SQL Server stored procedures to optimize data access and query performance.
+            \item Resolved critical database deadlocks and optimized complex queries for improved reporting performance.
+            \item Developed responsive interfaces with AngularJS for real-time interaction across ERP modules.
+        \end{itemize}
+    }
+
+    \projectentry{E-commerce Integration}{
+        \techstack{ASP.NET Core, C\#, RESTful APIs, Webhooks, SQL Server, Three-Layer Architecture}
+
+        \begin{itemize}[leftmargin=1.2em, itemsep=0.1em, topsep=0.2em]
+            \item Designed and developed an E-commerce Integration Platform to synchronize data between third-party marketplaces, advertising platforms, and ERP systems.
+            \item Built a middleware service based on Three-Layer Architecture for seamless integration with external platforms.
+            \item Implemented bi-directional API integration with TikTok Shop using webhooks for real-time synchronization.
+            \item Built a Facebook Ads data pipeline to extract, transform, and load campaign performance metrics into the ERP platform.
+        \end{itemize}
+    }
+}
+
+%====================================
+%         PROJECTS
+%====================================
+\section{Projects}
+
+\projectentry{Base Structure (Backend Template)}{
+    \techstack{.NET 9, C\# 13, ASP.NET Core, EF Core, PostgreSQL, Clean Architecture, CQRS, MediatR, FluentValidation, AutoMapper, Serilog, JWT Authentication, Unit Testing, Integration Testing}
+
+    \begin{itemize}[leftmargin=1.2em, itemsep=0.1em, topsep=0.2em]
+        \item Designed and developed a scalable E-commerce Platform supporting secure online transactions, product management, and high-volume business operations.
+        \item Implemented Clean Architecture and CQRS patterns using MediatR to improve modularity and scalability.
+        \item Developed JWT-based authentication and authorization for secure access control.
+        \item Utilized EF Core with PostgreSQL for efficient data management with FluentValidation and AutoMapper.
+        \item Implemented centralized logging with Serilog and comprehensive unit/integration testing.
+    \end{itemize}
+}
+
+\projectentry{Master's Thesis -- AI Base Framework for Enterprise Systems}{
+    \techstack{.NET 8, ASP.NET Core, Clean Architecture, CQRS, MediatR, Next.js 14, React 18, TailwindCSS, Zustand, PostgreSQL + pgvector, Redis, MinIO, Docker, Ollama (llama3.2, nomic-embed-text), Multi-provider AI Gateway}
+
+    \begin{itemize}[leftmargin=1.2em, itemsep=0.1em, topsep=0.2em]
+        \item Designed and developed an enterprise AI platform (AI Base Framework) integrating AI capabilities into enterprise systems (ERP, DMS, CRM, HRM) through RAG, Semantic Search, AI Agents, and multi-provider AI integration.
+        \item Built modular monolith architecture with plugin-based extensibility and agent-based AI capabilities.
+        \item Implemented RAG pipeline with semantic search using PostgreSQL + pgvector (HNSW index) for high-accuracy vector similarity search.
+        \item Integrated multi-provider AI gateway supporting Ollama (local offline), OpenAI GPT, Claude, Gemini, Azure OpenAI, and DeepSeek.
+        \item Built AI Agent runtime with tool calling, human-in-the-loop approval, and comprehensive audit logging.
+        \item Developed NL-to-SQL engine with SQL injection protection and RBAC-aware query generation.
+        \item Implemented Speech-to-Text (Whisper) and Text-to-Speech for voice AI interactions.
+        \item Used Redis for distributed caching, MinIO for document storage, Docker/Docker Compose for containerized deployment with Nginx reverse proxy.
+    \end{itemize}
+}
+
+%====================================
+%         EDUCATION
+%====================================
+\section{Education}
+
+\begin{tabularx}{\linewidth}{@{}X r@{}}
+    \textbf{\color{darktext}FPT University} \textit{(Bachelor's)} & \textcolor{lighttext}{\small 06/2019 -- 12/2023} \\
+    \textcolor{primary}{Information Technology} -- Software Engineer & \\[0.8em]
+    \textbf{\color{darktext}PTIT University} \textit{(Master's)} & \textcolor{lighttext}{\small 07/2025 -- Present} \\
+    \textcolor{primary}{Information Technology} -- Information System & \\
+\end{tabularx}
+
+\end{document}

@@ -12,21 +12,24 @@
 
 @layer base {
   body {
-    @apply bg-[#0B0B0F] text-gray-300 font-sans antialiased;
+    @apply font-sans antialiased;
+    background-color: #F8F7F4;
+    color: #181816;
     overflow-x: hidden;
   }
 
+  body[data-theme='dark'] {
+    background-color: #121211;
+    color: #EDEDEA;
+  }
+
   ::selection {
-    background-color: rgba(99, 102, 241, 0.3);
-    color: #818cf8;
+    background-color: rgba(184, 67, 30, 0.18);
+    color: inherit;
   }
 
   html {
     scroll-behavior: smooth;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    @apply text-white;
   }
 }
 
@@ -54,98 +57,19 @@
   @apply py-12 md:py-16;
 }
 
-/* Gradient text utility */
-.gradient-text {
-  @apply bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent;
-}
-
-/* Card hover transition */
-.card-hover {
-  @apply transition-all duration-300 ease-out;
-  &:hover {
-    @apply -translate-y-1 shadow-xl;
-  }
-}
-
-/* Slick carousel overrides */
-.slick-prev:before,
-.slick-next:before {
-  @apply text-gray-400;
-}
-
-.slick-dots {
-  li {
-    @apply m-0;
-
-    button:before {
-      @apply text-xs text-gray-600;
-    }
-
-    &:hover button:before {
-      @apply text-gray-400;
-    }
-  }
-
-  li.slick-active {
-    button:before {
-      @apply text-indigo-500;
-    }
-  }
-}
-
-/* Custom scrollbar - Dark theme */
+/* Custom scrollbar - Subtle architectural style */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0B0B0F;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1f1f28;
+  background: rgba(120, 118, 110, 0.32);
   border-radius: 4px;
   &:hover {
-    background: #2a2a35;
+    background: rgba(120, 118, 110, 0.5);
   }
-}
-
-/* Page transitions */
-.page-enter {
-  opacity: 0;
-  transform: translateY(8px);
-}
-
-.page-enter-active {
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-}
-
-/* Custom slick dots for testimonials */
-.custom-dots {
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  gap: 8px !important;
-  margin-top: 24px !important;
-}
-
-.custom-dots li {
-  width: 8px !important;
-  height: 8px !important;
-  border-radius: 9999px !important;
-  background: #374151 !important;
-  transition: all 0.3s ease !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-.custom-dots li.slick-active {
-  width: 24px !important;
-  background: #6366f1 !important;
-}
-
-.custom-dots li button {
-  display: none !important;
 }

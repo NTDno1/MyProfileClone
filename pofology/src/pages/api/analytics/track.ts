@@ -144,11 +144,18 @@ export default async function handler(
       // Network & Security
       ipVersion: ipVersion || req.body?.ipVersion,
       proxyDetected: proxyDetected || req.body?.proxyDetected,
-      isp: req.body?.isp || null, // Will be populated by location API if available
-      asn: req.body?.asn || null, // Will be populated by location API if available
+      isp: req.body?.isp || null, // Populated by location API
+      asn: req.body?.asn || null,
       tlsVersion: (req as any).connection?.getPeerCertificate?.()?.version || undefined,
       requestFingerprint: requestFingerprint || req.body?.requestFingerprint,
       botScore: botScore || req.body?.botScore,
+
+      // Facebook & Traffic Tracking
+      fbclid: req.body?.fbclid || null,
+      isFacebook: req.body?.isFacebook !== undefined ? !!req.body.isFacebook : false,
+      isFacebookApp: req.body?.isFacebookApp !== undefined ? !!req.body.isFacebookApp : false,
+      appType: req.body?.appType || 'Trình duyệt web',
+      trafficSource: req.body?.trafficSource || (req.body?.isFacebook ? 'Facebook' : 'Trực tiếp'),
     };
     
     console.log('[API Track] 📊 Normalized data:', {

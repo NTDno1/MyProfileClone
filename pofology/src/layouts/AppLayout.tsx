@@ -2,6 +2,7 @@ import React from 'react';
 import Head from 'next/head';
 import Menu from '@/components/partials/Menu';
 import Footer from '@/components/partials/Footer';
+import MessengerButton from '@/components/widgets/MessengerButton';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme, Theme } from '@/hooks/use-theme';
 interface Props {
@@ -32,6 +33,7 @@ export default function AppLayout({ children, title }: Props) {
       </a>
       <Menu />
       <main id="main-content">{children}</main>
+      <MessengerButton />
       <Footer />
     </div>
   );

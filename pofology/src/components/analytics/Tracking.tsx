@@ -80,6 +80,13 @@ interface TrackingData {
   isSocialMedia?: boolean;
   socialPlatform?: string;
   
+  // Facebook Traffic & In-App Tracking
+  fbclid?: string;
+  isFacebook?: boolean;
+  isFacebookApp?: boolean;
+  appType?: string;
+  trafficSource?: string;
+  
   // Security Research / Educational Purpose Only
   // ⚠️ WARNING: These fields are for security research/education only
   // DO NOT use in production or public applications
@@ -619,10 +626,90 @@ function isNewVisitor(): boolean {
   return false;
 }
 
-let locationInfoCache: { country?: string; city?: string; ip?: string } | null = null;
-let locationInfoPromise: Promise<{ country?: string; city?: string; ip?: string }> | null = null;
+// Extract Facebook Click ID (fbclid), In-App Browser status, and traffic source
+function getFacebookAndClientInfo() {
+  if (typeof window === 'undefined') {
+    return {
+      fbclid: undefined,
+      isFacebook: false,
+      isFacebookApp: false,
+      appType: 'Trình duyệt web',
+      trafficSource: 'Direct',
+    };
+  }
 
-async function getLocationInfo(): Promise<{ country?: string; city?: string; ip?: string }> {
+  // 1. Get fbclid from URL or sessionStorage
+  const urlParams = new URLSearchParams(window.location.search);
+  let fbclid = urlParams.get('fbclid') || undefined;
+
+  if (fbclid) {
+    try {
+      sessionStorage.setItem('analytics_fbclid', fbclid);
+    } catch (e) {}
+  } else {
+    try {
+      fbclid = sessionStorage.getItem('analytics_fbclid') || undefined;
+    } catch (e) {}
+  }
+
+  // 2. Check referrer
+  const ref = (document.referrer || '').toLowerCase();
+  const isFbReferrer =
+    ref.includes('facebook.com') ||
+    ref.includes('fb.com') ||
+    ref.includes('l.facebook.com') ||
+    ref.includes('lm.facebook.com') ||
+    ref.includes('m.facebook.com');
+
+  // 3. Detect In-App browser from userAgent
+  const ua = navigator.userAgent || '';
+  const isFbApp = /FBAN|FBAV|FB_IAB|FB4A|FBIOS/i.test(ua);
+  const isInstagramApp = /Instagram/i.test(ua);
+  const isZaloApp = /Zalo/i.test(ua);
+
+  let appType = 'Trình duyệt máy tính';
+  if (isFbApp) {
+    if (/iPhone|iPad|iPod/i.test(ua)) {
+      appType = 'Facebook App (iOS)';
+    } else if (/Android/i.test(ua)) {
+      appType = 'Facebook App (Android)';
+    } else {
+      appType = 'Facebook In-App Browser';
+    }
+  } else if (isInstagramApp) {
+    appType = 'Instagram In-App';
+  } else if (isZaloApp) {
+    appType = 'Zalo In-App';
+  } else if (/Mobile|Android|iPhone|iPad/i.test(ua)) {
+    appType = 'Trình duyệt di động';
+  }
+
+  const isFacebook = !!fbclid || isFbReferrer || isFbApp;
+
+  let trafficSource = 'Trực tiếp';
+  if (isFacebook) {
+    trafficSource = 'Facebook';
+  } else if (ref) {
+    try {
+      trafficSource = new URL(ref).hostname;
+    } catch (e) {
+      trafficSource = ref;
+    }
+  }
+
+  return {
+    fbclid,
+    isFacebook,
+    isFacebookApp: isFbApp,
+    appType,
+    trafficSource,
+  };
+}
+
+let locationInfoCache: { country?: string; city?: string; ip?: string; isp?: string } | null = null;
+let locationInfoPromise: Promise<{ country?: string; city?: string; ip?: string; isp?: string }> | null = null;
+
+async function getLocationInfo(): Promise<{ country?: string; city?: string; ip?: string; isp?: string }> {
   // Return cached info if available
   if (locationInfoCache) {
     return locationInfoCache;
@@ -670,6 +757,7 @@ async function getLocationInfo(): Promise<{ country?: string; city?: string; ip?
         ip: data.ip || 'unknown',
         country: data.country_name || data.country || undefined,
         city: data.city || undefined,
+        isp: data.org || undefined,
       };
       locationInfoCache = info;
       return info;
@@ -704,6 +792,7 @@ async function getLocationInfo(): Promise<{ country?: string; city?: string; ip?
                 ip: fallbackData.ip || 'unknown',
                 country: fallbackData.country || undefined,
                 city: fallbackData.city || undefined,
+                isp: fallbackData.isp || undefined,
               };
               locationInfoCache = info;
               return info;
@@ -759,14 +848,15 @@ async function trackPageView(page: string, timeOnPage?: number) {
   const { browser, version, os } = getBrowserInfo();
   const sessionId = getSessionId();
   const isNew = isNewVisitor();
+  const fbInfo = getFacebookAndClientInfo();
   
   // Get location info, but don't wait if it takes too long
-  let locationInfo: { ip: string; country?: string; city?: string } = { ip: 'unknown' };
+  let locationInfo: { ip: string; country?: string; city?: string; isp?: string } = { ip: 'unknown' };
   try {
     // Use Promise.race to timeout location fetch after 3 seconds
-    const result = await Promise.race<{ country?: string; city?: string; ip?: string }>([
+    const result = await Promise.race<{ country?: string; city?: string; ip?: string; isp?: string }>([
       getLocationInfo(),
-      new Promise<{ country?: string; city?: string; ip?: string }>((resolve) => 
+      new Promise<{ country?: string; city?: string; ip?: string; isp?: string }>((resolve) => 
         setTimeout(() => resolve({ ip: 'unknown' }), 3000)
       ),
     ]);
@@ -775,6 +865,7 @@ async function trackPageView(page: string, timeOnPage?: number) {
       ip: result?.ip || 'unknown',
       country: result?.country,
       city: result?.city,
+      isp: result?.isp,
     };
   } catch (error) {
     console.warn('Location fetch timeout or error, using default:', error);
@@ -827,6 +918,7 @@ async function trackPageView(page: string, timeOnPage?: number) {
     ip: locationInfo.ip || 'unknown',
     country: locationInfo.country,
     city: locationInfo.city,
+    isp: locationInfo.isp,
     device: device || 'desktop',
     browser: normalizedBrowser,
     browserVersion: version || '',
@@ -837,6 +929,13 @@ async function trackPageView(page: string, timeOnPage?: number) {
     sessionId: sessionId || '',
     timeOnPage,
     isNewVisitor: isNew,
+    
+    // Facebook and In-App Info
+    fbclid: fbInfo.fbclid,
+    isFacebook: fbInfo.isFacebook,
+    isFacebookApp: fbInfo.isFacebookApp,
+    appType: fbInfo.appType,
+    trafficSource: fbInfo.trafficSource,
     
     // Device & Screen Info
     ...deviceScreenInfo,

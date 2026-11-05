@@ -200,6 +200,65 @@ export default async function handler(
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
+    // Facebook-specific analytics
+    const facebookVisits = actualPageViews.filter(
+      (d) => d.isFacebook || !!d.fbclid || (d.referrer && d.referrer.toLowerCase().includes('facebook.com'))
+    );
+    const totalFacebookVisits = facebookVisits.length;
+    const uniqueFacebookVisitors = new Set(facebookVisits.map((d) => d.sessionId)).size;
+    const inAppBrowserCount = facebookVisits.filter(
+      (d) => d.isFacebookApp || (d.appType && d.appType.includes('Facebook App')) || (d.userAgent && /FBAN|FBAV/i.test(d.userAgent))
+    ).length;
+    const externalBrowserCount = Math.max(0, totalFacebookVisits - inAppBrowserCount);
+    const fbclidCount = facebookVisits.filter((d) => !!d.fbclid).length;
+
+    const fbPageViews = facebookVisits.reduce((acc: Record<string, number>, item) => {
+      acc[item.page] = (acc[item.page] || 0) + 1;
+      return acc;
+    }, {});
+    const topFacebookPages = Object.entries(fbPageViews)
+      .map(([page, views]) => ({ page, views }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 5);
+
+    const facebookSummary = {
+      totalFacebookVisits,
+      uniqueFacebookVisitors,
+      inAppBrowserCount,
+      externalBrowserCount,
+      fbclidCount,
+      topFacebookPages,
+    };
+
+    // Detailed recent visitors (last 50 visits)
+    const recentVisitors = actualPageViews
+      .slice()
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 50)
+      .map((item) => {
+        const isFb = item.isFacebook || !!item.fbclid || (item.referrer && item.referrer.toLowerCase().includes('facebook.com'));
+        const isFbApp = item.isFacebookApp || (item.userAgent && /FBAN|FBAV/i.test(item.userAgent));
+        return {
+          id: item._id ? item._id.toString() : item.sessionId,
+          timestamp: item.timestamp,
+          ip: item.ip,
+          city: item.city || 'Chưa rõ',
+          country: item.country || 'Việt Nam',
+          isp: item.isp || 'Chưa rõ',
+          device: item.device || 'desktop',
+          os: item.os || 'Unknown',
+          browser: item.browser || 'Unknown',
+          appType: item.appType || (isFbApp ? 'Facebook App' : (item.device === 'mobile' ? 'Trình duyệt di động' : 'Trình duyệt máy tính')),
+          isFacebook: isFb,
+          isFacebookApp: isFbApp,
+          fbclid: item.fbclid || undefined,
+          trafficSource: item.trafficSource || (isFb ? 'Facebook' : (item.referrer ? 'Web khác' : 'Trực tiếp')),
+          page: item.page,
+          timeOnPage: item.timeOnPage || 0,
+          referrer: item.referrer || '',
+        };
+      });
+
     const statsResult = {
       totalVisitors: uniqueIPs,
       totalPageViews,
@@ -210,6 +269,8 @@ export default async function handler(
       topDevices,
       topBrowsers,
       visitorsByDate,
+      facebookSummary,
+      recentVisitors,
     };
     
     console.log('[API Stats] ✅ Returning stats:', {

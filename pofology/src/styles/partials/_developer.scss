@@ -1866,6 +1866,137 @@
     font-size: 17px;
   }
 }
+/* --------------------------------------------------------------------------
+   Floating Facebook Messenger Widget
+   -------------------------------------------------------------------------- */
+.dev-messenger-widget {
+  position: fixed;
+  right: 22px;
+  bottom: 76px;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dev-messenger-btn {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00B2FE 0%, #006AFF 50%, #8A3FFC 100%);
+  color: #FFFFFF !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 18px rgba(0, 106, 255, 0.35);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  cursor: pointer;
+  text-decoration: none;
+
+  &:hover {
+    transform: scale(1.08) translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 106, 255, 0.5);
+    color: #FFFFFF !important;
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+.dev-messenger-icon {
+  font-size: 26px;
+  color: #FFFFFF;
+}
+
+.dev-messenger-online-pulse {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 12px;
+  height: 12px;
+  background-color: #22C55E;
+  border: 2px solid var(--surface, #FFFFFF);
+  border-radius: 50%;
+}
+
+.dev-messenger-tooltip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface, #FFFFFF);
+  color: var(--text, #181816);
+  border: 1px solid var(--border, #E2DFD7);
+  padding: 8px 12px;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  animation: messengerSlideIn 0.3s ease forwards;
+  max-width: 240px;
+}
+
+@keyframes messengerSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.dev-messenger-tooltip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dev-messenger-tooltip-badge {
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #16A34A;
+}
+
+.dev-messenger-tooltip-text {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--text, #181816);
+}
+
+.dev-messenger-tooltip-close {
+  background: transparent;
+  border: none;
+  color: var(--muted, #6E6C65);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  border-radius: 4px;
+
+  &:hover {
+    color: var(--text, #181816);
+  }
+}
+
+@media (max-width: 680px) {
+  .dev-messenger-widget {
+    bottom: 84px;
+    right: 16px;
+  }
+  .dev-messenger-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .dev-messenger-icon {
+    font-size: 24px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto !important;

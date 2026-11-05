@@ -67,6 +67,7 @@ export default async function handler(
               ip: data1.ip || ip,
               country: data1.country_name || data1.country || undefined,
               city: data1.city || undefined,
+              isp: data1.org || undefined,
             });
           }
         }
@@ -81,7 +82,7 @@ export default async function handler(
         const controller2 = new AbortController();
         const timeout2 = setTimeout(() => controller2.abort(), 3000);
         
-        const response2 = await fetch(`http://ip-api.com/json/${ip}?fields=status,message,country,countryCode,city,query`, {
+        const response2 = await fetch(`http://ip-api.com/json/${ip}?fields=status,message,country,countryCode,city,query,isp,org`, {
           signal: controller2.signal,
           headers: {
             'Accept': 'application/json',
@@ -99,6 +100,7 @@ export default async function handler(
               ip: data2.query || ip,
               country: data2.country || undefined,
               city: data2.city || undefined,
+              isp: data2.isp || data2.org || undefined,
             });
           }
         }

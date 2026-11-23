@@ -1,0 +1,136 @@
+{
+  "profile": {
+    "name": "NA 2HAND",
+    "subtitle": "LIFESTYLE",
+    "quote": "Fashion inspo for the girl who's always on the go ✨",
+    "avatar": "/uploads/girlfriend-1.jpg",
+    "verifiedBadge": true
+  },
+  "theme": {
+    "template": "template1",
+    "preset": "blush-rose",
+    "primaryColor": "#d97793",
+    "secondaryColor": "#f7d6e0",
+    "accentColor": "#b55672",
+    "bgType": "image-overlay",
+    "bgImage": "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1000&q=80",
+    "portraitBgImage": "/uploads/girlfriend-1.jpg",
+    "bgGradientStart": "#f6c4d2",
+    "bgGradientMid": "#e89ab2",
+    "bgGradientEnd": "#c8738e",
+    "bgOverlayColor": "#7a354b",
+    "bgOverlayOpacity": 35,
+    "bgBlur": 3,
+    "avatarFrame": "pearl-double",
+    "avatarSize": 164,
+    "buttonStyle": "frosted-light",
+    "buttonRadius": "pill",
+    "buttonBgColor": "#ffffff",
+    "buttonBgOpacity": 88,
+    "buttonTextColor": "#522938",
+    "textColor": "#ffffff",
+    "headingFont": "Cormorant Garamond",
+    "bodyFont": "Plus Jakarta Sans",
+    "uppercaseLinks": true,
+    "particleEffect": "bokeh",
+    "socialPosition": "bottom"
+  },
+  "links": [
+    {
+      "id": "link-1",
+      "title": "SHOPEE STORE",
+      "subtitle": "",
+      "url": "https://s.shopee.vn/8VAfrswNOG",
+      "icon": "shopee",
+      "badge": "HOT",
+      "shimmer": true,
+      "enabled": true,
+      "clicks": 1
+    },
+    {
+      "id": "link-2",
+      "title": "TIK TOK SHOP ",
+      "subtitle": "",
+      "url": "https://www.tiktok.com/@na2hand3?_r=1&_t=ZS-9BaJAm0XO3Y",
+      "icon": "tiktok",
+      "badge": "HOT",
+      "shimmer": true,
+      "enabled": true,
+      "clicks": 1
+    }
+  ],
+  "featuredCard": {
+    "enabled": true,
+    "title": "MY COLLECTION",
+    "subtitle": "Khám phá trọn bộ sưu tập yêu thích của mình",
+    "url": "https://www.tiktok.com/@na2hand154?_r=1&_t=ZS-9BaJQCZaRXR",
+    "image": "/uploads/girlfriend-2.jpg",
+    "clicks": 4
+  },
+  "socials": [
+    {
+      "id": "soc-1",
+      "platform": "facebook",
+      "label": "Facebook",
+      "url": "https://www.facebook.com/anganh.764617",
+      "enabled": true,
+      "clicks": 0
+    },
+    {
+      "id": "soc-2",
+      "platform": "instagram",
+      "label": "Instagram",
+      "url": "https://www.instagram.com/na2hand154?knvt=MWtpYmx1ajNucnE3ZQ%3D%3D&utm_source=qr",
+      "enabled": true,
+      "clicks": 0
+    },
+    {
+      "id": "soc-6",
+      "platform": "shopee",
+      "label": "Shopee",
+      "url": "https://s.shopee.vn/8VAfrswNOG",
+      "enabled": false,
+      "clicks": 0
+    },
+    {
+      "id": "soc-1795248409824",
+      "platform": "tiktok",
+      "label": "TikTok",
+      "url": "https://www.tiktok.com/@na2hand3?_r=1&_t=ZS-9BaJAm0XO3Y",
+      "enabled": true,
+      "clicks": 1
+    },
+    {
+      "id": "soc-1795321024788",
+      "platform": "tiktok",
+      "label": "TikTok",
+      "url": "https://www.tiktok.com/@na2hand154?_r=1&_t=ZS-9BaJQCZaRXR",
+      "enabled": true
+    },
+    {
+      "id": "soc-1795321028583",
+      "platform": "tiktok",
+      "label": "TikTok",
+      "url": "https://www.tiktok.com/@nadoithuong23?_r=1&_t=ZS-9BblQAXjLpU",
+      "enabled": true,
+      "clicks": 1
+    },
+    {
+      "id": "soc-1795321743507",
+      "platform": "threads",
+      "label": "Threads",
+      "url": "https://www.threads.com/@na2hand154?igshid=NTc4MTIwNjQ2YQ==",
+      "enabled": true,
+      "clicks": 1
+    }
+  ],
+  "seo": {
+    "pageTitle": "NA 2HAND ✨ LIFESTYLE",
+    "metaDescription": "Fashion inspo for the girl who's always on the go. Khám phá cửa hàng thời trang, bí quyết làm đẹp và bộ sưu tập mới nhất.",
+    "showShareButton": true,
+    "footerText": "Made with ♡ by My Love"
+  },
+  "analytics": {
+    "totalViews": 33
+  }
+}

@@ -1,0 +1,7 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+data/auth.json
+data/analytics-logs.json
+data/mongo-settings.json

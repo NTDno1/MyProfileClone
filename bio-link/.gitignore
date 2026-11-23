@@ -1,0 +1,6 @@
+node_modules/
+data/auth.json
+data/analytics-logs.json
+data/mongo-settings.json
+1WUpuk*.jpg
+uploads/1WUpuk*.jpg

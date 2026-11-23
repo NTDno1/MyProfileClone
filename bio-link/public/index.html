@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#e89ab2" id="meta-theme-color" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="format-detection" content="telephone=no" />
+  <title id="page-title">NA 2HAND ✨ Lifestyle & Fashion</title>
+  <meta name="description" id="meta-desc" content="Fashion inspo for the girl who's always on the go ✨ Shopee, TikTok Shop & Bộ sưu tập NA 2HAND." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://na2hand.com" />
+  <meta property="og:title" content="NA 2HAND ✨ Lifestyle & Fashion" />
+  <meta property="og:description" content="Fashion inspo for the girl who's always on the go ✨ Khám phá Shopee, TikTok Shop & Bộ sưu tập NA 2HAND." />
+  <meta property="og:image" content="https://na2hand.com/uploads/girlfriend-1.jpg" />
+
+  <!-- Google Fonts: Graceful Serif & Clean Feminine Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/css/styles.css?v=3" />
+  <style>
+    html, body, .bio-page-wrapper, .bio-phone-card {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar {
+      width: 0 !important;
+      height: 0 !important;
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="bio-page-wrapper" id="page-wrapper">
+    <!-- Ambient blurred background for desktop view -->
+    <div class="ambient-backdrop" id="ambient-backdrop"></div>
+    <div class="ambient-overlay"></div>
+
+    <!-- Mobile Phone Container -->
+    <main class="bio-phone-card template-template2 radius-pill uppercase-links" id="phone-card">
+      <!-- Background Image & Color Overlay -->
+      <div class="card-bg-image" id="card-bg-image"></div>
+      <div class="card-bg-overlay" id="card-bg-overlay"></div>
+      <div class="card-bg-vignette"></div>
+
+      <!-- Floating Soft Particles (Bokeh / Sakura / Sparkles) -->
+      <div class="particles-container" id="particles-container"></div>
+
+      <!-- Content Area -->
+      <div class="bio-content">
+        <!-- Top Utility Bar -->
+        <div class="top-utility-bar" id="top-utility-bar">
+          <button type="button" class="utility-btn" id="btn-open-share" title="Chia sẻ trang Bio" aria-label="Chia sẻ trang Bio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Top Social Icons (Used in Template 3 or when socialPosition = 'top' / 'both') -->
+        <nav class="socials-row socials-top" id="socials-top" aria-label="Mạng xã hội phía trên" style="display: none;"></nav>
+
+        <!-- Avatar Section (Template 1 & Template 2) -->
+        <div class="avatar-wrapper frame-organic fade-up" id="avatar-wrapper">
+          <div class="avatar-container">
+            <img
+              src="/uploads/girlfriend-1.jpg"
+              alt="Avatar"
+              class="avatar-img"
+              id="profile-avatar"
+            />
+          </div>
+        </div>
+
+        <!-- Profile Name & Subtitle -->
+        <header class="profile-header fade-up" style="animation-delay: 0.06s;">
+          <h1 class="profile-name" id="profile-name">NA 2HAND</h1>
+          <p class="profile-subtitle" id="profile-subtitle">LIFESTYLE</p>
+        </header>
+
+        <!-- Main Pill Links List -->
+        <section class="links-list" id="links-list" aria-label="Danh sách liên kết"></section>
+
+        <!-- Bio Tagline / Quote -->
+        <p class="bio-quote fade-up" id="profile-quote" style="animation-delay: 0.25s;">
+          Fashion inspo for the girl who's always on the go
+        </p>
+
+        <!-- Featured Collection Banner Card (Canva Template 3 style or optional on any template) -->
+        <a
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="featured-card fade-up"
+          id="featured-card"
+          style="display: none; animation-delay: 0.3s;"
+        >
+          <div class="featured-card-bg" id="featured-card-bg"></div>
+          <div class="featured-card-overlay" id="featured-card-overlay"></div>
+          <div class="featured-card-content">
+            <span class="featured-card-title" id="featured-card-title">GET MY ENTIRE COLLECTION</span>
+            <span class="featured-card-subtitle" id="featured-card-subtitle"></span>
+          </div>
+        </a>
+
+        <!-- Bottom Social Icons (Used in Template 1 & 2 or when socialPosition = 'bottom' / 'both') -->
+        <nav class="socials-row socials-bottom fade-up" id="socials-bottom" aria-label="Mạng xã hội phía dưới" style="animation-delay: 0.35s;"></nav>
+
+        <!-- Footer -->
+        <footer class="bio-footer" id="bio-footer">Made with ♡ by My Love</footer>
+      </div>
+    </main>
+  </div>
+
+  <!-- Share Bio Modal -->
+  <div class="share-modal-backdrop" id="share-modal">
+    <div class="share-modal-card">
+      <h3 style="font-family: var(--heading-font); font-size: 1.5rem; margin-bottom: 6px; color: #3d1e29;">Chia sẻ Bio Link ✨</h3>
+      <p style="font-size: 0.82rem; color: #777; margin-bottom: 16px;">Sao chép đường dẫn để gắn lên tiểu sử Instagram, TikTok, Facebook của bạn</p>
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <input
+          type="text"
+          id="share-url-input"
+          readonly
+          style="flex: 1; padding: 10px 14px; border-radius: 12px; border: 1px solid #ead5dc; font-size: 0.82rem; background: #fdf8fa; color: #444; outline: none;"
+        />
+        <button
+          type="button"
+          id="btn-copy-share-url"
+          style="padding: 10px 16px; border-radius: 12px; border: none; background: var(--primary-color); color: #fff; font-weight: 600; font-size: 0.82rem; cursor: pointer;"
+        >
+          Copy
+        </button>
+      </div>
+      <div style="display: flex; justify-content: center; gap: 10px;">
+        <a
+          href="/admin"
+          style="padding: 9px 16px; border-radius: 12px; border: 1px solid #e5d0d7; color: #6e4553; text-decoration: none; font-size: 0.78rem; font-weight: 500;"
+        >
+          ⚙️ Vào trang Quản trị
+        </a>
+        <button
+          type="button"
+          id="btn-close-share"
+          style="padding: 9px 18px; border-radius: 12px; border: none; background: #f1e8eb; color: #4a2c36; font-size: 0.78rem; font-weight: 600; cursor: pointer;"
+        >
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/icons.js?v=3"></script>
+  <script src="/js/bio.js?v=3"></script>
+</body>
+</html>

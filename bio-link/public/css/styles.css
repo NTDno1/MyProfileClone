@@ -1,0 +1,856 @@
+/* ==========================================================================
+   FEMININE CANVA LINK-IN-BIO STYLESHEET
+   Mobile-First • Zero Scrollbars • True-to-Life Canva Proportions
+   ========================================================================== */
+
+:root {
+  --primary-color: #d97793;
+  --secondary-color: #f7d6e0;
+  --accent-color: #b55672;
+  --bg-grad-start: #f6c4d2;
+  --bg-grad-mid: #e89ab2;
+  --bg-grad-end: #c8738e;
+  --bg-overlay-color: #7a354b;
+  --bg-overlay-opacity: 0.35;
+  --bg-blur: 3px;
+  --btn-bg-rgba: rgba(255, 255, 255, 0.88);
+  --btn-text-color: #522938;
+  --text-color: #ffffff;
+  --heading-font: 'Cormorant Garamond', Georgia, serif;
+  --body-font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --avatar-size: 118px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+/* Completely hide scrollbars on all elements & browsers (Windows Chrome/Edge/Firefox/Safari) */
+*::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.bio-page-wrapper::-webkit-scrollbar,
+.bio-phone-card::-webkit-scrollbar {
+  width: 0px !important;
+  height: 0px !important;
+  display: none !important;
+  background: transparent !important;
+}
+
+html {
+  width: 100%;
+  height: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  overflow-x: clip;
+  scrollbar-width: none !important;
+}
+
+body {
+  width: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+  font-family: var(--body-font);
+  color: var(--text-color);
+  background: var(--bg-grad-end);
+  overflow-x: clip;
+  overflow-y: visible;
+  overscroll-behavior-y: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scrollbar-width: none !important;
+}
+
+/* Ambient Desktop Backdrop */
+.bio-page-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  overflow-x: hidden;
+  background: linear-gradient(145deg, var(--bg-grad-start) 0%, var(--bg-grad-mid) 50%, var(--bg-grad-end) 100%);
+}
+
+.ambient-backdrop {
+  position: fixed;
+  inset: -30px;
+  background-size: cover;
+  background-position: center 25%;
+  filter: blur(28px) saturate(1.2);
+  opacity: 0.65;
+  z-index: 0;
+  pointer-events: none;
+  transition: background-image 0.5s ease;
+}
+
+.ambient-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 50% 25%, rgba(255, 255, 255, 0.18), rgba(0, 0, 0, 0.32));
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Main Mobile Container - Full screen edge-to-edge on all mobile phones */
+.bio-phone-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden; /* Prevents inner background layers from creating a second scrollbar */
+  background: linear-gradient(165deg, var(--bg-grad-start) 0%, var(--bg-grad-mid) 48%, var(--bg-grad-end) 100%);
+  transition: background 0.35s ease;
+}
+
+/* On Desktop / Tablet screens (>= 541px), style as an elegant floating phone frame */
+@media (min-width: 541px) {
+  body:not(.is-iframe-preview) .bio-page-wrapper {
+    padding: 20px 16px;
+    align-items: center;
+  }
+
+  body:not(.is-iframe-preview) .bio-phone-card {
+    max-width: 400px;
+    min-height: 760px;
+    max-height: 92dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-radius: 44px;
+    box-shadow:
+      0 25px 70px -15px rgba(0, 0, 0, 0.35),
+      0 0 0 10px rgba(255, 255, 255, 0.22),
+      inset 0 0 0 1.5px rgba(255, 255, 255, 0.55);
+  }
+}
+
+/* In iframe preview mode inside Admin: single scroll container, zero scrollbars */
+body.is-iframe-preview {
+  overflow-x: clip !important;
+  overflow-y: visible !important;
+}
+body.is-iframe-preview .bio-page-wrapper {
+  padding: 0 !important;
+  min-height: 100dvh !important;
+  overflow: clip !important;
+}
+body.is-iframe-preview .bio-phone-card {
+  max-width: 100% !important;
+  min-height: 100dvh !important;
+  max-height: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: clip !important;
+}
+
+/* Card Background Layers */
+.card-bg-image {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 25%;
+  background-repeat: no-repeat;
+  filter: blur(var(--bg-blur));
+  transform: scale(1.05) translateZ(0);
+  z-index: 0;
+  pointer-events: none;
+  transition: background-image 0.4s ease, filter 0.3s ease;
+}
+
+/* Template 3 uses a sharp editorial portrait background framed nicely on the face */
+.template-template3 .card-bg-image {
+  filter: blur(0px);
+  transform: scale(1) translateZ(0);
+  background-position: center 22%;
+}
+
+.card-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-overlay-color);
+  opacity: var(--bg-overlay-opacity);
+  z-index: 1;
+  pointer-events: none;
+  transition: background 0.3s ease, opacity 0.3s ease;
+}
+
+/* Soft feather / bokeh vignette layer */
+.card-bg-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.25) 0%, transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(255, 255, 255, 0.2) 0%, transparent 50%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.16) 45%, rgba(0, 0, 0, 0.45) 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Floating Particles Layer (Bokeh / Sakura / Sparkles) */
+.particles-container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.particle-bokeh {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 70%);
+  will-change: transform, opacity;
+  animation: floatBokeh linear infinite;
+}
+
+.particle-sakura {
+  position: absolute;
+  background: linear-gradient(135deg, rgba(255, 230, 238, 0.85), rgba(255, 182, 203, 0.65));
+  border-radius: 150% 0 150% 0;
+  box-shadow: 0 2px 6px rgba(255, 182, 193, 0.3);
+  will-change: transform, opacity;
+  animation: fallSakura linear infinite;
+}
+
+.particle-sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.85);
+  will-change: transform, opacity;
+  animation: twinkleSparkle ease-in-out infinite;
+}
+
+@keyframes floatBokeh {
+  0% { transform: translate3d(0, 20px, 0) scale(0.9); opacity: 0; }
+  30% { opacity: 0.65; }
+  70% { opacity: 0.55; }
+  100% { transform: translate3d(0, -120px, 0) scale(1.15); opacity: 0; }
+}
+
+@keyframes fallSakura {
+  0% { transform: translate3d(0, -10%, 0) rotate(0deg); opacity: 0; }
+  15% { opacity: 0.85; }
+  85% { opacity: 0.75; }
+  100% { transform: translate3d(45px, 900px, 0) rotate(360deg); opacity: 0; }
+}
+
+@keyframes twinkleSparkle {
+  0%, 100% { transform: scale(0.4); opacity: 0.15; }
+  50% { transform: scale(1.25); opacity: 0.95; }
+}
+
+/* Card Inner Content - Proportionally fitted to a real phone screen */
+.bio-content {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: max(16px, calc(12px + env(safe-area-inset-top, 0px)));
+  padding-bottom: max(18px, calc(14px + env(safe-area-inset-bottom, 0px)));
+  padding-left: max(22px, calc(18px + env(safe-area-inset-left, 0px)));
+  padding-right: max(22px, calc(18px + env(safe-area-inset-right, 0px)));
+}
+
+/* Floating Top-Right Share Button (Does not push vertical layout down!) */
+.top-utility-bar {
+  position: absolute;
+  top: max(14px, calc(10px + env(safe-area-inset-top, 0px)));
+  right: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+}
+
+.utility-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.25s ease;
+}
+
+.utility-btn:hover, .utility-btn:active {
+  background: rgba(255, 255, 255, 0.38);
+  transform: scale(1.06);
+}
+
+.utility-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ==========================================================================
+   AVATAR SECTION (Canva Template 1, 2 & 3)
+   ========================================================================== */
+.avatar-wrapper {
+  position: relative;
+  margin-top: 14px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Template 3 hides the small circular avatar because the whole background is the portrait! */
+.template-template3 .avatar-wrapper {
+  display: none;
+}
+
+.template-template3 .profile-header {
+  margin-top: 68px;
+}
+
+.avatar-container {
+  position: relative;
+  width: clamp(96px, 28vw, var(--avatar-size));
+  height: clamp(96px, 28vw, var(--avatar-size));
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 22%;
+  border-radius: 50%;
+  display: block;
+  background: var(--secondary-color);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.avatar-wrapper:hover .avatar-img {
+  transform: scale(1.03);
+}
+
+/* Frame Style 1: Circle (Canva Template 1) */
+.frame-circle .avatar-img {
+  border: 3px solid rgba(255, 255, 255, 0.78);
+}
+
+/* Frame Style 2: Organic Tilted White Blob Behind Avatar (Canva Template 2!) */
+.frame-organic::before {
+  content: '';
+  position: absolute;
+  inset: -6px -9px -6px -9px;
+  background: rgba(255, 255, 255, 0.86);
+  border-radius: 54% 46% 52% 48% / 46% 54% 46% 54%;
+  transform: rotate(-28deg) scale(1.03, 0.94);
+  z-index: 1;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.14);
+  transition: transform 0.5s ease;
+}
+
+.frame-organic:hover::before {
+  transform: rotate(-18deg) scale(1.05, 0.95);
+}
+
+/* Frame Style 3: Soft Glow Ring */
+.frame-glow-ring .avatar-img {
+  border: 3.5px solid #ffffff;
+  box-shadow:
+    0 0 0 6px rgba(255, 255, 255, 0.25),
+    0 12px 32px rgba(0, 0, 0, 0.25);
+}
+
+/* Frame Style 4: Double Pearl */
+.frame-pearl-double::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(255, 255, 255, 0.85);
+  animation: spinSlow 28s linear infinite;
+}
+.frame-pearl-double .avatar-img {
+  border: 3px solid rgba(255, 255, 255, 0.92);
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   PROFILE HEADER (Name & Subtitle)
+   ========================================================================== */
+.profile-header {
+  text-align: center;
+  margin-bottom: 16px;
+  width: 100%;
+  padding: 0 4px;
+}
+
+.profile-name {
+  font-family: var(--heading-font);
+  font-size: clamp(1.6rem, 6.4vw, 1.95rem);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 1.15;
+  color: var(--text-color);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.28);
+  margin-bottom: 5px;
+  word-break: break-word;
+}
+
+.template-template3 .profile-name {
+  font-size: clamp(1.75rem, 6.8vw, 2.15rem);
+  letter-spacing: 0.08em;
+}
+
+.profile-subtitle {
+  font-family: var(--body-font);
+  font-size: clamp(0.75rem, 3.1vw, 0.83rem);
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  color: var(--text-color);
+  opacity: 0.95;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ==========================================================================
+   BIO LINKS LIST (Sleek Canva Pill Buttons - No Badge Overlap!)
+   ========================================================================== */
+.links-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin-bottom: 14px;
+}
+
+.bio-link-btn {
+  position: relative;
+  width: 100%;
+  min-height: 46px;
+  padding: 11px 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: var(--btn-text-color);
+  background: var(--btn-bg-rgba);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    0 6px 18px -4px rgba(0, 0, 0, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  transition: transform 0.22s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.22s ease;
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+/* Button Radius Variants */
+.radius-pill .bio-link-btn {
+  border-radius: 9999px;
+}
+.radius-rounded .bio-link-btn {
+  border-radius: 18px;
+}
+.radius-soft .bio-link-btn {
+  border-radius: 10px;
+}
+
+/* Button Style Variants */
+.btn-style-solid-theme .bio-link-btn {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 8px 22px -4px rgba(0, 0, 0, 0.22);
+}
+
+.btn-style-glass-tint .bio-link-btn {
+  background: rgba(255, 255, 255, 0.24) !important;
+  color: #ffffff !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.65);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-style-outline-pearl .bio-link-btn {
+  background: rgba(0, 0, 0, 0.16) !important;
+  color: #ffffff !important;
+  border: 1.8px solid rgba(255, 255, 255, 0.9);
+}
+
+@media (hover: hover) {
+  .bio-link-btn:hover {
+    transform: translateY(-2px) scale(1.012);
+    box-shadow:
+      0 12px 26px -5px rgba(0, 0, 0, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  }
+}
+
+.bio-link-btn:active {
+  transform: scale(0.978);
+}
+
+/* Shimmer sweep animation */
+.bio-link-btn.has-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 65%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.45),
+    transparent
+  );
+  transform: skewX(-22deg);
+  animation: shimmerSweep 3.8s infinite;
+  pointer-events: none;
+}
+
+@keyframes shimmerSweep {
+  0% { left: -120%; }
+  45%, 100% { left: 160%; }
+}
+
+.link-icon-left {
+  position: absolute;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  opacity: 0.88;
+  flex-shrink: 0;
+}
+
+.link-icon-left svg {
+  width: 17px;
+  height: 17px;
+}
+
+.link-text-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+}
+
+.link-title {
+  font-size: clamp(0.8rem, 3.3vw, 0.86rem);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 1.22;
+  word-break: break-word;
+}
+
+.uppercase-links .link-title {
+  text-transform: uppercase;
+}
+
+.link-subtitle {
+  font-size: clamp(0.66rem, 2.6vw, 0.71rem);
+  opacity: 0.76;
+  margin-top: 2px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.28;
+}
+
+/* Cute Badge (HOT / NEW / FREE) */
+.link-badge {
+  position: absolute;
+  right: 12px;
+  padding: 2.5px 7.5px;
+  border-radius: 999px;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: var(--primary-color);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+}
+
+.btn-style-solid-theme .link-badge {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--primary-color);
+}
+
+/* ==========================================================================
+   QUOTE / TAGLINE SECTION
+   ========================================================================== */
+.bio-quote {
+  text-align: center;
+  font-size: clamp(0.76rem, 3.1vw, 0.82rem);
+  line-height: 1.45;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--text-color);
+  opacity: 0.95;
+  max-width: 280px;
+  margin: 2px auto 14px;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.32);
+}
+
+/* ==========================================================================
+   FEATURED COLLECTION BANNER CARD (Canva Template 3 Bottom Card)
+   ========================================================================== */
+.featured-card {
+  position: relative;
+  width: 100%;
+  height: 92px;
+  flex-shrink: 0;
+  border-radius: 16px;
+  border: 1.8px solid rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: #ffffff;
+  margin-bottom: 14px;
+  box-shadow: 0 10px 26px -6px rgba(0, 0, 0, 0.3);
+  touch-action: manipulation;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+@media (hover: hover) {
+  .featured-card:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 14px 32px -6px rgba(0, 0, 0, 0.38);
+  }
+  .featured-card:hover .featured-card-bg {
+    transform: scale(1.07);
+  }
+}
+
+.featured-card:active {
+  transform: scale(0.982);
+}
+
+.featured-card-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 24%;
+  transition: transform 0.5s ease;
+}
+
+.featured-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(19, 85, 110, 0.72) 0%,
+    rgba(0, 0, 0, 0.32) 50%,
+    rgba(19, 85, 110, 0.72) 100%
+  );
+}
+
+.featured-card-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 0 14px;
+}
+
+.featured-card-title {
+  display: block;
+  font-size: clamp(0.8rem, 3.3vw, 0.88rem);
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  line-height: 1.32;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.featured-card-subtitle {
+  display: block;
+  font-size: clamp(0.66rem, 2.7vw, 0.71rem);
+  opacity: 0.92;
+  margin-top: 2px;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+
+/* ==========================================================================
+   SOCIAL ICONS ROW (Circular White Buttons)
+   ========================================================================== */
+.socials-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 4px 0 10px;
+}
+
+.socials-row.socials-top {
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+.social-circle-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--primary-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.18);
+  touch-action: manipulation;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (hover: hover) {
+  .social-circle-btn:hover {
+    transform: translateY(-3px) scale(1.1);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.24);
+  }
+}
+
+.social-circle-btn:active {
+  transform: scale(0.92);
+}
+
+.social-circle-btn svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* Footer Text */
+.bio-footer {
+  margin-top: auto;
+  padding-top: 6px;
+  text-align: center;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+  color: var(--text-color);
+}
+
+/* ==========================================================================
+   DEVICE-SPECIFIC RESPONSIVE TUNING (iPhone SE/Mini, Pro Max, Androids)
+   ========================================================================== */
+
+/* Compact phones: iPhone SE, iPhone 12/13 mini (<= 360px) */
+@media (max-width: 360px) {
+  .bio-content {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .links-list {
+    gap: 9px;
+  }
+  .bio-link-btn {
+    min-height: 43px;
+    padding: 9px 42px;
+  }
+  .socials-row {
+    gap: 12px;
+  }
+  .social-circle-btn {
+    width: 38px;
+    height: 38px;
+  }
+  .featured-card {
+    height: 84px;
+  }
+}
+
+/* Large phones: iPhone 14/15/16 Plus & Pro Max, Samsung Ultra (412px - 540px) */
+@media (min-width: 412px) and (max-width: 540px) {
+  .bio-content {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  .bio-link-btn {
+    min-height: 50px;
+  }
+  .featured-card {
+    height: 102px;
+  }
+}
+
+/* Entrance Animations */
+.fade-up {
+  animation: fadeUpAnim 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fadeUpAnim {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Share Modal */
+.share-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 50;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.share-modal-backdrop.active {
+  display: flex;
+}
+
+.share-modal-card {
+  width: 100%;
+  max-width: 340px;
+  background: #ffffff;
+  color: #333;
+  border-radius: 26px;
+  padding: 24px;
+  text-align: center;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  animation: fadeUpAnim 0.25s ease-out;
+}

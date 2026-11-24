@@ -2884,11 +2884,11 @@ body[data-theme='light'],
   }
 }
 
-/* Mobile Back-to-Top Floating Button */
+/* Floating Back-to-Top Button (Positioned cleanly above Zalo & Messenger stack) */
 .dev-mobile-back-to-top {
   position: fixed;
-  bottom: 84px;
-  right: 16px;
+  bottom: 146px;
+  right: 26px;
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -2902,7 +2902,7 @@ body[data-theme='light'],
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  z-index: 90;
+  z-index: 88;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   opacity: 0;
@@ -2923,6 +2923,13 @@ body[data-theme='light'],
     border-color: var(--figma-primary);
     transform: translateY(-4px) scale(1.12);
     box-shadow: 0 12px 32px var(--figma-primary-glow);
+  }
+}
+
+@media (max-width: 768px) {
+  .dev-mobile-back-to-top {
+    bottom: 202px;
+    right: 16px;
   }
 }
 

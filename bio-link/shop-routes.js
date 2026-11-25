@@ -242,10 +242,10 @@ const DEFAULT_SHOP_SETTINGS = {
   qrImageUrl: '/media/bio-link/cute-qr-placeholder.svg',
   bankBin: '970422', // MB Bank
   bankName: 'MB Bank (Ngân hàng Quân Đội)',
-  bankAccountNo: '0983877462',
+  bankAccountNo: '0359427135',
   bankAccountName: 'NA 2HAND SHOP',
   qrNotePrefix: 'NA2HAND',
-  zaloPhone: '0983877462',
+  zaloPhone: '0359427135',
   messengerUrl: 'https://www.facebook.com/anganh.764617',
   shopeeShopUrl: 'https://s.shopee.vn/8VAfrswNOG',
   tiktokShopUrl: 'https://www.tiktok.com/@na2hand3',
@@ -338,7 +338,22 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
           orders: remote.store.orders || local.orders,
           reviews: remote.store.reviews || local.reviews
         };
+        let settingsChanged = false;
+        if (!merged.settings.zaloPhone || merged.settings.zaloPhone === '0983877462') {
+          merged.settings.zaloPhone = '0359427135';
+          settingsChanged = true;
+        }
+        if (merged.settings.bankAccountNo === '0983877462') {
+          merged.settings.bankAccountNo = '0359427135';
+          settingsChanged = true;
+        }
         saveLocalShopData(merged);
+        if (settingsChanged) {
+          await col.updateOne(
+            { _id: 'na2hand_main_store' },
+            { $set: { store: merged, updatedAt: new Date() } }
+          );
+        }
         return merged;
       } else {
         await col.updateOne(

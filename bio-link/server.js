@@ -120,8 +120,30 @@ async function initMongoConnection(customUri, customDbName) {
     const remoteDoc = await col.findOne({ _id: 'main_bio_config' });
     if (remoteDoc && remoteDoc.config) {
       const migrated = rewriteLegacyBioUrls(remoteDoc.config);
+      let cfgChanged = migrated.changed;
+      if (!Array.isArray(migrated.data.socials)) migrated.data.socials = [];
+      const zaloIdx = migrated.data.socials.findIndex((s) => s && s.platform === 'zalo');
+      if (zaloIdx === -1) {
+        migrated.data.socials.push({
+          id: 'soc-zalo',
+          platform: 'zalo',
+          label: 'Zalo',
+          url: 'https://zalo.me/0359427135',
+          enabled: true,
+          clicks: 0
+        });
+        cfgChanged = true;
+      } else if (
+        !migrated.data.socials[zaloIdx].url ||
+        migrated.data.socials[zaloIdx].url === 'https://zalo.me' ||
+        migrated.data.socials[zaloIdx].url.includes('0983877462')
+      ) {
+        migrated.data.socials[zaloIdx].url = 'https://zalo.me/0359427135';
+        migrated.data.socials[zaloIdx].enabled = true;
+        cfgChanged = true;
+      }
       fs.writeFileSync(CONFIG_FILE, JSON.stringify(migrated.data, null, 2), 'utf8');
-      if (migrated.changed) {
+      if (cfgChanged) {
         await col.updateOne(
           { _id: 'main_bio_config' },
           { $set: { config: migrated.data, updatedAt: new Date() } }
@@ -273,7 +295,7 @@ const DEFAULT_CONFIG = {
     { id: 'soc-4', platform: 'mail', label: 'Email', url: 'mailto:hello@hikarimaeve.com', enabled: true, clicks: 0 },
     { id: 'soc-5', platform: 'tiktok', label: 'TikTok', url: 'https://tiktok.com', enabled: false, clicks: 0 },
     { id: 'soc-6', platform: 'shopee', label: 'Shopee', url: 'https://shopee.vn', enabled: false, clicks: 0 },
-    { id: 'soc-7', platform: 'zalo', label: 'Zalo', url: 'https://zalo.me', enabled: false, clicks: 0 },
+    { id: 'soc-7', platform: 'zalo', label: 'Zalo', url: 'https://zalo.me/0359427135', enabled: true, clicks: 0 },
     { id: 'soc-8', platform: 'threads', label: 'Threads', url: 'https://threads.net', enabled: false, clicks: 0 }
   ],
   seo: {

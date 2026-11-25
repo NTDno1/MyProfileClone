@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { MongoClient } = require('mongodb');
+const { registerShopRoutes } = require('./shop-routes');
 
 const app = express();
 const PORT = process.env.PORT || 3005;
@@ -27,11 +28,11 @@ app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '30d' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- MONGODB CONNECTION (Shared with Pofology project) ---
+// --- MONGODB ATLAS CONNECTION (Dedicated Database `na2hand_shop` - Separated from Pofology!) ---
 const DEFAULT_MONGO_URI =
   process.env.MONGODB_URI ||
   'mongodb+srv://datt19112001_db_user:1@mongodbdatnt.bc8xywz.mongodb.net/?retryWrites=true&w=majority';
-const DEFAULT_DB_NAME = process.env.MONGODB_DB || 'signalr_chat';
+const DEFAULT_DB_NAME = process.env.MONGODB_DB || 'na2hand_shop';
 
 let mongoClient = null;
 let mongoDb = null;
@@ -42,9 +43,10 @@ function loadMongoSettings() {
   try {
     if (fs.existsSync(MONGO_SETTINGS_FILE)) {
       const parsed = JSON.parse(fs.readFileSync(MONGO_SETTINGS_FILE, 'utf8'));
+      const savedDb = parsed.dbName && parsed.dbName !== 'signalr_chat' ? parsed.dbName : DEFAULT_DB_NAME;
       return {
         uri: parsed.uri || DEFAULT_MONGO_URI,
-        dbName: parsed.dbName || DEFAULT_DB_NAME
+        dbName: savedDb
       };
     }
   } catch (e) {}
@@ -67,18 +69,22 @@ async function initMongoConnection(customUri, customDbName) {
     mongoClient = new MongoClient(uri, {
       retryWrites: true,
       w: 'majority',
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000,
-      socketTimeoutMS: 20000,
-      maxPoolSize: 5
+      serverSelectionTimeoutMS: 7000,
+      connectTimeoutMS: 7000,
+      socketTimeoutMS: 30000,
+      maxPoolSize: 8
     });
     await mongoClient.connect();
+    mongoClient.on('close', () => {
+      mongoConnected = false;
+      mongoDb = null;
+    });
     mongoDb = mongoClient.db(dbName);
     mongoConnected = true;
     mongoErrorMsg = '';
-    console.log(`✅ [MongoDB] Đã kết nối tới database "${dbName}" (chung với Pofology)`);
+    console.log(`✅ [MongoDB Atlas] Đã kết nối tới database riêng "${dbName}" (tách biệt hoàn toàn khỏi Pofology)`);
 
-    // Sync config between MongoDB and local disk
+    // Sync Bio config between MongoDB `na2hand_shop` and local disk
     const col = mongoDb.collection('bio_config');
     const remoteDoc = await col.findOne({ _id: 'main_bio_config' });
     if (remoteDoc && remoteDoc.config) {
@@ -91,15 +97,41 @@ async function initMongoConnection(customUri, customDbName) {
         { upsert: true }
       );
     }
+
+    // Write Keep-Alive heartbeat into `na2hand_shop`
+    await mongoDb.collection('keepalive_heartbeats').updateOne(
+      { _id: 'na2hand_keepalive' },
+      { $set: { lastPingAt: new Date() }, $inc: { pingCount: 1 } },
+      { upsert: true }
+    );
+
     return true;
   } catch (err) {
     mongoConnected = false;
     mongoDb = null;
-    mongoErrorMsg = err.message || 'Không thể kết nối MongoDB';
-    console.warn(`⚠️ [MongoDB] Chưa kết nối được (${mongoErrorMsg}). Đang dùng cơ chế lưu trữ thực tế trên ổ cứng & đồng bộ tự động.`);
+    mongoErrorMsg = err.message || 'Không thể kết nối MongoDB Atlas';
+    console.warn(`⚠️ [MongoDB] Chưa kết nối được (${mongoErrorMsg}). Hệ thống sẽ tự động thử kết nối lại định kỳ.`);
     return false;
   }
 }
+
+// Auto-reconnect & Keep-Alive scheduler every 5 minutes if disconnected, or every 6 hours if connected
+setInterval(async () => {
+  if (!mongoConnected || !mongoDb) {
+    await initMongoConnection();
+  } else {
+    try {
+      await mongoDb.collection('keepalive_heartbeats').updateOne(
+        { _id: 'na2hand_keepalive' },
+        { $set: { lastPingAt: new Date() }, $inc: { pingCount: 1 } },
+        { upsert: true }
+      );
+    } catch {
+      mongoConnected = false;
+      mongoDb = null;
+    }
+  }
+}, 5 * 60 * 1000);
 
 // Default configuration with 100% REAL counters starting at 0
 const DEFAULT_CONFIG = {
@@ -376,31 +408,15 @@ async function recordAnalyticsEvent(req, eventData) {
   logs.unshift(logItem);
   saveLocalLogs(logs);
 
-  // 2. Save to MongoDB (both bio_analytics and pofology's analytics collection!)
+  // 2. Save strictly to dedicated `na2hand_shop.bio_analytics` collection on MongoDB Atlas
   if (mongoConnected && mongoDb) {
     try {
       await mongoDb.collection('bio_analytics').insertOne({
         ...logItem,
         timestamp: new Date(logItem.timestamp)
       });
-      // Also write compatible document to pofology's `analytics` collection
-      await mongoDb.collection('analytics').insertOne({
-        ip: logItem.ip,
-        device: logItem.device.toLowerCase().includes('desktop') || logItem.device.includes('Máy tính') ? 'desktop' : 'mobile',
-        browser: logItem.browser,
-        os: logItem.os,
-        page: logItem.type === 'view' ? '/bio' : `/bio/click/${logItem.targetTitle}`,
-        referrer: logItem.referrer,
-        userAgent: logItem.userAgent,
-        fbclid: logItem.fbclid,
-        isFacebook: logItem.trafficSource === 'Facebook',
-        isFacebookApp: logItem.browser.includes('Facebook') || logItem.browser.includes('Messenger'),
-        appType: logItem.browser,
-        trafficSource: logItem.trafficSource,
-        timestamp: new Date(logItem.timestamp)
-      });
     } catch (err) {
-      console.warn('[MongoDB] Lỗi ghi sự kiện analytics:', err.message);
+      console.warn('[MongoDB] Lỗi ghi sự kiện bio_analytics:', err.message);
     }
   }
 
@@ -725,7 +741,22 @@ app.post('/api/upload', requireAuth, (req, res) => {
   }
 });
 
+// Register Full E-Commerce Shop Routes (MongoDB `na2hand_shop`)
+registerShopRoutes(app, {
+  dataDir: DATA_DIR,
+  getMongoDb: () => (mongoConnected ? mongoDb : null),
+  requireAuth
+});
+
 // Page Routes
+app.get('/shop', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'shop.html'));
+});
+
+app.get('/shop-admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'shop-admin.html'));
+});
+
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
@@ -737,7 +768,9 @@ app.get('*', (req, res) => {
 // Initialize MongoDB connection and start server
 initMongoConnection().finally(() => {
   app.listen(PORT, () => {
-    console.log(`🌸 Bio Link Server đang chạy tại: http://localhost:${PORT}`);
-    console.log(`✨ Trang Quản trị (Admin):       http://localhost:${PORT}/admin`);
+    console.log(`🌸 Bio Link đang chạy tại:        http://localhost:${PORT}`);
+    console.log(`🛍️ Shop Bán Hàng Online (Cute):   http://localhost:${PORT}/shop`);
+    console.log(`✨ Quản trị Bio Link:             http://localhost:${PORT}/admin`);
+    console.log(`🎀 Quản trị Cửa Hàng Online:      http://localhost:${PORT}/shop-admin`);
   });
 });

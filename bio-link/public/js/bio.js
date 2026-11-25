@@ -216,7 +216,12 @@
       a.className = `bio-link-btn fade-up ${link.shimmer ? 'has-shimmer' : ''}`;
       a.style.animationDelay = `${0.1 + idx * 0.05}s`;
       a.href = link.url || '#';
-      if (!String(link.url || '').startsWith('#') && !String(link.url || '').startsWith('mailto:') && !String(link.url || '').startsWith('tel:')) {
+      if (
+        !String(link.url || '').startsWith('#') &&
+        !String(link.url || '').startsWith('/') &&
+        !String(link.url || '').startsWith('mailto:') &&
+        !String(link.url || '').startsWith('tel:')
+      ) {
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
       }

@@ -45,7 +45,7 @@ async function getConnectedClient(): Promise<MongoClient> {
       // Reset cached promise on failure so the next request automatically retries!
       cachedClient = null;
       connectingPromise = null;
-      newClient.close().catch(() => {});
+      newClient.close().catch(() => { });
       console.error('[MongoDB] ❌ Connection error:', err?.message || err);
       throw err;
     });

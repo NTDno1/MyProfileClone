@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#ff7eb3" />
+  <title id="shop-page-title">NA 2HAND Boutique ✨ Tiệm Đồ Xinh Lung Linh</title>
+  <meta name="description" content="Tiệm thời trang nữ & 2hand tuyển chọn xinh lung linh NA 2HAND Boutique ✨ Mua sắm trực tiếp, quét QR nhanh chóng hoặc nhận hàng thanh toán COD." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/shop.css?v=1" />
+</head>
+<body>
+  <!-- Ambient Blink-Blink Starlight Layer -->
+  <div class="ambient-sparkles" id="ambient-sparkles"></div>
+
+  <!-- Top Marquee Announcement -->
+  <div class="marquee-bar">
+    <div class="marquee-track" id="marquee-track">
+      ✨ FREESHIP ĐƠN TỪ 299K • NHẬP MÃ XINHXINH10 GIẢM NGAY 10% • ĐỒ TUYỂN CHỌN THƠM PHỨC 🌸 &nbsp;&nbsp;&nbsp;✦&nbsp;&nbsp;&nbsp; ✨ FREESHIP ĐƠN TỪ 299K • NHẬP MÃ XINHXINH10 GIẢM NGAY 10% • ĐỒ TUYỂN CHỌN THƠM PHỨC 🌸 &nbsp;&nbsp;&nbsp;✦&nbsp;&nbsp;&nbsp;
+    </div>
+  </div>
+
+  <!-- Sticky Header -->
+  <header class="shop-header">
+    <div class="header-inner">
+      <a href="/shop" class="shop-brand">
+        <span class="brand-bow blink-shimmer">🎀</span>
+        <div>
+          <div class="brand-name" id="header-shop-name">NA 2HAND Boutique</div>
+          <div style="font-size: 0.68rem; color: var(--ink-muted); font-weight: 700;" id="header-tagline">Tiệm đồ xinh lung linh ✨</div>
+        </div>
+      </a>
+
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Tìm váy babydoll, áo len, chân váy xinh..." />
+      </div>
+
+      <div class="header-actions">
+        <a href="/" class="cute-pill-btn" title="Quay về trang Bio">🌸 <span class="hide-mobile">Bio</span></a>
+        <button type="button" class="cute-pill-btn" id="btn-open-track">📦 <span class="hide-mobile">Tra đơn</span></button>
+        <button type="button" class="cute-pill-btn" id="btn-filter-wishlist" title="Sản phẩm yêu thích">
+          💗 <span id="wishlist-count">0</span>
+        </button>
+        <button type="button" class="cute-pill-btn primary blink-shimmer" id="btn-open-cart">
+          🛍️ <span>Giỏ</span>
+          <span class="count-badge" id="cart-count">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Storefront Content -->
+  <main class="shop-container">
+    <!-- Dreamy Hero Card -->
+    <section class="hero-card">
+      <div>
+        <div class="hero-tag blink-shimmer">✦ NEW COLLECTION 2026 • BLINK EDITION ✦</div>
+        <h1 class="hero-title" id="hero-title">Tủ Đồ Xinh Lung Linh Của Nàng ✨</h1>
+        <p class="hero-subtitle" id="hero-subtitle">
+          Tuyển chọn những mẫu váy đầm tiểu thư, áo xinh & 2hand cao cấp chỉ có 1-0-2, gói hàng giấy thơm gửi trao tận tay nàng ♡
+        </p>
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <div class="flash-timer-box">
+            <span>⚡ Săn Deal Ngọt:</span>
+            <span class="timer-digit" id="timer-h">04</span>:
+            <span class="timer-digit" id="timer-m">45</span>:
+            <span class="timer-digit" id="timer-s">59</span>
+          </div>
+          <a href="#catalog-anchor" class="cute-pill-btn primary blink-shimmer" style="padding: 11px 20px;">
+            ✨ Khám phá ngay
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-photo-wrap">
+        <img src="/uploads/girlfriend-1.jpg" alt="NA 2HAND Model" class="hero-photo" id="hero-photo" />
+      </div>
+    </section>
+
+    <!-- Collectible Voucher Strip -->
+    <section class="voucher-strip" id="voucher-strip"></section>
+
+    <!-- Category Pills & Sort Controls -->
+    <div id="catalog-anchor" class="filter-toolbar">
+      <div class="category-pills" id="category-pills"></div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <select id="sort-select" class="sort-select">
+          <option value="featured">✨ Nổi bật nhất</option>
+          <option value="newest">🌸 Hàng mới về</option>
+          <option value="bestseller">🔥 Bán chạy nhất</option>
+          <option value="price-asc">💗 Giá thấp → cao</option>
+          <option value="price-desc">💎 Giá cao → thấp</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Product Grid -->
+    <section class="products-grid" id="products-grid"></section>
+
+    <!-- Cute Store Guarantees Footer -->
+    <section style="margin-top: 46px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+      <div style="background:#fff; border:1.5px solid var(--border-cute); border-radius:20px; padding:18px; text-align:center;">
+        <div style="font-size:1.6rem; margin-bottom:6px;">🌸</div>
+        <div style="font-weight:800; font-size:0.9rem; margin-bottom:4px;">Giặt Hấp Thơm Phức</div>
+        <div style="font-size:0.78rem; color:var(--ink-muted);">Mọi món đồ đều được kiểm tra tỉ mỉ và ướp hương thơm dịu trước khi đóng gói.</div>
+      </div>
+      <div style="background:#fff; border:1.5px solid var(--border-cute); border-radius:20px; padding:18px; text-align:center;">
+        <div style="font-size:1.6rem; margin-bottom:6px;">📱</div>
+        <div style="font-weight:800; font-size:0.9rem; margin-bottom:4px;">Quét QR Hoặc COD Linh Hoạt</div>
+        <div style="font-size:0.78rem; color:var(--ink-muted);">Hỗ trợ quét mã QR chuyển khoản nhanh gọn hoặc nhận hàng kiểm tra rồi thanh toán.</div>
+      </div>
+      <div style="background:#fff; border:1.5px solid var(--border-cute); border-radius:20px; padding:18px; text-align:center;">
+        <div style="font-size:1.6rem; margin-bottom:6px;">💌</div>
+        <div style="font-weight:800; font-size:0.9rem; margin-bottom:4px;">Tư Vấn Size Tận Tâm</div>
+        <div style="font-size:0.78rem; color:var(--ink-muted);">Nhắn tin Zalo hoặc Messenger để tiệm tư vấn số đo chuẩn xinh cho riêng nàng nhé!</div>
+      </div>
+    </section>
+
+    <footer style="margin-top: 34px; text-align: center; font-size: 0.78rem; color: var(--ink-muted);">
+      <p>Made with ♡ by My Love • NA 2HAND Boutique © 2026</p>
+      <div style="margin-top: 8px; display: flex; justify-content: center; gap: 14px;">
+        <a href="/" style="color: var(--pink-600); text-decoration: none; font-weight: 700;">🌸 Trang Bio</a>
+        <a href="/shop-admin" style="color: var(--ink-muted); text-decoration: none;">⚙️ Quản trị Cửa hàng</a>
+      </div>
+    </footer>
+  </main>
+
+  <!-- PRODUCT DETAIL MODAL -->
+  <div class="modal-backdrop" id="product-modal">
+    <div class="modal-card" id="product-modal-content"></div>
+  </div>
+
+  <!-- SLIDE-OUT SHOPPING BAG DRAWER -->
+  <div class="cart-drawer-backdrop" id="cart-drawer-backdrop">
+    <aside class="cart-drawer">
+      <div style="padding: 16px 18px; border-bottom: 1.5px solid var(--border-cute); display: flex; align-items: center; justify-content: space-between;">
+        <h3 style="font-size: 1.05rem; font-weight: 800;">🛍️ Túi Đồ Xinh Của Nàng</h3>
+        <button type="button" id="btn-close-cart" style="border:none; background:#ffe4ef; color:var(--pink-600); width:32px; height:32px; border-radius:50%; font-weight:800; cursor:pointer;">✕</button>
+      </div>
+
+      <div class="freeship-bar-wrap">
+        <div id="freeship-msg">✨ Mua thêm để được Miễn phí vận chuyển nhé!</div>
+        <div class="freeship-progress">
+          <div class="freeship-progress-fill" id="freeship-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <div id="cart-items-list" style="flex: 1; overflow-y: auto; padding: 14px 16px;"></div>
+
+      <div style="padding: 14px 16px; border-top: 1.5px solid var(--border-cute); background: #fff;">
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+          <input type="text" id="cart-coupon-input" placeholder="Nhập mã giảm giá (VD: XINHXINH10)" style="flex:1; padding:9px 12px; border-radius:12px; border:1.5px solid var(--pink-200); font-family:inherit; font-size:0.82rem; outline:none;" />
+          <button type="button" id="btn-apply-coupon" class="cute-pill-btn" style="padding: 8px 14px;">Áp dụng</button>
+        </div>
+        <div id="coupon-feedback" style="font-size: 0.75rem; color: var(--pink-600); font-weight: 700; margin-bottom: 8px; display: none;"></div>
+
+        <div style="font-size: 0.82rem; display: flex; justify-content: space-between; margin-bottom: 4px;">
+          <span>Tạm tính:</span>
+          <strong id="cart-subtotal">0đ</strong>
+        </div>
+        <div style="font-size: 0.82rem; display: flex; justify-content: space-between; margin-bottom: 4px; color: #16a34a;" id="cart-discount-row">
+          <span>Giảm giá voucher:</span>
+          <strong id="cart-discount">-0đ</strong>
+        </div>
+        <div style="font-size: 0.82rem; display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span>Phí giao hàng:</span>
+          <strong id="cart-shipping">25.000đ</strong>
+        </div>
+        <div style="font-size: 1.05rem; display: flex; justify-content: space-between; margin-bottom: 12px; padding-top: 8px; border-top: 1px dashed var(--pink-200); color: var(--pink-600);">
+          <strong>Tổng cộng:</strong>
+          <strong id="cart-total">0đ</strong>
+        </div>
+
+        <button type="button" id="btn-proceed-checkout" class="prod-buy-btn blink-shimmer" style="padding: 13px; font-size: 0.92rem; border-radius: 16px;">
+          💖 Tiến Hành Đặt Hàng Ngay
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- CHECKOUT & QR PAYMENT MODAL -->
+  <div class="modal-backdrop" id="checkout-modal">
+    <div class="modal-card" style="max-width: 560px;" id="checkout-modal-body">
+      <button type="button" class="modal-close-btn" id="btn-close-checkout">✕</button>
+      <div id="checkout-form-step">
+        <h2 style="font-family: var(--font-display); font-size: 1.75rem; margin-bottom: 4px;">🎀 Thông Tin Nhận Hàng</h2>
+        <p style="font-size: 0.8rem; color: var(--ink-muted); margin-bottom: 16px;">Điền địa chỉ để tiệm gói hàng thơm phức gửi tới tận tay nàng nha ✨</p>
+
+        <form id="checkout-form">
+          <input type="text" id="chk-name" class="cute-input" placeholder="Họ và tên người nhận *" required />
+          <input type="tel" id="chk-phone" class="cute-input" placeholder="Số điện thoại liên hệ *" required />
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <input type="text" id="chk-province" class="cute-input" placeholder="Tỉnh / Thành phố *" required />
+            <input type="text" id="chk-district" class="cute-input" placeholder="Quận / Huyện / Phường *" required />
+          </div>
+          <input type="text" id="chk-address" class="cute-input" placeholder="Số nhà, tên đường, tòa nhà cụ thể *" required />
+          <input type="text" id="chk-note" class="cute-input" placeholder="Ghi chú cho shop (VD: giao giờ hành chính, gói làm quà...)" />
+
+          <h3 style="font-size: 0.92rem; font-weight: 800; margin: 10px 0 10px;">💳 Chọn Phương Thức Thanh Toán</h3>
+
+          <div class="pay-option-card selected" data-pay="qr" id="pay-card-qr">
+            <span style="font-size: 1.5rem;">📱</span>
+            <div style="flex: 1;">
+              <div style="font-weight: 800; font-size: 0.88rem;">Quét Trực Tiếp Mã QR Chuyển Khoản</div>
+              <div style="font-size: 0.74rem; color: var(--ink-muted);">Hiển thị hình ảnh mã QR để nàng quét nhanh trên app Ngân hàng / MoMo</div>
+            </div>
+          </div>
+
+          <div class="pay-option-card" data-pay="cod" id="pay-card-cod">
+            <span style="font-size: 1.5rem;">💵</span>
+            <div style="flex: 1;">
+              <div style="font-weight: 800; font-size: 0.88rem;">Nhận Hàng Rồi Thanh Toán (Ship COD)</div>
+              <div style="font-size: 0.74rem; color: var(--ink-muted);">Nhận hàng tận tay, kiểm tra ưng ý rồi thanh toán tiền mặt cho shipper</div>
+            </div>
+          </div>
+
+          <!-- Instant QR Preview right inside Checkout when QR is chosen -->
+          <div id="checkout-qr-preview-box" style="background: var(--pink-50); border: 1.5px dashed var(--pink-300); border-radius: 18px; padding: 14px; text-align: center; margin: 12px 0;">
+            <div style="font-size: 0.8rem; font-weight: 800; color: var(--pink-600); margin-bottom: 8px;">✨ Hình Ảnh Mã QR Thanh Toán Của Shop ✨</div>
+            <img id="checkout-qr-preview-img" src="/images/cute-qr-placeholder.svg" alt="Mã QR Thanh Toán" style="width: 190px; height: 190px; object-fit: contain; border-radius: 16px; background: #fff; padding: 6px; border: 1.5px solid var(--pink-200);" />
+            <div style="font-size: 0.76rem; color: var(--ink-dark); margin-top: 6px;" id="checkout-qr-bank-text"></div>
+            <div style="font-size: 0.72rem; color: var(--ink-muted); margin-top: 2px;">(Sau khi bấm Đặt Hàng, hệ thống sẽ hiện mã đơn riêng để nàng quét hoặc xác nhận!)</div>
+          </div>
+
+          <button type="submit" id="btn-submit-order" class="prod-buy-btn blink-shimmer" style="padding: 14px; font-size: 0.95rem; border-radius: 16px; margin-top: 6px;">
+            ✨ Hoàn Tất Đặt Hàng (<span id="chk-btn-total">0đ</span>)
+          </button>
+        </form>
+      </div>
+
+      <!-- Step 2: Order Success & Scannable QR Screen -->
+      <div id="checkout-success-step" style="display: none; text-align: center;"></div>
+    </div>
+  </div>
+
+  <!-- ORDER TRACKING LOOKUP MODAL -->
+  <div class="modal-backdrop" id="track-modal">
+    <div class="modal-card" style="max-width: 500px;">
+      <button type="button" class="modal-close-btn" id="btn-close-track">✕</button>
+      <h2 style="font-family: var(--font-display); font-size: 1.7rem; margin-bottom: 6px;">📦 Tra Cứu Đơn Hàng</h2>
+      <p style="font-size: 0.8rem; color: var(--ink-muted); margin-bottom: 14px;">Nhập Số điện thoại đặt hàng hoặc Mã đơn (VD: NA123456) để xem tình trạng đơn nhé!</p>
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <input type="text" id="track-query-input" class="cute-input" style="margin-bottom: 0;" placeholder="Nhập SĐT hoặc Mã đơn NA..." />
+        <button type="button" id="btn-do-track" class="cute-pill-btn primary">Tìm đơn</button>
+      </div>
+      <div id="track-results-box"></div>
+    </div>
+  </div>
+
+  <!-- Live Social Proof Toast -->
+  <div class="live-proof-toast" id="live-proof-toast">
+    <img src="/uploads/girlfriend-2.jpg" id="proof-img" alt="Sp" style="width: 40px; height: 40px; border-radius: 10px; object-fit: cover;" />
+    <div>
+      <div style="font-weight: 800; color: var(--pink-600);" id="proof-title">🎀 Nàng Bảo Ngọc vừa đặt mua</div>
+      <div style="color: var(--ink-dark); font-weight: 600;" id="proof-prod">Đầm Babydoll Hoa Nhí • 2 phút trước</div>
+    </div>
+  </div>
+
+  <script src="/js/shop.js?v=1"></script>
+</body>
+</html>

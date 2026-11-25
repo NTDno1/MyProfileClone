@@ -7,6 +7,7 @@ import { AnalyticsStats, TimeRange, VisitorLogItem } from '@/types/analytics';
 import { isValidAuthToken } from '@/lib/auth';
 import { FaFacebook, FaFacebookMessenger, FaPhoneAlt, FaCommentDots, FaMobileAlt, FaDesktop, FaGlobeAsia, FaClock, FaEye, FaUsers } from 'react-icons/fa';
 import { FiArrowLeft, FiLogOut, FiRefreshCw, FiCopy, FiCheck, FiShield } from 'react-icons/fi';
+import MongoAdminPanel from '@/components/admin/MongoAdminPanel';
 
 const Statistics: NextPage = () => {
   const router = useRouter();
@@ -154,8 +155,8 @@ const Statistics: NextPage = () => {
     filterSource === 'facebook'
       ? recentVisitors.filter((v) => v.isFacebook || !!v.fbclid)
       : filterSource === 'contact'
-      ? recentVisitors.filter((v) => v.eventType === 'contact_click' || (v.page && v.page.startsWith('[CLICK]')))
-      : recentVisitors;
+        ? recentVisitors.filter((v) => v.eventType === 'contact_click' || (v.page && v.page.startsWith('[CLICK]')))
+        : recentVisitors;
 
   return (
     <>
@@ -234,11 +235,10 @@ const Statistics: NextPage = () => {
                   <button
                     key={item.key}
                     onClick={() => setTimeRange(item.key as TimeRange)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                      timeRange === item.key
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${timeRange === item.key
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
+                      }`}
                   >
                     {item.label}
                   </button>
@@ -254,6 +254,9 @@ const Statistics: NextPage = () => {
               </button>
             </div>
           </div>
+
+          {/* SECTION 0: MONGODB ATLAS ADMIN, STORAGE QUOTA, KEEP-ALIVE & TELEGRAM */}
+          <MongoAdminPanel />
 
           {/* SECTION 1: FACEBOOK TRAFFIC INSIGHTS */}
           <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 rounded-2xl p-6 text-white shadow-lg">
@@ -492,22 +495,20 @@ const Statistics: NextPage = () => {
                 <button
                   type="button"
                   onClick={() => setFilterSource('all')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                    filterSource === 'all'
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${filterSource === 'all'
                       ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
                       : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'
-                  }`}
+                    }`}
                 >
                   Tất cả ({recentVisitors.length})
                 </button>
                 <button
                   type="button"
                   onClick={() => setFilterSource('facebook')}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                    filterSource === 'facebook'
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${filterSource === 'facebook'
                       ? 'bg-blue-600 text-white shadow-sm'
                       : 'text-gray-600 dark:text-gray-300 hover:text-blue-600'
-                  }`}
+                    }`}
                 >
                   <FaFacebook className={filterSource === 'facebook' ? 'text-white' : 'text-blue-500'} />
                   Chỉ từ Facebook ({recentVisitors.filter((v) => v.isFacebook || !!v.fbclid).length})
@@ -515,11 +516,10 @@ const Statistics: NextPage = () => {
                 <button
                   type="button"
                   onClick={() => setFilterSource('contact')}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                    filterSource === 'contact'
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${filterSource === 'contact'
                       ? 'bg-indigo-600 text-white shadow-sm'
                       : 'text-gray-600 dark:text-gray-300 hover:text-indigo-600'
-                  }`}
+                    }`}
                 >
                   <FaFacebookMessenger className={filterSource === 'contact' ? 'text-white' : 'text-indigo-500'} />
                   Bấm Zalo / Messenger ({contactClickLogsCount})
@@ -594,13 +594,12 @@ const Statistics: NextPage = () => {
                         <td className="py-3 px-4">
                           {v.eventType === 'contact_click' || (v.page && v.page.startsWith('[CLICK]')) ? (
                             <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${
-                                v.contactChannel === 'zalo' || (v.page && v.page.includes('Zalo'))
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${v.contactChannel === 'zalo' || (v.page && v.page.includes('Zalo'))
                                   ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300'
                                   : v.contactChannel === 'phone' || (v.page && v.page.includes('Gọi điện'))
-                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
-                                  : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300'
-                              }`}
+                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                                    : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300'
+                                }`}
                             >
                               {v.contactChannel === 'zalo' || (v.page && v.page.includes('Zalo')) ? (
                                 <FaCommentDots />
@@ -623,8 +622,8 @@ const Statistics: NextPage = () => {
                           {v.eventType === 'contact_click' || (v.page && v.page.startsWith('[CLICK]'))
                             ? 'Vừa click'
                             : v.timeOnPage && v.timeOnPage > 0
-                            ? formatTime(v.timeOnPage)
-                            : 'Đang xem'}
+                              ? formatTime(v.timeOnPage)
+                              : 'Đang xem'}
                         </td>
 
                         {/* fbclid */}

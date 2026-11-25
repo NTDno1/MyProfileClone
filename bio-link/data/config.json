@@ -37,6 +37,17 @@
   },
   "links": [
     {
+      "id": "link-shop",
+      "title": "CỬA HÀNG ONLINE NA 2HAND",
+      "subtitle": "",
+      "url": "/shop",
+      "icon": "shopping-bag",
+      "badge": "NEW",
+      "shimmer": true,
+      "enabled": true,
+      "clicks": 0
+    },
+    {
       "id": "link-1",
       "title": "SHOPEE STORE",
       "subtitle": "",
@@ -65,7 +76,7 @@
     "subtitle": "Khám phá trọn bộ sưu tập yêu thích của mình",
     "url": "https://www.tiktok.com/@na2hand154?_r=1&_t=ZS-9BaJQCZaRXR",
     "image": "/uploads/girlfriend-2.jpg",
-    "clicks": 4
+    "clicks": 5
   },
   "socials": [
     {
@@ -131,6 +142,6 @@
     "footerText": "Made with ♡ by My Love"
   },
   "analytics": {
-    "totalViews": 33
+    "totalViews": 38
   }
 }

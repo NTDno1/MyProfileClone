@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "NA 2HAND 1-Click Grabber (Shopee & TikTok Shop)",
+  "version": "1.0.0",
+  "description": "Hút sản phẩm đang xem trên trình duyệt Shopee & TikTok Shop thẳng về cửa hàng NA 2HAND Boutique chỉ với 1 click (không cần API sàn).",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Cài đặt NA 2HAND Grabber",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.shopee.vn/*",
+        "*://*.tiktok.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

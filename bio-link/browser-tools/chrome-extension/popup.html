@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body {
+      width: 320px;
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(155deg, #fff5f9, #ffe8f2);
+      color: #3d1a29;
+    }
+    h3 { margin: 0 0 6px; font-size: 15px; color: #d63874; }
+    p { margin: 0 0 12px; font-size: 12px; color: #7d5365; line-height: 1.45; }
+    label { display: block; font-size: 11px; font-weight: 700; margin-bottom: 4px; }
+    input {
+      width: 100%; box-sizing: border-box; padding: 8px 10px;
+      border-radius: 10px; border: 1.5px solid #f2c2d6; margin-bottom: 10px;
+      font-size: 12px; outline: none;
+    }
+    button {
+      width: 100%; padding: 10px; border: none; border-radius: 11px;
+      background: linear-gradient(135deg, #f4669d, #d63874);
+      color: #fff; font-weight: 700; font-size: 13px; cursor: pointer;
+    }
+    #msg { margin-top: 8px; font-size: 12px; font-weight: 700; text-align: center; color: #15803d; }
+  </style>
+</head>
+<body>
+  <h3>🎀 NA 2HAND 1-Click Grabber</h3>
+  <p>Lấy thông tin trong <b>/shop-admin → Tab 3</b> dán vào đây 1 lần duy nhất:</p>
+
+  <label>Địa chỉ Web Bán Hàng (Server URL)</label>
+  <input type="text" id="serverUrl" placeholder="https://na2hand.com" />
+
+  <label>Mã Khóa Đồng Bộ (Sync API Key)</label>
+  <input type="text" id="syncKey" placeholder="na2hand_sync_..." />
+
+  <button id="saveBtn">💾 Lưu Kết Nối</button>
+  <div id="msg"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

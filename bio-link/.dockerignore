@@ -5,3 +5,6 @@ npm-debug.log
 data/auth.json
 data/analytics-logs.json
 data/mongo-settings.json
+data/shop-store.json
+browser-tools/playwright-sync/node_modules
+browser-tools/playwright-sync/chrome-profile

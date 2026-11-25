@@ -1,0 +1,13 @@
+{
+  "name": "na2hand-playwright-browser-sync",
+  "version": "1.0.0",
+  "description": "Công cụ mở trình duyệt thật (Playwright) tự cuộn & kéo sản phẩm Shopee / TikTok Shop về NA 2HAND Boutique không cần API sàn",
+  "main": "agent.js",
+  "scripts": {
+    "start": "node agent.js",
+    "install-browser": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.51.0"
+  }
+}

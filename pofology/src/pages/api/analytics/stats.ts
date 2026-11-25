@@ -19,24 +19,24 @@ export default async function handler(
     let startDate: Date;
 
     switch (range as TimeRange) {
-    case 'day':
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      break;
-    case 'week':
-      startDate = new Date(now);
-      startDate.setDate(now.getDate() - 7);
-      break;
-    case 'month':
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      break;
-    case 'year':
-      startDate = new Date(now.getFullYear(), 0, 1);
-      break;
-    case 'all':
-      startDate = new Date(0);
-      break;
-    default:
-      startDate = new Date(0);
+      case 'day':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case 'week':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      case 'all':
+        startDate = new Date(0);
+        break;
+      default:
+        startDate = new Date(0);
     }
 
     // Try MongoDB first, merge any fallback records, fallback cleanly on error
@@ -82,7 +82,7 @@ export default async function handler(
       if (timeOnPage !== 0 && timeOnPage !== null && timeOnPage !== undefined && timeOnPage !== '') {
         return false;
       }
-      
+
       // Additional check: filter out potential duplicates (same page + sessionId within 5 seconds)
       const currentTime = new Date(d.timestamp).getTime();
       const isDuplicate = data.slice(0, index).some((prev: any) => {
@@ -92,13 +92,13 @@ export default async function handler(
         }
         return false;
       });
-      
+
       return !isDuplicate;
     });
-    
+
     console.log('[API Stats] 🔍 Total records:', data.length, 'Actual page views (after filtering):', actualPageViews.length);
     const totalPageViews = actualPageViews.length;
-    
+
     // Unique visitors = unique sessionIds from actual page views (not updates)
     const uniqueVisitors = new Set(actualPageViews.map((d) => d.sessionId)).size;
     const uniqueIPs = new Set(actualPageViews.map((d) => d.ip)).size;
@@ -160,7 +160,7 @@ export default async function handler(
       acc[browser] = (acc[browser] || 0) + 1;
       return acc;
     }, {});
-    
+
     console.log('[API Stats] 🔍 Browser counts:', browserCounts);
     const topBrowsers = Object.entries(browserCounts)
       .map(([browser, count]) => ({ browser, count }))
@@ -295,7 +295,7 @@ export default async function handler(
       storageSource,
       storageError,
     };
-    
+
     console.log('[API Stats] ✅ Returning stats:', {
       totalVisitors: statsResult.totalVisitors,
       totalPageViews: statsResult.totalPageViews,

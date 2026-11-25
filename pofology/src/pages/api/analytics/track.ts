@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getAnalyticsCollection } from '@/lib/mongodb';
 import { inMemoryStorage } from '@/lib/analytics-storage';
+import { ensureMongoKeepAliveScheduler } from '@/lib/mongo-monitor';
+
+ensureMongoKeepAliveScheduler();
 
 export default async function handler(
   req: NextApiRequest,

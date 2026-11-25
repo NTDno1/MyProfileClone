@@ -17,11 +17,19 @@
       --bg: #fdf7fa;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: clip;
+    }
     body {
       font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: clip;
     }
     .login-overlay {
       position: fixed; inset: 0; z-index: 100;
@@ -36,7 +44,14 @@
       position: sticky; top: 0; z-index: 40;
       background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(14px);
       border-bottom: 1.5px solid var(--border);
-      padding: 12px 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      width: 100%;
+    }
+    .top-bar-inner {
+      width: 100%;
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 12px clamp(14px, 2.5vw, 28px);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
     }
     .btn {
       display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -53,11 +68,12 @@
     .btn-danger { background: #fff1f2; color: #e11d48; border-color: #fecdd3; }
     .btn-sm { padding: 6px 11px; font-size: 0.76rem; border-radius: 10px; }
 
-    .container { max-width: 1260px; margin: 0 auto; padding: 22px 16px 80px; }
+    .container { width: 100%; max-width: 1360px; margin: 0 auto; padding: 22px clamp(14px, 2.5vw, 28px) 80px; }
     .kpi-grid {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr)); gap: 14px; margin-bottom: 22px;
     }
     .kpi-card {
+      min-width: 0;
       background: #fff; border: 1.5px solid var(--border); border-radius: 20px; padding: 16px 18px;
       box-shadow: 0 6px 20px rgba(180, 90, 125, 0.05);
     }
@@ -65,9 +81,12 @@
     .kpi-lbl { font-size: 0.76rem; color: var(--muted); font-weight: 600; }
 
     .tabs {
-      display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 18px; scrollbar-width: none;
+      display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 6px; margin-bottom: 18px;
     }
-    .tabs::-webkit-scrollbar { display: none; }
+    @media (max-width: 768px) {
+      .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+      .tabs::-webkit-scrollbar { display: none; }
+    }
     .tab-btn {
       padding: 10px 16px; border-radius: 14px; border: 1.5px solid var(--border);
       background: #fff; color: var(--muted); font-family: inherit; font-weight: 700; font-size: 0.84rem;
@@ -76,10 +95,12 @@
     .tab-btn.active { background: var(--pri); color: #fff; border-color: var(--pri); }
 
     .card {
+      min-width: 0;
       background: #fff; border: 1.5px solid var(--border); border-radius: 22px; padding: 22px; margin-bottom: 18px;
     }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .grid-2 > * { min-width: 0; }
+    @media (max-width: 720px) { .grid-2 { grid-template-columns: minmax(0, 1fr); } }
 
     .label { display: block; font-size: 0.78rem; font-weight: 700; margin-bottom: 5px; color: #54283b; }
     .input, .select, .textarea {
@@ -120,15 +141,17 @@
 
   <!-- HEADER -->
   <header class="top-bar">
-    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-      <span style="font-size: 1.4rem;">🎀</span>
-      <strong style="font-size: 1.05rem;">NA 2HAND Shop Admin</strong>
-      <span class="badge" id="db-badge" style="background: #e6f9ed; color: #157f3d;">🟢 MongoDB: na2hand_shop</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-      <a href="/shop" target="_blank" class="btn btn-primary btn-sm">🛍️ Xem Web Bán Hàng (/shop)</a>
-      <a href="/admin" class="btn btn-sm">🌸 Quản trị Bio Link</a>
-      <button type="button" class="btn btn-sm" id="btn-logout">Đăng xuất</button>
+    <div class="top-bar-inner">
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <span style="font-size: 1.4rem;">🎀</span>
+        <strong style="font-size: 1.05rem;">NA 2HAND Shop Admin</strong>
+        <span class="badge" id="db-badge" style="background: #e6f9ed; color: #157f3d;">🟢 MongoDB: na2hand_shop</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <a href="/shop" target="_blank" class="btn btn-primary btn-sm">🛍️ Xem Web Bán Hàng (/shop)</a>
+        <a href="/admin" class="btn btn-sm">🌸 Quản trị Bio Link</a>
+        <button type="button" class="btn btn-sm" id="btn-logout">Đăng xuất</button>
+      </div>
     </div>
   </header>
 
@@ -306,79 +329,37 @@
       </div>
     </section>
 
-    <!-- PANE 3: AUTO SYNC FROM SHOPEE & TIKTOK SHOP -->
+    <!-- PANE 3: SINGLE ZERO-INSTALL AUTO SYNC FROM SHOPEE & TIKTOK SHOP -->
     <section class="tab-pane" id="pane-sync" style="display: none;">
-      <div class="card" style="background: linear-gradient(135deg, #fff5f9, #fdf2ff); border-color: #f3b8d2;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
-          <div>
-            <h3 style="font-size:1.15rem;">🚀 Cách 1: Bấm Mở Trình Duyệt Thật Tự Kéo Từ Shopee & TikTok Shop (Playwright)</h3>
-            <p style="font-size:0.8rem; color:var(--muted); margin-top:3px;">
-              Tự động mở trình duyệt Chrome trên máy tính của bạn, vào thẳng trang sản phẩm hoặc trang Shop Shopee / TikTok Shop, tự cuộn & click lấy chuẩn 100% Tên, Giá, Bộ ảnh gốc HD, Size/Màu mà không cần API của sàn!
+      <div class="card" style="background: linear-gradient(135deg, #fff6fa, #fdf2ff); border-color: #f3b8d2; padding: 28px 24px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
+          <div style="max-width: 780px;">
+            <h3 style="font-size:1.2rem; margin-bottom:6px;">🚀 Tự Động Kéo Sản Phẩm Từ Link Shop (Shopee &amp; TikTok Shop)</h3>
+            <p style="font-size:0.84rem; color:var(--muted); line-height:1.55;">
+              Chỉ cần dán đường dẫn Shop (hoặc link sản phẩm) vào ô bên dưới rồi bấm <strong>Tự Động Kéo Toàn Bộ Sản Phẩm</strong> — hệ thống tự giải mã link rút gọn và đồng bộ thẳng vào cửa hàng, <strong>không cần cài đặt thêm bất kỳ công cụ hay tiện ích nào</strong>.
             </p>
           </div>
-          <span class="badge" id="playwright-agent-badge" style="background:#fef3c7; color:#92400e;">🔌 Đang kiểm tra Playwright Local Agent...</span>
-        </div>
-
-        <div class="grid-2" style="align-items: end;">
-          <div>
-            <label class="label">Dán Link Sản Phẩm hoặc Link Cả Shop (Shopee / TikTok Shop)</label>
-            <input type="text" id="sync-target-url" class="input" style="margin-bottom:0;" placeholder="VD: https://shopee.vn/... hoặc https://www.tiktok.com/@na2hand3" />
-          </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button type="button" class="btn btn-primary" id="btn-launch-playwright">
-              🚀 Mở Trình Duyệt & Kéo Sản Phẩm Về Ngay
-            </button>
-            <button type="button" class="btn" id="btn-quick-shopee">🧡 Shop Shopee Của Tôi</button>
-            <button type="button" class="btn" id="btn-quick-tiktok">🎵 TikTok Shop Của Tôi</button>
+            <button type="button" class="btn btn-sm" id="btn-quick-shopee">🧡 Điền Link Shop Shopee Của Tôi</button>
+            <button type="button" class="btn btn-sm" id="btn-quick-tiktok">🎵 Điền Link TikTok Shop Của Tôi</button>
           </div>
         </div>
 
-        <div id="sync-live-log" style="display:none; margin-top:12px; padding:12px; border-radius:14px; background:#fff; border:1px solid var(--border); font-size:0.8rem;"></div>
+        <form id="auto-sync-form" style="display:flex; gap:10px; flex-wrap:wrap; align-items:stretch;">
+          <input
+            type="url"
+            id="sync-target-url"
+            class="input"
+            style="flex: 1 1 320px; margin-bottom:0; padding: 13px 16px; font-size: 0.95rem; background:#fff;"
+            placeholder="Dán link Shop Shopee hoặc TikTok Shop vào đây (VD: https://s.shopee.vn/8VAfrswNOG hoặc https://www.tiktok.com/@na2hand3)..."
+            required
+          />
+          <button type="submit" class="btn btn-primary" id="btn-auto-sync-now" style="padding: 13px 24px; font-size: 0.92rem; white-space: nowrap;">
+            🚀 Tự Động Kéo Toàn Bộ Sản Phẩm
+          </button>
+        </form>
 
-        <div style="margin-top:14px; padding:12px 14px; border-radius:14px; background:rgba(255,255,255,0.85); font-size:0.78rem; line-height:1.6;">
-          <strong>💡 Cách bật Playwright Companion trên máy tính của bạn (chỉ 1 lệnh):</strong><br/>
-          Mở Terminal tại thư mục <code>bio-link/browser-tools/playwright-sync</code> và chạy:
-          <code style="background:#fce7f3; padding:2px 7px; border-radius:6px; font-weight:700;">npm install &amp;&amp; npm start</code>
-          → Khi đèn báo bên trên chuyển sang <strong>🟢 Playwright Sẵn Sàng</strong>, bạn bấm nút <strong>Mở Trình Duyệt &amp; Kéo Sản Phẩm</strong> là Chrome trên máy bạn tự bật lên và hút thẳng sản phẩm lên web!
-        </div>
-      </div>
-
-      <div class="card">
-        <h3 style="font-size:1.05rem; margin-bottom:6px;">🌸 Cách 2: Tiện Ích Chrome Extension "NA 2HAND 1-Click Grabber" (Khuyên dùng hàng ngày!)</h3>
-        <p style="font-size:0.8rem; color:var(--muted); margin-bottom:14px;">
-          Cài trực tiếp vào trình duyệt Chrome / Edge / Cốc Cốc của bạn: Khi bạn đang lướt bất kỳ sản phẩm nào trên <strong>Shopee</strong> hoặc <strong>TikTok Shop</strong>, góc màn hình sẽ hiện nút hồng <strong>"🌸 Đẩy Sản Phẩm Về Shop NA 2HAND"</strong> — bấm 1 click là bay thẳng vào cửa hàng!
-        </p>
-
-        <div class="grid-2">
-          <div>
-            <label class="label">Địa chỉ Server Shop của bạn (Dán vào Extension)</label>
-            <input type="text" id="ext-server-url" class="input" readonly />
-          </div>
-          <div>
-            <label class="label">Mã Khóa Đồng Bộ Bảo Mật (Sync API Key)</label>
-            <div style="display:flex; gap:8px;">
-              <input type="text" id="ext-sync-key" class="input" readonly style="margin-bottom:0;" />
-              <button type="button" class="btn btn-sm" id="btn-copy-sync-key">📋 Copy</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="font-size:0.8rem; line-height:1.65; color:#4b2336; background:#fff9fb; padding:12px 14px; border-radius:14px; border:1px solid var(--border);">
-          <strong>Hướng dẫn cài Extension trong 20 giây:</strong><br/>
-          1. Mở trình duyệt Chrome/Edge, gõ trên thanh địa chỉ: <code>chrome://extensions</code> → Bật công tắc <strong>Developer mode (Chế độ dành cho nhà phát triển)</strong> ở góc phải.<br/>
-          2. Bấm nút <strong>Load unpacked (Tải tiện ích đã giải nén)</strong> → Chọn thư mục <code>bio-link/browser-tools/chrome-extension</code> trong dự án.<br/>
-          3. Bấm vào icon 🎀 của Extension, dán <strong>Địa chỉ Server</strong> &amp; <strong>Sync API Key</strong> ở trên vào. Xong! Mở bất kỳ link Shopee / TikTok Shop nào cũng có nút hút 1 chạm!
-        </div>
-      </div>
-
-      <div class="card">
-        <h3 style="font-size:1.05rem; margin-bottom:6px;">🪄 Cách 3: Nút Bookmarklet Kéo-Thả (Chạy ngay trên trình duyệt không cần cài đặt)</h3>
-        <p style="font-size:0.8rem; color:var(--muted); margin-bottom:12px;">
-          Kéo nút màu hồng dưới đây thả lên <strong>Thanh Dấu Trang (Bookmarks Bar)</strong> của trình duyệt. Khi đang mở trang sản phẩm Shopee hoặc TikTok Shop, chỉ cần bấm vào dấu trang đó là sản phẩm tự động bay về Shop!
-        </p>
-        <a id="bookmarklet-link" href="#" class="btn btn-primary" onclick="alert('Hãy dùng chuột KÉO nút này thả lên thanh Dấu Trang (Bookmarks Bar) phía trên trình duyệt của bạn nhé!'); return false;">
-          🌸 Hút Về Shop NA 2HAND
-        </a>
+        <div id="sync-live-log" style="display:none; margin-top:16px; padding:16px; border-radius:16px; background:#fff; border:1.5px solid var(--border); font-size:0.84rem; line-height:1.6;"></div>
       </div>
     </section>
 
@@ -548,6 +529,6 @@
 
   <div class="toast" id="toast">Đã lưu thành công!</div>
 
-  <script src="/js/shop-admin.js?v=3"></script>
+  <script src="/js/shop-admin.js?v=4"></script>
 </body>
 </html>

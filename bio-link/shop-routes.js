@@ -984,8 +984,459 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
   });
 
   // =========================================================================
-  // 3. SHOPEE & TIKTOK SHOP BROWSER IMPORT ENDPOINT
-  //    Receives scraped DOM/JSON products from User's Playwright Agent or Chrome Extension!
+  // 3. SINGLE-CLICK AUTO SHOP SYNC (Server-Side Direct URL Fetch + Smart HTML Parser)
+  // =========================================================================
+  async function saveImportedItemsToStore(rawProducts) {
+    const store = await getShopStore();
+    let addedCount = 0;
+    let updatedCount = 0;
+    const importedItems = [];
+
+    for (const item of rawProducts) {
+      if (!item || !item.name) continue;
+
+      const cleanPrice = parsePriceVnd(item.price);
+      const cleanOrig = parsePriceVnd(item.originalPrice) || Math.round((cleanPrice || 199000) * 1.25);
+      const platform =
+        item.sourcePlatform ||
+        (String(item.sourceUrl || '').includes('tiktok') ? 'tiktok' : 'shopee');
+
+      const imgs = Array.isArray(item.images)
+        ? item.images.filter((u) => typeof u === 'string' && (u.startsWith('http') || u.startsWith('/media/')))
+        : [];
+
+      const existingIdx = (store.products || []).findIndex(
+        (p) =>
+          (item.sourceUrl && p.sourceUrl && p.sourceUrl === item.sourceUrl) ||
+          String(p.name || '').trim().toLowerCase() === String(item.name || '').trim().toLowerCase()
+      );
+
+      const productObj = {
+        id: existingIdx >= 0 ? store.products[existingIdx].id : `prod_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        name: String(item.name).trim(),
+        category: item.category || (store.categories[0] ? store.categories[0].id : 'vay-dam'),
+        price: cleanPrice > 0 ? cleanPrice : 199000,
+        originalPrice: cleanOrig >= cleanPrice ? cleanOrig : cleanPrice,
+        images: imgs.length > 0 ? imgs.slice(0, 8) : ['/media/bio-link/girlfriend-1.jpg'],
+        sizes: Array.isArray(item.sizes) && item.sizes.length > 0 ? item.sizes : ['S', 'M', 'L'],
+        colors: Array.isArray(item.colors) && item.colors.length > 0 ? item.colors : ['Theo hình'],
+        stock: Number(item.stock || 20),
+        sold: Number(item.sold || 0),
+        rating: Number(item.rating || 5.0),
+        reviewCount: Number(item.reviewCount || 5),
+        isFlashSale: item.isFlashSale !== false,
+        isFeatured: true,
+        isNew: true,
+        sourcePlatform: platform,
+        sourceUrl: item.sourceUrl || '',
+        description: String(
+          item.description ||
+            `Sản phẩm đồng bộ trực tiếp từ ${platform === 'tiktok' ? 'TikTok Shop' : 'Shopee'} chính hãng của NA 2HAND.`
+        ),
+        enabled: true,
+        createdAt: existingIdx >= 0 ? store.products[existingIdx].createdAt : new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      if (existingIdx >= 0) {
+        store.products[existingIdx] = productObj;
+        updatedCount++;
+      } else {
+        store.products.unshift(productObj);
+        addedCount++;
+      }
+      importedItems.push(productObj);
+    }
+
+    if (importedItems.length > 0) {
+      await saveShopStore(store);
+    }
+    return { addedCount, updatedCount, importedItems };
+  }
+
+  async function resolveShortShopUrl(inputUrl) {
+    let current = String(inputUrl || '').trim();
+    const ua =
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+    for (let hop = 0; hop < 6; hop++) {
+      try {
+        const res = await fetch(current, {
+          redirect: 'manual',
+          headers: { 'User-Agent': ua, 'Accept-Language': 'vi-VN,vi;q=0.9,en;q=0.8' }
+        });
+        const loc = res.headers.get('location');
+        if (loc && res.status >= 300 && res.status < 400) {
+          current = new URL(loc, current).toString();
+        } else {
+          break;
+        }
+      } catch {
+        break;
+      }
+    }
+    try {
+      const u = new URL(current);
+      // Clean affiliate tracking query noise on Shopee shop URLs while preserving product/shop path
+      if (u.hostname.includes('shopee.vn') && !u.pathname.includes('/search')) {
+        u.search = '';
+        current = u.toString();
+      }
+    } catch {}
+    return current;
+  }
+
+  function extractProductsFromHtmlOrJson(html, baseUrl) {
+    const platform = String(baseUrl || '').includes('tiktok') ? 'tiktok' : 'shopee';
+    const found = [];
+    const seenKeys = new Set();
+
+    const pushCandidate = (cand) => {
+      if (!cand || !cand.name) return;
+      const cleanName = String(cand.name)
+        .replace(/\s*\|\s*Shopee.*$/i, '')
+        .replace(/\s*-\s*TikTok.*$/i, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (
+        cleanName.length < 4 ||
+        /^shopee việt nam|^tiktok\s*-?\s*make your day/i.test(cleanName)
+      ) {
+        return;
+      }
+      const key = (cand.sourceUrl || cleanName).toLowerCase();
+      if (seenKeys.has(key)) return;
+      seenKeys.add(key);
+      found.push({
+        ...cand,
+        name: cleanName.slice(0, 150),
+        sourcePlatform: cand.sourcePlatform || platform,
+        sourceUrl: cand.sourceUrl || baseUrl
+      });
+    };
+
+    // 1. JSON-LD (Product & ItemList)
+    const ldRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    let m;
+    while ((m = ldRegex.exec(html)) !== null) {
+      try {
+        const parsed = JSON.parse(m[1].trim());
+        const queue = Array.isArray(parsed) ? [...parsed] : [parsed];
+        while (queue.length > 0) {
+          const node = queue.shift();
+          if (!node || typeof node !== 'object') continue;
+          if (node['@type'] === 'ItemList' && Array.isArray(node.itemListElement)) {
+            node.itemListElement.forEach((el) => queue.push(el.item || el));
+          } else if (node['@type'] === 'Product' && node.name) {
+            const offer = Array.isArray(node.offers) ? node.offers[0] : node.offers;
+            const imgs = Array.isArray(node.image) ? node.image : node.image ? [node.image] : [];
+            pushCandidate({
+              name: node.name,
+              price: offer?.price || offer?.lowPrice || 0,
+              originalPrice: offer?.highPrice || 0,
+              images: imgs.filter((x) => typeof x === 'string'),
+              description: node.description || '',
+              sourceUrl: node.url || baseUrl
+            });
+          }
+        }
+      } catch {}
+    }
+
+    // 2. Embedded SSR State (__UNIVERSAL_DATA_FOR_REHYDRATION__, __NEXT_DATA__, SIGI_STATE, RENDER_DATA)
+    const stateRegex =
+      /<script[^>]*id=["'](?:__UNIVERSAL_DATA_FOR_REHYDRATION__|__NEXT_DATA__|SIGI_STATE|RENDER_DATA)["'][^>]*>([\s\S]*?)<\/script>/gi;
+    while ((m = stateRegex.exec(html)) !== null) {
+      try {
+        const rawJson = m[1].trim().startsWith('%7B') ? decodeURIComponent(m[1].trim()) : m[1];
+        const root = JSON.parse(rawJson);
+        const walk = (obj, depth = 0) => {
+          if (!obj || typeof obj !== 'object' || depth > 18 || found.length >= 100) return;
+          if (Array.isArray(obj)) {
+            for (const el of obj) walk(el, depth + 1);
+            return;
+          }
+
+          // Shopee item_basic / item node
+          if (obj.name && (obj.itemid || obj.item_id) && (obj.price || obj.price_min)) {
+            const rawImgs = Array.isArray(obj.images)
+              ? obj.images
+              : obj.image
+              ? [obj.image]
+              : [];
+            const fullImgs = rawImgs.map((h) =>
+              String(h).startsWith('http') ? h : `https://down-vn.img.susercontent.com/file/${h}`
+            );
+            const shopId = obj.shopid || obj.shop_id || '';
+            const itemId = obj.itemid || obj.item_id || '';
+            pushCandidate({
+              name: obj.name,
+              price: obj.price || obj.price_min,
+              originalPrice: obj.price_before_discount || obj.price_max || 0,
+              images: fullImgs,
+              sold: obj.historical_sold || obj.sold || 0,
+              sourcePlatform: 'shopee',
+              sourceUrl: shopId && itemId ? `https://shopee.vn/product/${shopId}/${itemId}` : baseUrl
+            });
+          }
+
+          // TikTok Shop productInfo / productBase node
+          if (
+            (obj.productBase?.title || (obj.title && (obj.product_id || obj.productId))) &&
+            (obj.productBase?.price || obj.price || obj.real_price || obj.market_price)
+          ) {
+            const pTitle = obj.productBase?.title || obj.title;
+            const rawPrice =
+              obj.productBase?.price?.real_price ||
+              obj.real_price?.price_val ||
+              obj.price?.real_price ||
+              obj.price ||
+              0;
+            const imgs = [];
+            const imgCandidates = obj.productBase?.images || obj.images || (obj.cover ? [obj.cover] : []);
+            if (Array.isArray(imgCandidates)) {
+              imgCandidates.forEach((im) => {
+                if (typeof im === 'string' && im.startsWith('http')) imgs.push(im);
+                else if (Array.isArray(im?.url_list) && im.url_list[0]) imgs.push(im.url_list[0]);
+                else if (Array.isArray(im?.thumb_url_list) && im.thumb_url_list[0]) imgs.push(im.thumb_url_list[0]);
+              });
+            }
+            const pid = obj.product_id || obj.productId || '';
+            pushCandidate({
+              name: pTitle,
+              price: rawPrice,
+              images: imgs,
+              sold: obj.sold_count || obj.soldCount || 0,
+              sourcePlatform: 'tiktok',
+              sourceUrl: pid ? `https://www.tiktok.com/view/product/${pid}` : baseUrl
+            });
+          }
+
+          for (const v of Object.values(obj)) {
+            if (v && typeof v === 'object') walk(v, depth + 1);
+          }
+        };
+        walk(root, 0);
+      } catch {}
+    }
+
+    // 3. Anchors & Pasted HTML Product Cards (<a href="...">...<img src="...">...₫195.000...</a>)
+    const anchorRegex = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    while ((m = anchorRegex.exec(html)) !== null && found.length < 80) {
+      let href = m[1] || '';
+      const inner = m[2] || '';
+      if (!/-i\.\d+\.\d+|\/product\/\d+|\/view\/product\/|shopee\.vn\/.+-i\./i.test(href)) continue;
+      try {
+        href = new URL(href, baseUrl || 'https://shopee.vn').toString();
+      } catch {}
+
+      const imgMatch =
+        inner.match(/<img[^>]+(?:src|data-src)=["'](https?:\/\/[^"']+)["']/i) || [];
+      const imgUrl = (imgMatch[1] || '').replace(/_tn$/, '');
+
+      const plain = inner
+        .replace(/<[^>]+>/g, '\n')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&');
+      const lines = plain
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 2);
+
+      const titleLine = lines.find(
+        (l) =>
+          l.length >= 8 &&
+          !/^[₫đ\d.,%\s-]+$/i.test(l) &&
+          !/^(yêu thích|mall|đã bán|tài trợ|ad|flash sale)$/i.test(l)
+      );
+      const priceMatch =
+        plain.match(/(\d{2,3}(?:[.,]\d{3})+)\s*[₫đ]?/) ||
+        plain.match(/[₫đ]\s*(\d{2,3}(?:[.,]\d{3})+)/) ||
+        plain.match(/\b(\d{2,3})k\b/i);
+
+      if (titleLine) {
+        pushCandidate({
+          name: titleLine,
+          price: priceMatch ? priceMatch[0] : 189000,
+          images: imgUrl ? [imgUrl] : [],
+          sourceUrl: href
+        });
+      }
+    }
+
+    // 3b. Div-based Product Grid Cards (e.g. TikTok Shop showcase tab where cards use <div> + <img> + price)
+    if (found.length === 0) {
+      const imgTagRegex = /<img[^>]+(?:src|data-src)=["'](https?:\/\/[^"']+)["'][^>]*>/gi;
+      let imMatch;
+      while ((imMatch = imgTagRegex.exec(html)) !== null && found.length < 80) {
+        const imgUrl = imMatch[1].replace(/_tn$/, '');
+        if (/avatar|icon|logo|emoji|badge|flag|sprite/i.test(imgUrl)) continue;
+        // Inspect the 900 chars immediately following the product thumbnail for title + VND price
+        const afterHtml = html.slice(imMatch.index, imMatch.index + 950);
+        const plain = afterHtml
+          .replace(/<[^>]+>/g, '\n')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&');
+        const lines = plain
+          .split('\n')
+          .map((l) => l.trim())
+          .filter((l) => l.length > 2);
+        const priceLine = lines.find(
+          (l) => /(\d{2,3}(?:[.,]\d{3})+)\s*[₫đ]|[₫đ]\s*(\d{2,3}(?:[.,]\d{3})+)/.test(l)
+        );
+        const titleLine = lines.find(
+          (l) =>
+            l.length >= 8 &&
+            l !== priceLine &&
+            !/^[₫đ\d.,%\s-]+$/i.test(l) &&
+            !/^(yêu thích|mall|đã bán|tài trợ|ad|flash sale|mua ngay)$/i.test(l)
+        );
+        if (titleLine && priceLine) {
+          pushCandidate({
+            name: titleLine,
+            price: priceLine,
+            images: [imgUrl],
+            sourceUrl: baseUrl
+          });
+        }
+      }
+    }
+
+    // 4. OpenGraph single-product fallback
+    if (found.length === 0) {
+      const ogTitle = (html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i) || [])[1];
+      const ogImg = (html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) || [])[1];
+      const ogPrice = (html.match(/<meta[^>]+property=["']product:price:amount["'][^>]+content=["']([^"']+)["']/i) || [])[1];
+      if (ogTitle && (/-i\.\d+\.\d+|\/product\/|\/view\/product\//.test(baseUrl) || ogPrice)) {
+        pushCandidate({
+          name: ogTitle,
+          price: ogPrice || 199000,
+          images: ogImg ? [ogImg] : [],
+          sourceUrl: baseUrl
+        });
+      }
+    }
+
+    return found;
+  }
+
+  // Unified 1-Click Auto-Sync Endpoint (Zero local installation required!)
+  app.post('/api/shop/auto-sync', requireAuth, async (req, res) => {
+    try {
+      const { targetUrl, pastedHtml, pastedText } = req.body || {};
+
+      // Mode B: Instant parse of copied Shop page content (when platform hides shop catalog behind buyer login)
+      if (pastedHtml || pastedText) {
+        const base = targetUrl || 'https://shopee.vn';
+        let extracted = [];
+        if (pastedHtml) {
+          extracted = extractProductsFromHtmlOrJson(String(pastedHtml), base);
+        }
+        if (extracted.length === 0 && pastedText) {
+          // Parse plain-text blocks copied from Shopee / TikTok Shop grid
+          const lines = String(pastedText)
+            .split(/\r?\n/)
+            .map((l) => l.trim())
+            .filter(Boolean);
+          for (let i = 0; i < lines.length; i++) {
+            const pMatch =
+              lines[i].match(/^[₫đ]?\s*(\d{2,3}(?:[.,]\d{3})+)\s*[₫đ]?$/) ||
+              lines[i].match(/^(\d{2,3})k$/i);
+            if (pMatch && i > 0) {
+              // Look backwards 1-3 lines for product title
+              for (let b = i - 1; b >= Math.max(0, i - 3); b--) {
+                const cand = lines[b];
+                if (
+                  cand.length >= 10 &&
+                  !/^[₫đ\d.,%\s-]+$/.test(cand) &&
+                  !/^(yêu thích|xu hướng|đã bán|giảm)/i.test(cand)
+                ) {
+                  extracted.push({
+                    name: cand,
+                    price: pMatch[0],
+                    sourceUrl: base,
+                    sourcePlatform: base.includes('tiktok') ? 'tiktok' : 'shopee'
+                  });
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        if (extracted.length === 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Chưa nhận diện được sản phẩm trong nội dung vừa sao chép. Hãy mở trang danh sách sản phẩm của Shop, nhấn Ctrl+A rồi Ctrl+C và bấm nút Hút từ Bộ Nhớ Tạm nhé!'
+          });
+        }
+
+        const saved = await saveImportedItemsToStore(extracted);
+        return res.json({
+          success: true,
+          addedCount: saved.addedCount,
+          updatedCount: saved.updatedCount,
+          products: saved.importedItems,
+          message: `🎉 Đã tự động kéo về thành công ${saved.addedCount} sản phẩm mới (cập nhật ${saved.updatedCount} sản phẩm)!`
+        });
+      }
+
+      // Mode A: Direct URL Auto-Sync from Server
+      if (!targetUrl || !/^https?:\/\//i.test(String(targetUrl).trim())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Vui lòng dán đường dẫn hợp lệ (bắt đầu bằng https://...) của Shop Shopee hoặc TikTok Shop!'
+        });
+      }
+
+      const resolvedUrl = await resolveShortShopUrl(targetUrl);
+      const ua =
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+
+      const pageRes = await fetch(resolvedUrl, {
+        headers: {
+          'User-Agent': ua,
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'vi-VN,vi;q=0.9,en;q=0.8'
+        }
+      });
+      const html = await pageRes.text();
+      const extracted = extractProductsFromHtmlOrJson(html, resolvedUrl);
+
+      if (extracted.length > 0) {
+        const saved = await saveImportedItemsToStore(extracted);
+        return res.json({
+          success: true,
+          resolvedUrl,
+          addedCount: saved.addedCount,
+          updatedCount: saved.updatedCount,
+          products: saved.importedItems,
+          message: `🎉 Đã tự động kéo thành công ${saved.addedCount} sản phẩm mới & cập nhật ${saved.updatedCount} sản phẩm từ ${resolvedUrl}!`
+        });
+      }
+
+      // Platform hides product grid behind buyer login for cloud server IPs -> return clean resolvedUrl so UI offers 1-second clipboard grab
+      return res.json({
+        success: true,
+        needsBrowserClipboard: true,
+        addedCount: 0,
+        updatedCount: 0,
+        resolvedUrl,
+        platform: resolvedUrl.includes('tiktok') ? 'tiktok' : 'shopee',
+        message:
+          'Đã mở khóa link rút gọn sang địa chỉ Shop gốc: ' +
+          resolvedUrl
+      });
+    } catch (err) {
+      console.error('Auto-sync error:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'Không thể kết nối tới đường dẫn này: ' + err.message
+      });
+    }
+  });
+
+  // =========================================================================
+  // 4. DIRECT PRODUCT IMPORT ENDPOINT
   // =========================================================================
   app.post('/api/shop/import', requireAdminOrSyncKey, async (req, res) => {
     try {
@@ -999,69 +1450,13 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         return res.status(400).json({ success: false, message: 'Không có dữ liệu sản phẩm để nhập.' });
       }
 
-      const store = await getShopStore();
-      let addedCount = 0;
-      let updatedCount = 0;
-      const importedItems = [];
-
-      for (const item of rawProducts) {
-        if (!item || !item.name) continue;
-
-        const cleanPrice = parsePriceVnd(item.price);
-        const cleanOrig = parsePriceVnd(item.originalPrice) || Math.round(cleanPrice * 1.25);
-        const platform =
-          item.sourcePlatform ||
-          (String(item.sourceUrl || '').includes('tiktok') ? 'tiktok' : 'shopee');
-
-        const imgs = Array.isArray(item.images)
-          ? item.images.filter((u) => typeof u === 'string' && u.startsWith('http'))
-          : [];
-
-        const existingIdx = item.sourceUrl
-          ? (store.products || []).findIndex((p) => p.sourceUrl && p.sourceUrl === item.sourceUrl)
-          : -1;
-
-        const productObj = {
-          id: existingIdx >= 0 ? store.products[existingIdx].id : `prod_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-          name: String(item.name).trim(),
-          category: item.category || (store.categories[0] ? store.categories[0].id : 'vay-dam'),
-          price: cleanPrice > 0 ? cleanPrice : 199000,
-          originalPrice: cleanOrig >= cleanPrice ? cleanOrig : cleanPrice,
-          images: imgs.length > 0 ? imgs.slice(0, 8) : ['/media/bio-link/girlfriend-1.jpg'],
-          sizes: Array.isArray(item.sizes) && item.sizes.length > 0 ? item.sizes : ['Freesize'],
-          colors: Array.isArray(item.colors) && item.colors.length > 0 ? item.colors : ['Theo hình'],
-          stock: Number(item.stock || 20),
-          sold: Number(item.sold || 0),
-          rating: Number(item.rating || 5.0),
-          reviewCount: Number(item.reviewCount || 5),
-          isFlashSale: Boolean(item.isFlashSale),
-          isFeatured: true,
-          isNew: true,
-          sourcePlatform: platform,
-          sourceUrl: item.sourceUrl || '',
-          description: String(item.description || `Sản phẩm đồng bộ trực tiếp từ ${platform === 'tiktok' ? 'TikTok Shop' : 'Shopee'} chính hãng của NA 2HAND ✨`),
-          enabled: true,
-          createdAt: existingIdx >= 0 ? store.products[existingIdx].createdAt : new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-
-        if (existingIdx >= 0) {
-          store.products[existingIdx] = productObj;
-          updatedCount++;
-        } else {
-          store.products.unshift(productObj);
-          addedCount++;
-        }
-        importedItems.push(productObj);
-      }
-
-      await saveShopStore(store);
+      const saved = await saveImportedItemsToStore(rawProducts);
       res.json({
         success: true,
-        addedCount,
-        updatedCount,
-        products: importedItems,
-        message: `🎉 Đã đồng bộ thành công ${addedCount} sản phẩm mới & cập nhật ${updatedCount} sản phẩm từ sàn vào Shop!`
+        addedCount: saved.addedCount,
+        updatedCount: saved.updatedCount,
+        products: saved.importedItems,
+        message: `🎉 Đã đồng bộ thành công ${saved.addedCount} sản phẩm mới & cập nhật ${saved.updatedCount} sản phẩm từ sàn vào Shop!`
       });
     } catch (err) {
       console.error('Import error:', err);

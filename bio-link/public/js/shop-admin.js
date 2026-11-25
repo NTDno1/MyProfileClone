@@ -642,169 +642,226 @@
     });
   }
 
-  // --- 3. AUTO SYNC SHOPEE & TIKTOK SHOP (PLAYWRIGHT + EXTENSION + BOOKMARKLET) ---
-  function buildBookmarkletHref(serverUrl, syncKey) {
-    // Bookmarklet runs directly inside the user's currently open Shopee / TikTok Shop tab
-    const code = `(function(){
-      var sUrl=${JSON.stringify(serverUrl)};
-      var sKey=${JSON.stringify(syncKey)};
-      var u=location.href;
-      var plat=u.indexOf('tiktok')>-1?'tiktok':'shopee';
-      var title=(document.querySelector('h1')&&document.querySelector('h1').innerText)||document.title||'';
-      title=title.replace(/\\s*\\|\\s*Shopee.*$/i,'').replace(/\\s*-\\s*TikTok.*$/i,'').trim();
-      var price=0,orig=0,imgs=[],desc='';
-      document.querySelectorAll('script[type="application/ld+json"]').forEach(function(sc){
-        try{
-          var j=JSON.parse(sc.textContent);
-          var arr=Array.isArray(j)?j:[j];
-          arr.forEach(function(it){
-            if(it['@type']==='Product'){
-              if(it.name)title=it.name;
-              if(it.description)desc=it.description;
-              if(it.image)imgs=imgs.concat(Array.isArray(it.image)?it.image:[it.image]);
-              var ofr=Array.isArray(it.offers)?it.offers[0]:it.offers;
-              if(ofr&&(ofr.price||ofr.lowPrice))price=ofr.price||ofr.lowPrice;
-            }
-          });
-        }catch(e){}
-      });
-      if(!price){
-        var bodyTxt=document.body.innerText;
-        var m=bodyTxt.match(/([0-9]{2,3}(?:\\.[0-9]{3})+)\\s*[₫đ]/i)||bodyTxt.match(/[₫đ]\\s*([0-9]{2,3}(?:[.,][0-9]{3})+)/i);
-        if(m)price=m[1];
-      }
-      document.querySelectorAll('img').forEach(function(im){
-        var src=im.currentSrc||im.src||'';
-        if(src.indexOf('http')===0&&im.naturalWidth>=260&&imgs.indexOf(src)===-1&&src.indexOf('avatar')===-1){
-          imgs.push(src.replace(/_tn$/,''));
-        }
-      });
-      if(!title){alert('Không tìm thấy tên sản phẩm trên trang này!');return;}
-      fetch(sUrl+'/api/shop/import',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','X-Sync-Key':sKey},
-        body:JSON.stringify({product:{name:title,price:price||199000,originalPrice:orig,images:imgs.slice(0,8),sourcePlatform:plat,sourceUrl:u,description:desc}})
-      }).then(function(r){return r.json();}).then(function(res){
-        alert(res.message||'Đã đẩy sản phẩm về Shop NA 2HAND thành công! ✨');
-      }).catch(function(err){alert('Lỗi kết nối về Shop: '+err.message);});
-    })();`;
-    return 'javascript:' + encodeURIComponent(code.replace(/\s+/g, ' ').trim());
-  }
-
+  // --- 3. SINGLE ZERO-INSTALL AUTO SYNC FROM SHOPEE & TIKTOK SHOP ---
   function setupSyncTools() {
     if (!shopData) return;
-    const serverUrl = window.location.origin;
-    const syncKey = shopData.settings?.syncApiKey || '';
-
-    const extUrlEl = document.getElementById('ext-server-url');
-    const extKeyEl = document.getElementById('ext-sync-key');
-    const bmEl = document.getElementById('bookmarklet-link');
-
-    if (extUrlEl) extUrlEl.value = serverUrl;
-    if (extKeyEl) extKeyEl.value = syncKey;
-    if (bmEl && syncKey) {
-      bmEl.setAttribute('href', buildBookmarkletHref(serverUrl, syncKey));
+    const urlInput = document.getElementById('sync-target-url');
+    if (urlInput && !urlInput.value.trim() && shopData.settings?.shopeeShopUrl) {
+      urlInput.value = shopData.settings.shopeeShopUrl;
     }
   }
 
-  document.getElementById('btn-copy-sync-key')?.addEventListener('click', () => {
-    const val = document.getElementById('ext-sync-key')?.value || '';
-    if (!val) return;
-    navigator.clipboard.writeText(val);
-    showToast('Đã copy Sync API Key! 📋');
-  });
+  function renderSyncedPreviewHtml(res) {
+    const items = Array.isArray(res.products) ? res.products.slice(0, 8) : [];
+    const cardsHtml = items
+      .map((p) => {
+        const img = (p.images && p.images[0]) || '/media/bio-link/girlfriend-1.jpg';
+        return `
+          <div style="display:flex; align-items:center; gap:9px; padding:8px 10px; border:1px solid var(--border); border-radius:12px; background:#fff9fb; min-width:0;">
+            <img src="${escapeHtml(img)}" style="width:42px; height:42px; border-radius:9px; object-fit:cover; flex-shrink:0; border:1px solid var(--border);" />
+            <div style="min-width:0; flex:1;">
+              <div style="font-weight:700; font-size:0.78rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(p.name)}</div>
+              <div style="font-weight:800; font-size:0.76rem; color:var(--pri);">${formatVnd(p.price)}</div>
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+
+    return `
+      <div style="color:#15803d; font-weight:800; font-size:0.92rem; margin-bottom:6px;">
+        ${escapeHtml(res.message || 'Đã đồng bộ sản phẩm thành công!')}
+      </div>
+      ${
+        cardsHtml
+          ? `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:8px; margin:10px 0;">${cardsHtml}</div>`
+          : ''
+      }
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-top:8px;">
+        <span style="font-size:0.78rem; color:var(--muted);">Đã lưu trực tiếp vào MongoDB Atlas (<code>na2hand_shop</code>).</span>
+        <button type="button" class="btn btn-sm btn-primary" id="btn-jump-to-products">👗 Mở Danh Sách Sản Phẩm Vừa Kéo</button>
+      </div>
+    `;
+  }
+
+  function bindJumpToProductsBtn(container) {
+    container?.querySelector('#btn-jump-to-products')?.addEventListener('click', () => {
+      const prodTabBtn = document.querySelector('.tab-btn[data-tab="pane-products"]');
+      if (prodTabBtn) prodTabBtn.click();
+    });
+  }
+
+  async function importCopiedShopContent(targetUrl, pastedHtml, pastedText, logBox) {
+    logBox.innerHTML = '⏳ Đang tự động bóc tách ảnh HD, tên &amp; giá của toàn bộ sản phẩm...';
+    try {
+      const res = await apiFetch('/api/shop/auto-sync', {
+        method: 'POST',
+        body: JSON.stringify({ targetUrl, pastedHtml, pastedText })
+      });
+      logBox.innerHTML = renderSyncedPreviewHtml(res);
+      bindJumpToProductsBtn(logBox);
+      showToast(`Đã kéo về ${res.addedCount || 0} sản phẩm mới! 🎉`);
+      await loadOverview();
+    } catch (err) {
+      logBox.innerHTML = `<div style="color:#be123c; font-weight:700;">⚠️ ${escapeHtml(err.message)}</div>`;
+      showToast(err.message, true);
+    }
+  }
 
   document.getElementById('btn-quick-shopee')?.addEventListener('click', () => {
     const url = shopData?.settings?.shopeeShopUrl || 'https://s.shopee.vn/8VAfrswNOG';
-    document.getElementById('sync-target-url').value = url;
+    const el = document.getElementById('sync-target-url');
+    if (el) {
+      el.value = url;
+      el.focus();
+    }
   });
 
   document.getElementById('btn-quick-tiktok')?.addEventListener('click', () => {
     const url = shopData?.settings?.tiktokShopUrl || 'https://www.tiktok.com/@na2hand3';
-    document.getElementById('sync-target-url').value = url;
+    const el = document.getElementById('sync-target-url');
+    if (el) {
+      el.value = url;
+      el.focus();
+    }
   });
 
-  async function checkPlaywrightAgent() {
-    const badge = document.getElementById('playwright-agent-badge');
-    if (!badge) return false;
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 1800);
-      const res = await fetch(`${PLAYWRIGHT_AGENT_URL}/status`, { signal: controller.signal });
-      clearTimeout(timer);
-      if (res.ok) {
-        badge.textContent = '🟢 Playwright Sẵn Sàng Mở Chrome Trên Máy Bạn';
-        badge.style.background = '#dcfce7';
-        badge.style.color = '#15803d';
-        return true;
-      }
-    } catch {}
-    badge.textContent = '⚪ Chưa bật Playwright trên máy tính (Xem lệnh bật 5s bên dưới)';
-    badge.style.background = '#fef3c7';
-    badge.style.color = '#92400e';
-    return false;
-  }
-
-  setInterval(checkPlaywrightAgent, 8000);
-  checkPlaywrightAgent();
-
-  document.getElementById('btn-launch-playwright')?.addEventListener('click', async () => {
-    const targetUrl = document.getElementById('sync-target-url')?.value.trim();
+  document.getElementById('auto-sync-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const urlInput = document.getElementById('sync-target-url');
+    const submitBtn = document.getElementById('btn-auto-sync-now');
     const logBox = document.getElementById('sync-live-log');
+    const targetUrl = urlInput?.value.trim() || '';
+
     if (!targetUrl) {
-      showToast('Hãy dán link sản phẩm hoặc link Shop Shopee / TikTok Shop trước nhé!', true);
+      showToast('Hãy dán đường dẫn Shop Shopee hoặc TikTok Shop vào ô trước nhé!', true);
       return;
     }
 
+    const origBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '⏳ Đang tự động kéo sản phẩm...';
+    }
     logBox.style.display = 'block';
-    logBox.innerHTML = '⏳ Đang kết nối tới công cụ <strong>Playwright Local Browser</strong> trên máy của bạn...';
-
-    const agentOnline = await checkPlaywrightAgent();
-    if (!agentOnline) {
-      logBox.innerHTML = `
-        <div style="color:#be123c; font-weight:700; margin-bottom:6px;">
-          ⚠️ Trình điều khiển Playwright trên máy tính cá nhân của bạn hiện chưa bật!
-        </div>
-        <div style="line-height:1.6;">
-          Vì trang quản trị đang chạy trên đám mây/server, để mở được cửa sổ Chrome thật ngay trên màn hình máy tính của bạn, bạn hãy:<br/>
-          • <strong>Cách nhanh nhất (Không cần gõ lệnh):</strong> Cài tiện ích <strong>Chrome Extension NA 2HAND</strong> ở Khung Cách 2 bên dưới hoặc kéo nút <strong>Bookmarklet</strong> ở Cách 3, rồi mở thẳng <a href="${escapeHtml(targetUrl)}" target="_blank" style="color:var(--pri); font-weight:700;">link Shopee/TikTok này ↗</a> để hút 1 chạm!<br/>
-          • <strong>Hoặc bật Playwright tự động click trên máy bạn:</strong> Mở Terminal trong thư mục <code>bio-link/browser-tools/playwright-sync</code> rồi chạy <code>npm install &amp;&amp; npm start</code>, sau đó bấm lại nút này nhé!
-        </div>
-      `;
-      return;
-    }
+    logBox.innerHTML = `⏳ Đang kết nối tới <code>${escapeHtml(targetUrl)}</code> và tự động quét danh sách sản phẩm...`;
 
     try {
-      logBox.innerHTML = `🚀 Đang mở trình duyệt Chrome thật của bạn tới <code>${escapeHtml(targetUrl)}</code>, tự cuộn trang & click ảnh để cào dữ liệu chuẩn... (Vui lòng đợi 8 - 20 giây và không đóng cửa sổ Chrome vừa bật nhé!)`;
-
-      const res = await fetch(`${PLAYWRIGHT_AGENT_URL}/extract`, {
+      const res = await apiFetch('/api/shop/auto-sync', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetUrl,
-          serverUrl: window.location.origin,
-          syncKey: shopData?.settings?.syncApiKey || ''
-        })
+        body: JSON.stringify({ targetUrl })
       });
-      const json = await res.json();
 
-      if (!res.ok || !json.success) {
-        logBox.innerHTML = `<div style="color:#be123c; font-weight:700;">⚠️ ${escapeHtml(json.message || 'Chưa lấy được sản phẩm.')}</div>`;
+      if (!res.needsBrowserClipboard) {
+        if (res.resolvedUrl && urlInput) urlInput.value = res.resolvedUrl;
+        logBox.innerHTML = renderSyncedPreviewHtml(res);
+        bindJumpToProductsBtn(logBox);
+        showToast('Tự động kéo sản phẩm thành công! 🎉');
+        await loadOverview();
         return;
       }
 
+      // Optional silent check if local browser helper happens to be running (no setup prompt if absent)
+      try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 1100);
+        const localRes = await fetch(`${PLAYWRIGHT_AGENT_URL}/extract`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: ctrl.signal,
+          body: JSON.stringify({
+            targetUrl: res.resolvedUrl || targetUrl,
+            serverUrl: window.location.origin,
+            syncKey: shopData?.settings?.syncApiKey || ''
+          })
+        });
+        clearTimeout(t);
+        if (localRes.ok) {
+          const localJson = await localRes.json();
+          if (localJson.success) {
+            logBox.innerHTML = renderSyncedPreviewHtml(localJson);
+            bindJumpToProductsBtn(logBox);
+            showToast('Tự động kéo sản phẩm thành công! 🎉');
+            await loadOverview();
+            return;
+          }
+        }
+      } catch {}
+
+      const finalShopUrl = res.resolvedUrl || targetUrl;
+      if (urlInput && res.resolvedUrl) urlInput.value = res.resolvedUrl;
+
       logBox.innerHTML = `
-        <div style="color:#15803d; font-weight:800; margin-bottom:4px;">
-          🎉 ${escapeHtml(json.message)}
+        <div style="margin-bottom:10px;">
+          <strong style="color:#9d174d;">✨ Đã nhận diện đúng địa chỉ Shop:</strong>
+          <a href="${escapeHtml(finalShopUrl)}" target="_blank" rel="noopener" style="color:var(--pri); font-weight:800; word-break:break-all;">${escapeHtml(finalShopUrl)} ↗</a>
         </div>
-        <div style="color:var(--muted);">
-          Đã tự động lưu vào MongoDB (<code>na2hand_shop</code>). Chuyển sang Tab <strong>👗 2. Sản Phẩm</strong> để kiểm tra hoặc chỉnh giá tùy ý nhé!
+        <div style="font-size:0.81rem; color:var(--text); margin-bottom:12px; background:#fff9fb; padding:10px 12px; border-radius:12px; border:1px dashed #f0abc6;">
+          Sàn đang ẩn danh sách sản phẩm với máy chủ đám mây (yêu cầu tab trình duyệt của bạn). Không cần cài bất kỳ phần mềm nào — bạn chỉ cần:
+          <strong>1)</strong> Bấm mở trang Shop bên dưới &rarr; nhấn <strong>Ctrl + A</strong> rồi <strong>Ctrl + C</strong> trên trang Shop &rarr;
+          <strong>2)</strong> Quay lại đây bấm <strong>Hút Ngay Từ Bộ Nhớ Tạm</strong> (hoặc nhấn <strong>Ctrl + V</strong> vào ô dưới) là toàn bộ ảnh gốc, tên &amp; giá tự động bay hết vào cửa hàng!
         </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+          <a href="${escapeHtml(finalShopUrl)}" target="_blank" rel="noopener" class="btn btn-sm">
+            🔗 1. Mở Trang Shop Trong Tab Mới
+          </a>
+          <button type="button" class="btn btn-sm btn-primary" id="btn-read-clipboard-sync">
+            📋 2. Hút Ngay Toàn Bộ Sản Phẩm Vừa Copy (1 Chạm)
+          </button>
+        </div>
+        <div
+          id="paste-drop-zone"
+          contenteditable="true"
+          style="min-height:46px; max-height:90px; overflow:hidden; padding:10px 12px; border-radius:12px; border:1.5px dashed #e5b8cc; background:#fdf7fa; color:var(--muted); font-size:0.79rem; outline:none;"
+        >Hoặc click vào ô này rồi nhấn <strong>Ctrl + V</strong> để tự động kéo sản phẩm ngay lập tức...</div>
       `;
-      showToast('Kéo sản phẩm từ trình duyệt thành công! 🎉');
-      await loadOverview();
+
+      logBox.querySelector('#btn-read-clipboard-sync')?.addEventListener('click', async () => {
+        try {
+          let htmlStr = '';
+          let textStr = '';
+          if (navigator.clipboard && navigator.clipboard.read) {
+            const clipItems = await navigator.clipboard.read();
+            for (const item of clipItems) {
+              if (item.types.includes('text/html')) {
+                const blob = await item.getType('text/html');
+                htmlStr += await blob.text();
+              }
+              if (item.types.includes('text/plain')) {
+                const blob = await item.getType('text/plain');
+                textStr += await blob.text();
+              }
+            }
+          } else if (navigator.clipboard && navigator.clipboard.readText) {
+            textStr = await navigator.clipboard.readText();
+          }
+          if (!htmlStr && !textStr) {
+            showToast('Bộ nhớ tạm đang trống — hãy nhấn Ctrl+A rồi Ctrl+C ở trang Shop trước nhé!', true);
+            return;
+          }
+          await importCopiedShopContent(finalShopUrl, htmlStr, textStr, logBox);
+        } catch {
+          const zone = logBox.querySelector('#paste-drop-zone');
+          if (zone) zone.focus();
+          showToast('Hãy nhấn Ctrl + V trực tiếp vào ô nét đứt bên dưới nhé!');
+        }
+      });
+
+      const pasteZone = logBox.querySelector('#paste-drop-zone');
+      pasteZone?.addEventListener('paste', async (ev) => {
+        ev.preventDefault();
+        const htmlStr = ev.clipboardData?.getData('text/html') || '';
+        const textStr = ev.clipboardData?.getData('text/plain') || '';
+        await importCopiedShopContent(finalShopUrl, htmlStr, textStr, logBox);
+      });
     } catch (err) {
-      logBox.innerHTML = `<div style="color:#be123c; font-weight:700;">Lỗi khi giao tiếp với Playwright: ${escapeHtml(err.message)}</div>`;
+      logBox.innerHTML = `<div style="color:#be123c; font-weight:700;">⚠️ ${escapeHtml(err.message)}</div>`;
+      showToast(err.message, true);
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origBtnHtml;
+      }
     }
   });
 

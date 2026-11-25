@@ -20,6 +20,9 @@ export interface AnalyticsData {
   isFacebookApp?: boolean;
   appType?: string;
   trafficSource?: string;
+  eventType?: 'pageview' | 'contact_click';
+  contactChannel?: 'messenger' | 'zalo' | 'phone';
+  sourcePage?: string;
 }
 
 export interface VisitorLogItem {
@@ -41,6 +44,9 @@ export interface VisitorLogItem {
   page: string;
   timeOnPage?: number;
   referrer?: string;
+  eventType?: 'pageview' | 'contact_click';
+  contactChannel?: 'messenger' | 'zalo' | 'phone';
+  sourcePage?: string;
 }
 
 export interface FacebookAnalyticsSummary {
@@ -50,6 +56,13 @@ export interface FacebookAnalyticsSummary {
   externalBrowserCount: number;
   fbclidCount: number;
   topFacebookPages: Array<{ page: string; views: number }>;
+}
+
+export interface ContactClicksSummary {
+  totalMessengerClicks: number;
+  totalZaloClicks: number;
+  totalPhoneClicks: number;
+  uniqueClickers: number;
 }
 
 export interface AnalyticsStats {
@@ -63,8 +76,8 @@ export interface AnalyticsStats {
   topBrowsers: Array<{ browser: string; count: number }>;
   visitorsByDate: Array<{ date: string; visitors: number; pageViews: number }>;
   facebookSummary?: FacebookAnalyticsSummary;
+  contactClicksSummary?: ContactClicksSummary;
   recentVisitors?: VisitorLogItem[];
 }
 
 export type TimeRange = 'day' | 'week' | 'month' | 'year';
-

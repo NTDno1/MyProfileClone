@@ -156,6 +156,11 @@ export default async function handler(
       isFacebookApp: req.body?.isFacebookApp !== undefined ? !!req.body.isFacebookApp : false,
       appType: req.body?.appType || 'Trình duyệt web',
       trafficSource: req.body?.trafficSource || (req.body?.isFacebook ? 'Facebook' : 'Trực tiếp'),
+
+      // Contact Button Click Tracking (Messenger / Zalo / Phone)
+      eventType: req.body?.eventType || 'pageview',
+      contactChannel: req.body?.contactChannel || null,
+      sourcePage: req.body?.sourcePage || null,
     };
     
     console.log('[API Track] 📊 Normalized data:', {

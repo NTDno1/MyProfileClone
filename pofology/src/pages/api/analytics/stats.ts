@@ -78,7 +78,14 @@ export default async function handler(
     // Filter out records with timeOnPage > 0 that are updates (not new page views)
     // Only count records where timeOnPage is 0, null, or undefined as actual page views
     // Also filter out records that are duplicates (same page, same sessionId, within 5 seconds)
+    const contactClickEvents = data.filter(
+      (d) => d.eventType === 'contact_click' || (typeof d.page === 'string' && d.page.startsWith('[CLICK]'))
+    );
+
     const actualPageViews = data.filter((d, index) => {
+      if (d.eventType === 'contact_click' || (typeof d.page === 'string' && d.page.startsWith('[CLICK]'))) {
+        return false;
+      }
       const timeOnPage = d.timeOnPage;
       // Only count if timeOnPage is 0, null, undefined, or not set (new page views, not updates)
       if (timeOnPage !== 0 && timeOnPage !== null && timeOnPage !== undefined && timeOnPage !== '') {
@@ -230,14 +237,33 @@ export default async function handler(
       topFacebookPages,
     };
 
-    // Detailed recent visitors (last 50 visits)
-    const recentVisitors = actualPageViews
-      .slice()
+    const totalMessengerClicks = contactClickEvents.filter(
+      (d) => d.contactChannel === 'messenger' || (typeof d.page === 'string' && d.page.includes('Messenger'))
+    ).length;
+    const totalZaloClicks = contactClickEvents.filter(
+      (d) => d.contactChannel === 'zalo' || (typeof d.page === 'string' && d.page.includes('Zalo'))
+    ).length;
+    const totalPhoneClicks = contactClickEvents.filter(
+      (d) => d.contactChannel === 'phone' || (typeof d.page === 'string' && d.page.includes('Gọi điện'))
+    ).length;
+    const uniqueClickers = new Set(contactClickEvents.map((d) => d.sessionId || d.ip)).size;
+
+    const contactClicksSummary = {
+      totalMessengerClicks,
+      totalZaloClicks,
+      totalPhoneClicks,
+      uniqueClickers,
+    };
+
+    // Detailed recent visitors + contact click events (last 80 items)
+    const combinedRecent = [...actualPageViews, ...contactClickEvents];
+    const recentVisitors = combinedRecent
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, 50)
+      .slice(0, 80)
       .map((item) => {
         const isFb = item.isFacebook || !!item.fbclid || (item.referrer && item.referrer.toLowerCase().includes('facebook.com'));
         const isFbApp = item.isFacebookApp || (item.userAgent && /FBAN|FBAV/i.test(item.userAgent));
+        const isContactClick = item.eventType === 'contact_click' || (typeof item.page === 'string' && item.page.startsWith('[CLICK]'));
         return {
           id: item._id ? item._id.toString() : item.sessionId,
           timestamp: item.timestamp,
@@ -256,6 +282,9 @@ export default async function handler(
           page: item.page,
           timeOnPage: item.timeOnPage || 0,
           referrer: item.referrer || '',
+          eventType: isContactClick ? ('contact_click' as const) : ('pageview' as const),
+          contactChannel: item.contactChannel || undefined,
+          sourcePage: item.sourcePage || undefined,
         };
       });
 
@@ -270,6 +299,7 @@ export default async function handler(
       topBrowsers,
       visitorsByDate,
       facebookSummary,
+      contactClicksSummary,
       recentVisitors,
     };
     

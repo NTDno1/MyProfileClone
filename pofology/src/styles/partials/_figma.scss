@@ -2150,6 +2150,12 @@ body[data-theme='light'],
   padding-block: 45px 35px !important;
 }
 
+@media (max-width: 768px) {
+  .dev-footer {
+    padding-bottom: calc(115px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
 .dev-footer-links a {
   color: var(--figma-text);
 }
@@ -2928,8 +2934,9 @@ body[data-theme='light'],
 
 @media (max-width: 768px) {
   .dev-mobile-back-to-top {
-    bottom: 202px;
-    right: 16px;
+    bottom: calc(222px + env(safe-area-inset-bottom, 0px));
+    right: 14px;
+    z-index: 105;
   }
 }
 

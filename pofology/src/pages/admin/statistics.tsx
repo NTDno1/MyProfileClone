@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Head from 'next/head';
 import { AnalyticsStats, TimeRange, VisitorLogItem } from '@/types/analytics';
 import { isValidAuthToken } from '@/lib/auth';
-import { FaFacebook, FaMobileAlt, FaDesktop, FaGlobeAsia, FaClock, FaEye, FaUsers } from 'react-icons/fa';
+import { FaFacebook, FaFacebookMessenger, FaPhoneAlt, FaCommentDots, FaMobileAlt, FaDesktop, FaGlobeAsia, FaClock, FaEye, FaUsers } from 'react-icons/fa';
 import { FiArrowLeft, FiLogOut, FiRefreshCw, FiCopy, FiCheck, FiShield } from 'react-icons/fi';
 
 const Statistics: NextPage = () => {
@@ -15,7 +15,7 @@ const Statistics: NextPage = () => {
   const [timeRange, setTimeRange] = useState<TimeRange>('day');
   const [lastUpdate, setLastUpdate] = useState<string>('');
   const [mounted, setMounted] = useState(false);
-  const [filterSource, setFilterSource] = useState<'all' | 'facebook'>('all');
+  const [filterSource, setFilterSource] = useState<'all' | 'facebook' | 'contact'>('all');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const fetchStats = useCallback(async (showLoading = true) => {
@@ -145,10 +145,17 @@ const Statistics: NextPage = () => {
   );
 
   const fbSummary = stats?.facebookSummary;
+  const contactSummary = stats?.contactClicksSummary;
   const recentVisitors = stats?.recentVisitors || [];
-  const filteredVisitors = filterSource === 'facebook'
-    ? recentVisitors.filter((v) => v.isFacebook || !!v.fbclid)
-    : recentVisitors;
+  const contactClickLogsCount = recentVisitors.filter(
+    (v) => v.eventType === 'contact_click' || (v.page && v.page.startsWith('[CLICK]'))
+  ).length;
+  const filteredVisitors =
+    filterSource === 'facebook'
+      ? recentVisitors.filter((v) => v.isFacebook || !!v.fbclid)
+      : filterSource === 'contact'
+      ? recentVisitors.filter((v) => v.eventType === 'contact_click' || (v.page && v.page.startsWith('[CLICK]')))
+      : recentVisitors;
 
   return (
     <>
@@ -284,6 +291,74 @@ const Statistics: NextPage = () => {
             </div>
           </div>
 
+          {/* SECTION 1B: MESSENGER & ZALO CLICK TRACKING */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-blue-200 dark:border-blue-900/50 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-gray-100 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center text-xl">
+                  <FaFacebookMessenger />
+                </div>
+                <div>
+                  <h2 className="text-base md:text-lg font-bold text-gray-900 dark:text-white">
+                    Theo Dõi Lượt Bấm Liên Hệ (Zalo & Messenger)
+                  </h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Ghi nhận ngay lập tức thiết bị, vị trí, nhà mạng và IP của người bấm vào icon Zalo (0983877462) hoặc Messenger
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFilterSource('contact')}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 transition-colors"
+              >
+                Xem danh sách người đã bấm ↓
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="rounded-xl p-4 bg-sky-50/70 dark:bg-sky-900/20 border border-sky-100 dark:border-sky-800/40">
+                <span className="text-xs uppercase font-semibold text-sky-700 dark:text-sky-300 flex items-center gap-1.5">
+                  <FaCommentDots /> Click Zalo
+                </span>
+                <p className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white mt-1">
+                  {contactSummary ? contactSummary.totalZaloClicks : 0}
+                </p>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">Bấm mở Zalo 0983877462</span>
+              </div>
+
+              <div className="rounded-xl p-4 bg-indigo-50/70 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/40">
+                <span className="text-xs uppercase font-semibold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+                  <FaFacebookMessenger /> Click Messenger
+                </span>
+                <p className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white mt-1">
+                  {contactSummary ? contactSummary.totalMessengerClicks : 0}
+                </p>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">Bấm mở chat Messenger</span>
+              </div>
+
+              <div className="rounded-xl p-4 bg-emerald-50/70 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/40">
+                <span className="text-xs uppercase font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                  <FaPhoneAlt /> Click Gọi SĐT
+                </span>
+                <p className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white mt-1">
+                  {contactSummary ? contactSummary.totalPhoneClicks : 0}
+                </p>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">Bấm gọi trên di động</span>
+              </div>
+
+              <div className="rounded-xl p-4 bg-purple-50/70 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/40">
+                <span className="text-xs uppercase font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
+                  <FaUsers /> Người bấm liên hệ
+                </span>
+                <p className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white mt-1">
+                  {contactSummary ? contactSummary.uniqueClickers : 0}
+                </p>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">Số khách độc nhất đã click</span>
+              </div>
+            </div>
+          </div>
+
           {/* SECTION 2: OVERALL PERFORMANCE METRICS */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             <StatCard
@@ -395,7 +470,7 @@ const Statistics: NextPage = () => {
               </div>
 
               {/* Source Filter Buttons */}
-              <div className="inline-flex p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+              <div className="inline-flex flex-wrap p-1 bg-gray-100 dark:bg-gray-700 rounded-lg gap-1">
                 <button
                   type="button"
                   onClick={() => setFilterSource('all')}
@@ -416,8 +491,20 @@ const Statistics: NextPage = () => {
                       : 'text-gray-600 dark:text-gray-300 hover:text-blue-600'
                   }`}
                 >
-                  <FaFacebook className="text-blue-500 group-hover:text-white" />
+                  <FaFacebook className={filterSource === 'facebook' ? 'text-white' : 'text-blue-500'} />
                   Chỉ từ Facebook ({recentVisitors.filter((v) => v.isFacebook || !!v.fbclid).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterSource('contact')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                    filterSource === 'contact'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-indigo-600'
+                  }`}
+                >
+                  <FaFacebookMessenger className={filterSource === 'contact' ? 'text-white' : 'text-indigo-500'} />
+                  Bấm Zalo / Messenger ({contactClickLogsCount})
                 </button>
               </div>
             </div>
@@ -431,7 +518,7 @@ const Statistics: NextPage = () => {
                     <th className="py-3 px-4">Nguồn truy cập</th>
                     <th className="py-3 px-4">Thiết bị & Ứng dụng</th>
                     <th className="py-3 px-4">Địa điểm & Nhà mạng (ISP)</th>
-                    <th className="py-3 px-4">Trang xem</th>
+                    <th className="py-3 px-4">Trang xem / Hành động</th>
                     <th className="py-3 px-4">Thời gian</th>
                     <th className="py-3 px-4">Mã Facebook (fbclid)</th>
                   </tr>
@@ -485,14 +572,41 @@ const Statistics: NextPage = () => {
                           </div>
                         </td>
 
-                        {/* Page Viewed */}
-                        <td className="py-3 px-4 font-mono text-blue-600 dark:text-blue-400 font-medium">
-                          {v.page}
+                        {/* Page Viewed / Contact Click Action */}
+                        <td className="py-3 px-4">
+                          {v.eventType === 'contact_click' || (v.page && v.page.startsWith('[CLICK]')) ? (
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${
+                                v.contactChannel === 'zalo' || (v.page && v.page.includes('Zalo'))
+                                  ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300'
+                                  : v.contactChannel === 'phone' || (v.page && v.page.includes('Gọi điện'))
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                                  : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300'
+                              }`}
+                            >
+                              {v.contactChannel === 'zalo' || (v.page && v.page.includes('Zalo')) ? (
+                                <FaCommentDots />
+                              ) : v.contactChannel === 'phone' || (v.page && v.page.includes('Gọi điện')) ? (
+                                <FaPhoneAlt />
+                              ) : (
+                                <FaFacebookMessenger />
+                              )}
+                              {v.page.replace('[CLICK] ', 'Đã bấm ')}
+                            </span>
+                          ) : (
+                            <span className="font-mono text-blue-600 dark:text-blue-400 font-medium">
+                              {v.page}
+                            </span>
+                          )}
                         </td>
 
                         {/* Time on Page */}
                         <td className="py-3 px-4 whitespace-nowrap font-medium text-gray-700 dark:text-gray-300">
-                          {v.timeOnPage && v.timeOnPage > 0 ? formatTime(v.timeOnPage) : 'Đang xem'}
+                          {v.eventType === 'contact_click' || (v.page && v.page.startsWith('[CLICK]'))
+                            ? 'Vừa click'
+                            : v.timeOnPage && v.timeOnPage > 0
+                            ? formatTime(v.timeOnPage)
+                            : 'Đang xem'}
                         </td>
 
                         {/* fbclid */}

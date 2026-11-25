@@ -25,6 +25,7 @@ import { posts } from '@/data/posts';
 import { experiences } from '@/data/experiences';
 import ProjectCard from './ProjectCard';
 import ContactSection from '@/components/partials/ContactSection';
+import { trackContactClick } from '@/components/analytics/Tracking';
 
 export function SectionHeading({
   label,
@@ -792,7 +793,12 @@ export default function DeveloperPortfolio() {
 
       {/* 12. DEDICATED MOBILE BOTTOM ACTION DOCK (ƯU TIÊN ĐIỆN THOẠI) */}
       <aside className="figma-mobile-dock" aria-label="Quick Mobile Actions">
-        <a href="tel:0983877462" className="figma-dock-btn" aria-label={t('figma.dock.call')}>
+        <a
+          href="tel:0983877462"
+          className="figma-dock-btn"
+          onClick={() => trackContactClick('phone')}
+          aria-label={t('figma.dock.call')}
+        >
           <div className="figma-dock-icon figma-dock-call">
             <FiPhone />
           </div>
@@ -807,10 +813,11 @@ export default function DeveloperPortfolio() {
         </a>
 
         <a
-          href="https://facebook.com/datntd01"
+          href="https://m.me/datntd01"
           target="_blank"
           rel="noopener noreferrer"
           className="figma-dock-btn"
+          onClick={() => trackContactClick('messenger')}
           aria-label={t('figma.dock.chat')}
         >
           <div className="figma-dock-icon figma-dock-chat">

@@ -11,6 +11,7 @@ import {
   FiSend,
 } from 'react-icons/fi';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { trackContactClick } from '@/components/analytics/Tracking';
 
 export default function ContactSection() {
   const { t } = useLanguage();
@@ -132,12 +133,22 @@ export default function ContactSection() {
           )}
 
           <div className="dev-contact-social">
-            <a href="https://zalo.me/0983877462" target="_blank" rel="noopener noreferrer">
+            <a
+              href="https://zalo.me/0983877462"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackContactClick('zalo')}
+            >
               <FiPhone />
               Zalo (0983877462)
               <FiArrowUpRight />
             </a>
-            <a href="https://facebook.com/datntd01" target="_blank" rel="noopener noreferrer">
+            <a
+              href="https://facebook.com/datntd01"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackContactClick('messenger')}
+            >
               <FiMessageSquare />
               Facebook
               <FiArrowUpRight />

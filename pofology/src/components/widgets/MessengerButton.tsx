@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaFacebookMessenger } from 'react-icons/fa';
 import { FiX } from 'react-icons/fi';
+import { trackContactClick } from '@/components/analytics/Tracking';
 
 interface MessengerButtonProps {
   facebookUsername?: string;
@@ -70,6 +71,7 @@ export default function MessengerButton({
           target="_blank"
           rel="noopener noreferrer"
           className="dev-zalo-btn"
+          onClick={() => trackContactClick('zalo')}
           aria-label={`Nhắn tin qua Zalo (${zaloPhone})`}
           title={`Liên hệ Zalo: ${zaloPhone}`}
         >
@@ -106,6 +108,7 @@ export default function MessengerButton({
           target="_blank"
           rel="noopener noreferrer"
           className="dev-messenger-btn"
+          onClick={() => trackContactClick('messenger')}
           aria-label="Mở cuộc trò chuyện trên Facebook Messenger"
           title="Nhắn tin với Nguyễn Tiến Đạt qua Messenger"
         >

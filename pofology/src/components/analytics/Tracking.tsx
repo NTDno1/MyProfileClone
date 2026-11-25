@@ -1173,3 +1173,57 @@ export function AnalyticsTracking() {
   return null;
 }
 
+export function trackContactClick(channel: 'messenger' | 'zalo' | 'phone') {
+  if (typeof window === 'undefined') return;
+  try {
+    const sourcePage = window.location.pathname || '/';
+    if (sourcePage.startsWith('/admin')) return;
+
+    const device = getDeviceType();
+    const { browser, version, os } = getBrowserInfo();
+    const sessionId = getSessionId();
+    const fbInfo = getFacebookAndClientInfo();
+    const cachedLoc = locationInfoCache || {};
+
+    const labelMap: Record<'messenger' | 'zalo' | 'phone', string> = {
+      messenger: '[CLICK] Messenger',
+      zalo: '[CLICK] Zalo (0983877462)',
+      phone: '[CLICK] Gọi điện (0983877462)',
+    };
+
+    const payload = {
+      eventType: 'contact_click',
+      contactChannel: channel,
+      sourcePage,
+      page: `${labelMap[channel]} (tại ${sourcePage})`,
+      ip: cachedLoc.ip || 'unknown',
+      country: cachedLoc.country,
+      city: cachedLoc.city,
+      isp: cachedLoc.isp,
+      device,
+      browser: browser || 'Unknown',
+      browserVersion: version || '',
+      os: os || 'Unknown',
+      referrer: document.referrer || '',
+      userAgent: navigator.userAgent || '',
+      sessionId,
+      timeOnPage: 0,
+      isNewVisitor: false,
+      fbclid: fbInfo.fbclid,
+      isFacebook: fbInfo.isFacebook,
+      isFacebookApp: fbInfo.isFacebookApp,
+      appType: fbInfo.appType,
+      trafficSource: fbInfo.trafficSource,
+      timestamp: new Date().toISOString(),
+    };
+
+    fetch('/api/analytics/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {}
+}
+
+

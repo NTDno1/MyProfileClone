@@ -185,7 +185,7 @@
               <div style="font-size:0.7rem;">${steps.length} bước (${row.viewCount} xem · ${row.clickCount} bấm)</div>
             </td>
             <td style="padding: 10px 8px;">
-              <div style="display:flex; align-items:center; flex-wrap:${isExpanded ? 'wrap' : 'nowrap'}; gap:2px; overflow-x:auto; max-width:560px; scrollbar-width:thin;">
+              <div style="display:flex; align-items:center; flex-wrap:${isExpanded ? 'wrap' : 'nowrap'}; gap:2px; overflow-x:auto; max-width:clamp(240px, 32vw, 520px); scrollbar-width:thin;">
                 ${flowHtml}
               </div>
             </td>
@@ -603,14 +603,14 @@
 
       card.innerHTML = `
         <div class="link-editor-header">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="width: 32px; height: 32px; border-radius: 10px; background: var(--adm-primary-light); color: var(--adm-primary); display: inline-flex; align-items: center; justify-content: center;">
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0;">
+            <span style="width: 32px; height: 32px; border-radius: 10px; background: var(--adm-primary-light); color: var(--adm-primary); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
               <span class="link-icon-preview" style="width: 18px; height: 18px; display: inline-flex;">${iconPreviewSvg}</span>
             </span>
-            <strong style="font-size: 0.92rem;">Nút #${idx + 1}: ${escapeHtml(link.title || 'Chưa đặt tên')}</strong>
+            <strong style="font-size: 0.92rem; word-break: break-word;">Nút #${idx + 1}: ${escapeHtml(link.title || 'Chưa đặt tên')}</strong>
             <span class="link-click-pill">👆 ${Number(link.clicks || 0)} lượt click</span>
           </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <label class="switch-label">
               <input type="checkbox" class="link-toggle-enabled" ${link.enabled !== false ? 'checked' : ''} />
               <span>Hiện</span>
@@ -770,10 +770,10 @@
           <span class="soc-icon-preview" style="width: 36px; height: 36px; border-radius: 50%; background: var(--adm-primary-light); color: var(--adm-primary); display: inline-flex; align-items: center; justify-content: center;">
             <span style="width: 18px; height: 18px; display: inline-flex;">${window.getBioIconSvg(soc.platform)}</span>
           </span>
-          <select class="form-select soc-select-platform" style="width: 175px;">
+          <select class="form-select soc-select-platform" style="width: 165px; max-width: 100%;">
             ${platformOptions}
           </select>
-          <input type="text" class="form-input soc-input-url" style="flex: 1; min-width: 210px;" value="${escapeAttr(soc.url)}" placeholder="https://... hoặc mailto:email@..." />
+          <input type="text" class="form-input soc-input-url" style="flex: 1 1 180px; min-width: 0;" value="${escapeAttr(soc.url)}" placeholder="https://... hoặc mailto:email@..." />
           <label class="switch-label">
             <input type="checkbox" class="soc-toggle-enabled" ${soc.enabled ? 'checked' : ''} />
             <span>Hiện</span>

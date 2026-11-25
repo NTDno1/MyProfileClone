@@ -82,9 +82,9 @@
     }
     .admin-header-inner {
       width: 100%;
-      max-width: 1480px;
+      max-width: 1600px;
       margin: 0 auto;
-      padding: 12px clamp(14px, 2.5vw, 32px);
+      padding: 12px clamp(16px, 3vw, 40px);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -168,11 +168,11 @@
     /* Layout Grid — minmax(0, 1fr) prevents children from overflowing horizontally */
     .admin-main {
       width: 100%;
-      max-width: 1480px;
+      max-width: 1600px;
       margin: 0 auto;
-      padding: 22px clamp(14px, 2.5vw, 32px) 80px;
+      padding: 22px clamp(16px, 3vw, 40px) 80px;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) clamp(295px, 24vw, 368px);
+      grid-template-columns: minmax(0, 1fr) clamp(280px, 24vw, 360px);
       gap: clamp(18px, 2.2vw, 28px);
       align-items: start;
     }
@@ -181,7 +181,7 @@
       width: 100%;
     }
 
-    @media (max-width: 1060px) {
+    @media (max-width: 1024px) {
       .admin-main {
         grid-template-columns: minmax(0, 1fr);
       }
@@ -250,7 +250,7 @@
     .tabs-bar {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
       margin-bottom: 20px;
       max-width: 100%;
     }
@@ -264,13 +264,13 @@
     }
     .tabs-bar::-webkit-scrollbar { display: none; }
     .tab-btn {
-      padding: 10px 15px;
+      padding: 9px 12px;
       border-radius: 13px;
       border: 1px solid var(--adm-border);
       background: #fff;
       color: var(--adm-muted);
       font-weight: 600;
-      font-size: 0.83rem;
+      font-size: 0.79rem;
       cursor: pointer;
       white-space: nowrap;
       transition: all 0.2s ease;
@@ -301,6 +301,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
       gap: 10px;
     }
     .panel-desc {
@@ -351,14 +352,15 @@
     /* Template Selector Cards (3 Canva Layouts) */
     .template-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 14px;
       margin-bottom: 20px;
     }
-    @media (max-width: 680px) {
-      .template-grid { grid-template-columns: 1fr; }
+    @media (max-width: 780px) {
+      .template-grid { grid-template-columns: minmax(0, 1fr); }
     }
     .template-option {
+      min-width: 0;
       border: 2px solid var(--adm-border);
       border-radius: 18px;
       padding: 16px;
@@ -513,14 +515,14 @@
 
     /* Mobile optimization for iPhone (prevent iOS Safari auto-zoom on input focus) & Android */
     @media (max-width: 768px) {
-      .admin-header {
+      .admin-header-inner {
         padding: 10px 14px;
       }
       .admin-main {
         padding: 16px 12px 90px;
       }
       .stats-grid {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
       }
       .stat-card {
@@ -567,7 +569,7 @@
       transform: translateX(-50%);
       z-index: 90;
     }
-    @media (max-width: 1060px) {
+    @media (max-width: 1024px) {
       .mobile-preview-fab { display: block; }
     }
 
@@ -1115,6 +1117,6 @@
   <div class="toast-msg" id="toast-msg">Đã lưu thay đổi thành công! ✨</div>
 
   <script src="/js/icons.js?v=3"></script>
-  <script src="/js/admin.js?v=4"></script>
+  <script src="/js/admin.js?v=5"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getAnalyticsCollection } from '@/lib/mongodb';
 import { inMemoryStorage } from '@/lib/analytics-storage';
-import { TimeRange } from '@/types/analytics';
+import { TimeRange, VisitorIpFlowItem } from '@/types/analytics';
 
 export default async function handler(
   req: NextApiRequest,
@@ -12,8 +12,8 @@ export default async function handler(
   }
 
   try {
-    console.log('[API Stats] 📈 Fetching statistics for range:', req.query.range || 'all');
-    const { range = 'all' } = req.query;
+    console.log('[API Stats] 📈 Fetching statistics for range:', req.query.range || 'week');
+    const { range = 'week' } = req.query;
 
     const now = new Date();
     let startDate: Date;
@@ -111,7 +111,7 @@ export default async function handler(
     const topPages = Object.entries(pageViews)
       .map(([page, views]) => ({ page, views }))
       .sort((a, b) => b.views - a.views)
-      .slice(0, 10);
+      .slice(0, 300);
 
     // Top countries - only count actual page views, not updates
     const countryViews = actualPageViews.reduce((acc: Record<string, number>, item) => {
@@ -123,7 +123,7 @@ export default async function handler(
     const topCountries = Object.entries(countryViews)
       .map(([country, visitors]) => ({ country, visitors }))
       .sort((a, b) => b.visitors - a.visitors)
-      .slice(0, 10);
+      .slice(0, 300);
 
     // Top devices - normalize undefined values, only count actual page views
     const deviceCounts = actualPageViews.reduce((acc: Record<string, number>, item) => {
@@ -246,11 +246,127 @@ export default async function handler(
       uniqueClickers,
     };
 
-    // Detailed recent visitors + contact click events (last 80 items)
-    const combinedRecent = [...actualPageViews, ...contactClickEvents];
-    const recentVisitors = combinedRecent
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, 250)
+    // Map max timeOnPage per (sessionId + page) from heartbeat records so each page step shows real reading duration
+    const maxTimeMap = new Map<string, number>();
+    for (const d of data) {
+      if (d.sessionId && d.page && typeof d.timeOnPage === 'number' && d.timeOnPage > 0) {
+        const k = `${d.sessionId}::${d.page}`;
+        const prev = maxTimeMap.get(k) || 0;
+        if (d.timeOnPage > prev) maxTimeMap.set(k, d.timeOnPage);
+      }
+    }
+
+    // Group ALL pageviews + contact clicks by unique IP into a single-row chronological User Flow
+    const combinedAllEvents = [...actualPageViews, ...contactClickEvents].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+
+    const ipFlowMap = new Map<string, VisitorIpFlowItem>();
+    for (const item of combinedAllEvents) {
+      const cleanIp = String(item.ip || 'unknown').replace(/^::ffff:/, '').trim() || 'unknown';
+      const isFb = Boolean(
+        item.isFacebook ||
+        item.fbclid ||
+        (item.referrer && item.referrer.toLowerCase().includes('facebook.com'))
+      );
+      const isFbApp = Boolean(item.isFacebookApp || (item.userAgent && /FBAN|FBAV/i.test(item.userAgent)));
+      const isContactClick = Boolean(
+        item.eventType === 'contact_click' ||
+        (typeof item.page === 'string' && item.page.startsWith('[CLICK]'))
+      );
+      const resolvedAppType =
+        item.appType ||
+        (isFbApp ? 'Facebook App' : item.device === 'mobile' ? 'Trình duyệt di động' : 'Trình duyệt máy tính');
+      const resolvedSource =
+        item.trafficSource || (isFb ? 'Facebook' : item.referrer ? 'Web khác' : 'Trực tiếp');
+
+      if (!ipFlowMap.has(cleanIp)) {
+        ipFlowMap.set(cleanIp, {
+          ip: cleanIp,
+          firstSeen: item.timestamp,
+          lastSeen: item.timestamp,
+          city: item.city || 'Chưa rõ',
+          country: item.country || 'Việt Nam',
+          isp: item.isp || 'Chưa rõ',
+          device: item.device || 'desktop',
+          os: item.os || 'Unknown',
+          browser: item.browser || 'Unknown',
+          appType: resolvedAppType,
+          isFacebook: isFb,
+          isFacebookApp: isFbApp,
+          fbclid: item.fbclid || undefined,
+          trafficSource: resolvedSource,
+          hasContactClick: isContactClick,
+          pageViewCount: 0,
+          contactClickCount: 0,
+          totalTimeOnSite: 0,
+          steps: [],
+        });
+      }
+
+      const flow = ipFlowMap.get(cleanIp)!;
+      flow.lastSeen = item.timestamp;
+      if (item.city && item.city !== 'Chưa rõ') flow.city = item.city;
+      if (item.country && item.country !== 'Unknown') flow.country = item.country;
+      if (item.isp && item.isp !== 'Chưa rõ') flow.isp = item.isp;
+      if (item.browser && item.browser !== 'Unknown') flow.browser = item.browser;
+      if (item.os && item.os !== 'Unknown') flow.os = item.os;
+      if (isFb) {
+        flow.isFacebook = true;
+        flow.trafficSource = 'Facebook';
+      } else if (flow.trafficSource === 'Trực tiếp' && resolvedSource !== 'Trực tiếp') {
+        flow.trafficSource = resolvedSource;
+      }
+      if (isFbApp) {
+        flow.isFacebookApp = true;
+        flow.appType = 'Facebook App';
+      }
+      if (item.fbclid && !flow.fbclid) {
+        flow.fbclid = item.fbclid;
+      }
+
+      const stepTime = isContactClick
+        ? 0
+        : maxTimeMap.get(`${item.sessionId}::${item.page}`) || Number(item.timeOnPage || 0);
+
+      if (isContactClick) {
+        flow.hasContactClick = true;
+        flow.contactClickCount += 1;
+      } else {
+        flow.pageViewCount += 1;
+        flow.totalTimeOnSite += stepTime;
+      }
+
+      const prevStep = flow.steps[flow.steps.length - 1];
+      const eventType = isContactClick ? ('contact_click' as const) : ('pageview' as const);
+      if (
+        prevStep &&
+        prevStep.eventType === eventType &&
+        prevStep.page === item.page &&
+        Math.abs(new Date(item.timestamp).getTime() - new Date(prevStep.timestamp).getTime()) < 5000
+      ) {
+        prevStep.repeat = (prevStep.repeat || 1) + 1;
+        prevStep.timestamp = item.timestamp;
+      } else {
+        flow.steps.push({
+          timestamp: item.timestamp,
+          page: item.page || '/',
+          eventType,
+          contactChannel: item.contactChannel || undefined,
+          timeOnPage: stepTime,
+          repeat: 1,
+        });
+      }
+    }
+
+    const ipFlows = Array.from(ipFlowMap.values()).sort(
+      (a, b) => new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime()
+    );
+
+    // Keep recentVisitors for backward compatibility
+    const recentVisitors = [...combinedAllEvents]
+      .reverse()
+      .slice(0, 150)
       .map((item) => {
         const isFb = item.isFacebook || !!item.fbclid || (item.referrer && item.referrer.toLowerCase().includes('facebook.com'));
         const isFbApp = item.isFacebookApp || (item.userAgent && /FBAN|FBAV/i.test(item.userAgent));
@@ -280,7 +396,7 @@ export default async function handler(
       });
 
     const statsResult = {
-      totalVisitors: uniqueIPs,
+      totalVisitors: ipFlows.length || uniqueIPs,
       totalPageViews,
       uniqueVisitors,
       averageTimeOnPage: Math.round(averageTimeOnPage),
@@ -292,6 +408,7 @@ export default async function handler(
       facebookSummary,
       contactClicksSummary,
       recentVisitors,
+      ipFlows,
       storageSource,
       storageError,
     };

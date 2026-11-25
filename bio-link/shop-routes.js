@@ -255,7 +255,7 @@ const DEFAULT_SHOP_SETTINGS = {
   syncApiKey: 'na2hand_sync_' + crypto.randomBytes(8).toString('hex')
 };
 
-function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth }) {
+function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnalyticsEvent }) {
   const SHOP_FILE = path.join(dataDir, 'shop-store.json');
 
   function loadLocalShopData() {
@@ -458,6 +458,13 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth }) {
   // =========================================================================
 
   app.get('/api/shop/storefront', async (req, res) => {
+    if (typeof recordAnalyticsEvent === 'function') {
+      recordAnalyticsEvent(req, {
+        type: 'shop_view',
+        targetTitle: 'Vào Cửa hàng /shop',
+        targetUrl: '/shop'
+      }).catch(() => {});
+    }
     const store = await getShopStore();
     const publicSettings = { ...store.settings };
     delete publicSettings.telegramBotToken;
@@ -626,6 +633,13 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth }) {
       store.orders.unshift(newOrder);
       await saveShopStore(store);
       notifyOrderTelegram(store.settings, newOrder);
+      if (typeof recordAnalyticsEvent === 'function') {
+        recordAnalyticsEvent(req, {
+          type: 'order',
+          targetTitle: `Đặt đơn #${newOrder.orderCode} (${Number(newOrder.totalAmount).toLocaleString('vi-VN')}đ)`,
+          targetUrl: '/shop'
+        }).catch(() => {});
+      }
 
       res.status(201).json({
         success: true,

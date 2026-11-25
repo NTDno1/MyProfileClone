@@ -928,24 +928,39 @@
         </div>
       </div>
 
-      <!-- TAB 5: REAL ANALYTICS -->
+      <!-- TAB 5: REAL ANALYTICS (IP-GROUPED FLOW + 30 ROWS/PAGE PAGINATION) -->
       <div class="tab-pane" id="tab-analytics" style="display: none;">
         <div class="panel-card">
-          <div class="panel-title">
-            <span>📈 Nhật ký Người truy cập & Bấm Link Thực Tế (100% Real-time)</span>
-            <div style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-outline btn-sm" id="btn-refresh-analytics">🔄 Làm mới ngay</button>
+          <div class="panel-title" style="flex-wrap: wrap; gap: 10px;">
+            <span>📈 Luồng Hành Trình Khách Theo IP (Gộp 1 Dòng / IP • 30 Dòng / Trang)</span>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+              <div id="ana-range-group" style="display: inline-flex; background: #f9eef2; padding: 3px; border-radius: 10px; gap: 3px;">
+                <button type="button" class="btn btn-sm ana-range-btn" data-range="day" style="border:none; background:transparent; padding:5px 10px;">Hôm nay</button>
+                <button type="button" class="btn btn-sm ana-range-btn active" data-range="week" style="border:none; background:#d64f7c; color:#fff; padding:5px 10px;">Tuần này</button>
+                <button type="button" class="btn btn-sm ana-range-btn" data-range="month" style="border:none; background:transparent; padding:5px 10px;">Tháng này</button>
+                <button type="button" class="btn btn-sm ana-range-btn" data-range="all" style="border:none; background:transparent; padding:5px 10px;">Tất cả</button>
+              </div>
+              <button type="button" class="btn btn-outline btn-sm" id="btn-refresh-analytics">🔄 Làm mới</button>
             </div>
           </div>
-          <p class="panel-desc">
-            Ghi nhận chính xác từng lượt khách mở trang Bio và từng lượt bấm vào nút đường dẫn (Thời gian, Thiết bị iPhone/Android, Ứng dụng Facebook/TikTok/Zalo/Safari, Địa chỉ IP).
+          <p class="panel-desc" style="margin-bottom: 10px;">
+            Mỗi địa chỉ IP được gom gọn trên <strong>1 dòng duy nhất</strong> theo trình tự thao tác thực tế (Vào trang Bio &rarr; Bấm Link &rarr; Vào Cửa hàng &rarr; Đặt đơn), phân trang chuẩn 30 dòng / 1 trang cho mọi phân loại.
           </p>
+
+          <!-- Filter Category Tabs -->
+          <div id="ana-filter-group" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;">
+            <button type="button" class="btn btn-primary btn-sm ana-filter-btn" data-filter="all">Tất cả IP (<span id="cnt-ana-all">0</span>)</button>
+            <button type="button" class="btn btn-outline btn-sm ana-filter-btn" data-filter="clicked">👆 Có bấm Link / Mua (<span id="cnt-ana-clicked">0</span>)</button>
+            <button type="button" class="btn btn-outline btn-sm ana-filter-btn" data-filter="social">📱 Từ MXH FB/IG/TikTok (<span id="cnt-ana-social">0</span>)</button>
+            <button type="button" class="btn btn-outline btn-sm ana-filter-btn" data-filter="shop">🛍️ Có vào Shop (<span id="cnt-ana-shop">0</span>)</button>
+          </div>
+
           <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: left;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.81rem; text-align: left;">
               <thead>
-                <tr style="border-bottom: 2px solid var(--adm-border); color: var(--adm-muted);">
-                  <th style="padding: 10px 8px;">Thời gian</th>
-                  <th style="padding: 10px 8px;">Hành động</th>
+                <tr style="border-bottom: 2px solid var(--adm-border); color: var(--adm-muted); white-space: nowrap;">
+                  <th style="padding: 10px 8px;">Thời gian mới nhất</th>
+                  <th style="padding: 10px 8px;">Luồng thao tác của khách (Từ đầu &rarr; Cuối trên 1 dòng)</th>
                   <th style="padding: 10px 8px;">Thiết bị / HĐH</th>
                   <th style="padding: 10px 8px;">Ứng dụng mở</th>
                   <th style="padding: 10px 8px;">Nguồn</th>
@@ -954,11 +969,14 @@
               </thead>
               <tbody id="analytics-logs-tbody">
                 <tr>
-                  <td colspan="6" style="padding: 20px; text-align: center; color: var(--adm-muted);">Chưa có lượt truy cập nào. Hãy mở trang Bio để ghi nhận lượt xem thực tế đầu tiên!</td>
+                  <td colspan="6" style="padding: 20px; text-align: center; color: var(--adm-muted);">Đang tải luồng hành trình khách truy cập...</td>
                 </tr>
               </tbody>
             </table>
           </div>
+
+          <!-- Pagination Footer (30 rows / page) -->
+          <div id="analytics-pagination" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--adm-border); font-size: 0.79rem;"></div>
         </div>
       </div>
 
@@ -1045,6 +1063,6 @@
   <div class="toast-msg" id="toast-msg">Đã lưu thay đổi thành công! ✨</div>
 
   <script src="/js/icons.js?v=3"></script>
-  <script src="/js/admin.js?v=3"></script>
+  <script src="/js/admin.js?v=4"></script>
 </body>
 </html>

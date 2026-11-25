@@ -65,6 +65,37 @@ export interface ContactClicksSummary {
   uniqueClickers: number;
 }
 
+export interface VisitorFlowStep {
+  timestamp: string | Date;
+  page: string;
+  eventType: 'pageview' | 'contact_click';
+  contactChannel?: 'messenger' | 'zalo' | 'phone';
+  timeOnPage?: number;
+  repeat?: number;
+}
+
+export interface VisitorIpFlowItem {
+  ip: string;
+  firstSeen: string | Date;
+  lastSeen: string | Date;
+  city?: string;
+  country?: string;
+  isp?: string;
+  device: string;
+  os?: string;
+  browser: string;
+  appType?: string;
+  isFacebook?: boolean;
+  isFacebookApp?: boolean;
+  fbclid?: string;
+  trafficSource?: string;
+  hasContactClick?: boolean;
+  pageViewCount: number;
+  contactClickCount: number;
+  totalTimeOnSite: number;
+  steps: VisitorFlowStep[];
+}
+
 export interface AnalyticsStats {
   totalVisitors: number;
   totalPageViews: number;
@@ -78,6 +109,7 @@ export interface AnalyticsStats {
   facebookSummary?: FacebookAnalyticsSummary;
   contactClicksSummary?: ContactClicksSummary;
   recentVisitors?: VisitorLogItem[];
+  ipFlows?: VisitorIpFlowItem[];
   storageSource?: 'mongodb' | 'fallback';
   storageError?: string;
 }

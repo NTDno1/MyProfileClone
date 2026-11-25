@@ -44,12 +44,19 @@
     document.getElementById('stat-ctr').textContent = `${ctr}%`;
   }
 
+  let anaRange = 'week';
+  let anaFilter = 'all';
+  let anaPage = 1;
+  const ANA_PAGE_SIZE = 30;
+  const expandedIps = new Set();
+
   async function fetchRealAnalytics() {
     if (!authToken) return;
     try {
+      const qs = `range=${encodeURIComponent(anaRange)}&filter=${encodeURIComponent(anaFilter)}&page=${anaPage}&pageSize=${ANA_PAGE_SIZE}`;
       const [cfgRes, anaRes] = await Promise.all([
         fetch('/api/config'),
-        fetch('/api/analytics', { headers: { Authorization: `Bearer ${authToken}` } })
+        fetch(`/api/analytics?${qs}`, { headers: { Authorization: `Bearer ${authToken}` } })
       ]);
       if (cfgRes.ok) {
         const cfgJson = await cfgRes.json();
@@ -77,6 +84,16 @@
           document.getElementById('stat-active-links').textContent = ana.summary.activeLinks || 0;
           document.getElementById('stat-ctr').textContent = `${ana.summary.ctr || 0}%`;
         }
+        if (ana.counts) {
+          const cAll = document.getElementById('cnt-ana-all');
+          const cClk = document.getElementById('cnt-ana-clicked');
+          const cSoc = document.getElementById('cnt-ana-social');
+          const cShp = document.getElementById('cnt-ana-shop');
+          if (cAll) cAll.textContent = ana.counts.all || 0;
+          if (cClk) cClk.textContent = ana.counts.clicked || 0;
+          if (cSoc) cSoc.textContent = ana.counts.social || 0;
+          if (cShp) cShp.textContent = ana.counts.shop || 0;
+        }
         if (ana.mongo) {
           const badge = document.getElementById('mongo-status-badge');
           const errText = document.getElementById('mongo-error-text');
@@ -96,53 +113,164 @@
             }
           }
         }
-        renderAnalyticsLogsTable(ana.recentLogs || []);
+        renderAnalyticsLogsTable(ana.ipFlows || [], ana.pagination || { page: 1, pageSize: ANA_PAGE_SIZE, totalItems: 0, totalPages: 1 });
       }
     } catch (e) {}
   }
 
-  function renderAnalyticsLogsTable(logs) {
+  function renderStepChip(step) {
+    const dt = new Date(step.timestamp);
+    const hm = dt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const rep = step.repeat && step.repeat > 1 ? ` ×${step.repeat}` : '';
+    if (step.type === 'order') {
+      return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;background:#dcfce7;color:#15803d;font-weight:700;white-space:nowrap;"><small style="opacity:.75">${hm}</small> 💖 ${escapeHtml(step.title)}${rep}</span>`;
+    }
+    if (step.type === 'click') {
+      return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;background:#fce8ef;color:#c7436e;font-weight:700;white-space:nowrap;"><small style="opacity:.75">${hm}</small> 👆 Bấm: ${escapeHtml(step.title)}${rep}</span>`;
+    }
+    if (step.type === 'shop_view') {
+      return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;background:#fef3c7;color:#92400e;font-weight:600;white-space:nowrap;"><small style="opacity:.75">${hm}</small> 🛍️ ${escapeHtml(step.title)}${rep}</span>`;
+    }
+    return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;background:#eef6ff;color:#2b6cb0;font-weight:600;white-space:nowrap;"><small style="opacity:.75">${hm}</small> 👁️ Xem Bio${rep}</span>`;
+  }
+
+  function renderAnalyticsLogsTable(ipFlows, pagination) {
     const tbody = document.getElementById('analytics-logs-tbody');
+    const pagerEl = document.getElementById('analytics-pagination');
     if (!tbody) return;
-    if (!logs || logs.length === 0) {
+
+    if (!ipFlows || ipFlows.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="6" style="padding: 20px; text-align: center; color: var(--adm-muted);">
-            Chưa có lượt truy cập nào (0 lượt xem, 0 lượt click). Hãy mở trang Bio trên điện thoại để ghi nhận lượt xem thực tế đầu tiên!
+          <td colspan="6" style="padding: 24px; text-align: center; color: var(--adm-muted);">
+            Chưa có khách truy cập nào khớp với bộ lọc hiện tại.
           </td>
         </tr>
       `;
+      if (pagerEl) pagerEl.innerHTML = '';
       return;
     }
 
-    tbody.innerHTML = logs
-      .map((item) => {
-        const dt = new Date(item.timestamp);
-        const timeStr = dt.toLocaleString('vi-VN', {
+    tbody.innerHTML = ipFlows
+      .map((row) => {
+        const lastDt = new Date(row.lastSeen);
+        const timeStr = lastDt.toLocaleString('vi-VN', {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
           day: '2-digit',
           month: '2-digit'
         });
-        const isClick = item.type === 'click';
-        const actionBadge = isClick
-          ? `<span style="padding:3px 9px; border-radius:99px; background:#fce8ef; color:#c7436e; font-weight:600;">👆 Bấm: ${escapeHtml(item.targetTitle)}</span>`
-          : `<span style="padding:3px 9px; border-radius:99px; background:#eef6ff; color:#2b6cb0; font-weight:600;">👁️ Xem trang Bio</span>`;
+
+        const steps = Array.isArray(row.steps) ? row.steps : [];
+        const isExpanded = expandedIps.has(row.ip);
+        let flowHtml = '';
+
+        if (steps.length <= 4 || isExpanded) {
+          flowHtml = steps.map(renderStepChip).join('<span style="color:#c4a1af;font-weight:700;margin:0 4px;">&rarr;</span>');
+          if (steps.length > 4 && isExpanded) {
+            flowHtml += ` <button type="button" class="toggle-ip-steps" data-ip="${escapeAttr(row.ip)}" style="border:1px solid #e6cad5;background:#fff;border-radius:99px;padding:2px 8px;font-size:0.7rem;cursor:pointer;color:#8c5268;">Thu gọn</button>`;
+          }
+        } else {
+          const firstChip = renderStepChip(steps[0]);
+          const tailChips = steps.slice(-2).map(renderStepChip).join('<span style="color:#c4a1af;font-weight:700;margin:0 4px;">&rarr;</span>');
+          const hiddenCount = steps.length - 3;
+          flowHtml = `${firstChip}<span style="color:#c4a1af;font-weight:700;margin:0 4px;">&rarr;</span><button type="button" class="toggle-ip-steps" data-ip="${escapeAttr(row.ip)}" style="border:1px dashed #d64f7c;background:#fff5f8;border-radius:99px;padding:2px 9px;font-size:0.71rem;font-weight:700;cursor:pointer;color:#c7436e;white-space:nowrap;">+${hiddenCount} bước nữa</button><span style="color:#c4a1af;font-weight:700;margin:0 4px;">&rarr;</span>${tailChips}`;
+        }
 
         return `
           <tr style="border-bottom: 1px solid #f5eaee;">
-            <td style="padding: 10px 8px; white-space: nowrap; color: var(--adm-muted);">${timeStr}</td>
-            <td style="padding: 10px 8px;">${actionBadge}</td>
-            <td style="padding: 10px 8px;">${escapeHtml(item.device || 'Khác')} <span style="color:#999;">(${escapeHtml(item.os || '')})</span></td>
-            <td style="padding: 10px 8px; font-weight: 600;">${escapeHtml(item.browser || 'Trình duyệt')}</td>
-            <td style="padding: 10px 8px;">${escapeHtml(item.trafficSource || 'Trực tiếp')}</td>
-            <td style="padding: 10px 8px; font-family: monospace; font-size: 0.76rem; color: #777;">${escapeHtml(item.ip || '')}</td>
+            <td style="padding: 10px 8px; white-space: nowrap; color: var(--adm-muted);">
+              <div style="font-weight:700; color:#4b2535;">${timeStr}</div>
+              <div style="font-size:0.7rem;">${steps.length} bước (${row.viewCount} xem · ${row.clickCount} bấm)</div>
+            </td>
+            <td style="padding: 10px 8px;">
+              <div style="display:flex; align-items:center; flex-wrap:${isExpanded ? 'wrap' : 'nowrap'}; gap:2px; overflow-x:auto; max-width:560px; scrollbar-width:thin;">
+                ${flowHtml}
+              </div>
+            </td>
+            <td style="padding: 10px 8px; white-space: nowrap;">${escapeHtml(row.device || 'Khác')} <span style="color:#999;">(${escapeHtml(row.os || '')})</span></td>
+            <td style="padding: 10px 8px; white-space: nowrap; font-weight: 600;">${escapeHtml(row.browser || 'Trình duyệt')}</td>
+            <td style="padding: 10px 8px; white-space: nowrap;">${escapeHtml(row.trafficSource || 'Trực tiếp')}</td>
+            <td style="padding: 10px 8px; white-space: nowrap; font-family: monospace; font-size: 0.76rem; color: #555; font-weight: 700;">${escapeHtml(row.ip || '')}</td>
           </tr>
         `;
       })
       .join('');
+
+    tbody.querySelectorAll('.toggle-ip-steps').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const ip = btn.getAttribute('data-ip');
+        if (expandedIps.has(ip)) expandedIps.delete(ip);
+        else expandedIps.add(ip);
+        renderAnalyticsLogsTable(ipFlows, pagination);
+      });
+    });
+
+    if (pagerEl) {
+      const { page, pageSize, totalItems, totalPages } = pagination;
+      const from = (page - 1) * pageSize + 1;
+      const to = Math.min(totalItems, page * pageSize);
+
+      let pageBtns = '';
+      for (let p = 1; p <= totalPages; p++) {
+        if (p === 1 || p === totalPages || Math.abs(p - page) <= 2) {
+          pageBtns += `<button type="button" class="btn btn-sm ana-page-btn ${p === page ? 'btn-primary' : 'btn-outline'}" data-p="${p}" style="padding:4px 10px;">${p}</button>`;
+        } else if (Math.abs(p - page) === 3) {
+          pageBtns += `<span style="padding:0 4px;color:#999;">...</span>`;
+        }
+      }
+
+      pagerEl.innerHTML = `
+        <div style="color: var(--adm-muted);">
+          Hiển thị <strong>${from}–${to}</strong> trên tổng <strong>${totalItems}</strong> địa chỉ IP (30 dòng / trang)
+        </div>
+        <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-outline btn-sm ana-page-btn" data-p="${page - 1}" ${page <= 1 ? 'disabled style="opacity:.45;padding:4px 10px;"' : 'style="padding:4px 10px;"'}>&larr; Trước</button>
+          ${pageBtns}
+          <button type="button" class="btn btn-outline btn-sm ana-page-btn" data-p="${page + 1}" ${page >= totalPages ? 'disabled style="opacity:.45;padding:4px 10px;"' : 'style="padding:4px 10px;"'}>Sau &rarr;</button>
+        </div>
+      `;
+
+      pagerEl.querySelectorAll('.ana-page-btn').forEach((b) => {
+        b.addEventListener('click', () => {
+          const nextP = Number(b.getAttribute('data-p'));
+          if (nextP >= 1 && nextP <= totalPages && nextP !== anaPage) {
+            anaPage = nextP;
+            fetchRealAnalytics();
+          }
+        });
+      });
+    }
   }
+
+  // Bind Time-Range & Filter Category Buttons for Analytics
+  document.querySelectorAll('.ana-range-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      anaRange = btn.getAttribute('data-range') || 'week';
+      anaPage = 1;
+      document.querySelectorAll('.ana-range-btn').forEach((b) => {
+        const active = b === btn;
+        b.classList.toggle('active', active);
+        b.style.background = active ? '#d64f7c' : 'transparent';
+        b.style.color = active ? '#fff' : '';
+      });
+      fetchRealAnalytics();
+    });
+  });
+
+  document.querySelectorAll('.ana-filter-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      anaFilter = btn.getAttribute('data-filter') || 'all';
+      anaPage = 1;
+      document.querySelectorAll('.ana-filter-btn').forEach((b) => {
+        const active = b === btn;
+        b.classList.toggle('btn-primary', active);
+        b.classList.toggle('btn-outline', !active);
+      });
+      fetchRealAnalytics();
+    });
+  });
 
   // --- AUTHENTICATION (Unified SSO with /shop-admin) ---
   async function checkAuthAndLoad() {

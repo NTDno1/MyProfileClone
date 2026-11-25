@@ -200,16 +200,61 @@
     }
   }
 
-  // --- 1. ORDERS MANAGEMENT ---
+  // --- 1. ORDERS MANAGEMENT (30 rows / page) ---
+  const SHOP_PAGE_SIZE = 30;
   let orderSearch = '';
   let orderStatusFilter = 'all';
+  let ordersPage = 1;
+  let productsPage = 1;
+
+  function renderAdminPager(containerId, currentPage, totalItems, onPageChange) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (totalItems === 0) {
+      el.innerHTML = '';
+      return;
+    }
+    const totalPages = Math.max(1, Math.ceil(totalItems / SHOP_PAGE_SIZE));
+    const safePage = Math.min(currentPage, totalPages);
+    const from = (safePage - 1) * SHOP_PAGE_SIZE + 1;
+    const to = Math.min(totalItems, safePage * SHOP_PAGE_SIZE);
+
+    let btns = '';
+    for (let p = 1; p <= totalPages; p++) {
+      if (p === 1 || p === totalPages || Math.abs(p - safePage) <= 2) {
+        btns += `<button type="button" class="btn btn-sm ${p === safePage ? 'btn-primary' : ''}" data-pg="${p}">${p}</button>`;
+      } else if (Math.abs(p - safePage) === 3) {
+        btns += `<span style="padding:0 4px;color:var(--muted);">...</span>`;
+      }
+    }
+
+    el.innerHTML = `
+      <span style="color:var(--muted);">Hiển thị <strong>${from}–${to}</strong> / <strong>${totalItems}</strong> dòng (30 dòng/trang)</span>
+      <div style="display:flex; gap:5px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-sm" data-pg="${safePage - 1}" ${safePage <= 1 ? 'disabled style="opacity:.45"' : ''}>&larr; Trước</button>
+        ${btns}
+        <button type="button" class="btn btn-sm" data-pg="${safePage + 1}" ${safePage >= totalPages ? 'disabled style="opacity:.45"' : ''}>Sau &rarr;</button>
+      </div>
+    `;
+
+    el.querySelectorAll('button[data-pg]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const next = Number(b.getAttribute('data-pg'));
+        if (next >= 1 && next <= totalPages && next !== safePage) {
+          onPageChange(next);
+        }
+      });
+    });
+  }
 
   document.getElementById('ord-search-input')?.addEventListener('input', (e) => {
     orderSearch = e.target.value.trim().toLowerCase();
+    ordersPage = 1;
     renderOrders();
   });
   document.getElementById('ord-status-filter')?.addEventListener('change', (e) => {
     orderStatusFilter = e.target.value;
+    ordersPage = 1;
     renderOrders();
   });
 
@@ -269,10 +314,20 @@
           </td>
         </tr>
       `;
+      renderAdminPager('orders-pagination', 1, 0, () => {});
       return;
     }
 
-    tbody.innerHTML = orders
+    const totalOrdersCount = orders.length;
+    const maxOrdPage = Math.max(1, Math.ceil(totalOrdersCount / SHOP_PAGE_SIZE));
+    if (ordersPage > maxOrdPage) ordersPage = maxOrdPage;
+    const pagedOrders = orders.slice((ordersPage - 1) * SHOP_PAGE_SIZE, ordersPage * SHOP_PAGE_SIZE);
+    renderAdminPager('orders-pagination', ordersPage, totalOrdersCount, (nextP) => {
+      ordersPage = nextP;
+      renderOrders();
+    });
+
+    tbody.innerHTML = pagedOrders
       .map((o) => {
         const dt = o.createdAt ? new Date(o.createdAt).toLocaleString('vi-VN') : '';
         const itemsHtml = (o.items || [])
@@ -485,10 +540,17 @@
     const tbody = document.getElementById('products-tbody');
     if (!tbody || !shopData) return;
     const prods = shopData.products || [];
+    const maxProdPage = Math.max(1, Math.ceil(prods.length / SHOP_PAGE_SIZE));
+    if (productsPage > maxProdPage) productsPage = maxProdPage;
+    const pagedProds = prods.slice((productsPage - 1) * SHOP_PAGE_SIZE, productsPage * SHOP_PAGE_SIZE);
+    renderAdminPager('products-pagination', productsPage, prods.length, (nextP) => {
+      productsPage = nextP;
+      renderProductsTable();
+    });
 
-    tbody.innerHTML = prods
+    tbody.innerHTML = pagedProds
       .map((p) => {
-        const img = (p.images && p.images[0]) || '/uploads/girlfriend-1.jpg';
+        const img = (p.images && p.images[0]) || '/media/bio-link/girlfriend-1.jpg';
         const srcBadge =
           p.sourcePlatform === 'shopee'
             ? `<span class="badge" style="background:#ffedd5; color:#c2410c;">🧡 Shopee</span>`

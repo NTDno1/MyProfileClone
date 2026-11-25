@@ -651,24 +651,158 @@ app.post('/api/click', async (req, res) => {
   res.json({ success: true, clicks: updatedClicks });
 });
 
-// Get detailed real-time analytics & visitor logs for Admin
+// Helper: Group raw events by IP into a single-row chronological User Action Flow
+function buildIpFlowsFromLogs(rawLogs) {
+  const ipMap = new Map();
+
+  // Sort oldest -> newest so steps inside each IP are in chronological order
+  const chronological = [...rawLogs].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
+
+  for (const ev of chronological) {
+    const ip = String(ev.ip || 'unknown').replace(/^::ffff:/, '').trim() || 'unknown';
+    const ts = new Date(ev.timestamp);
+    const tsIso = isNaN(ts.getTime()) ? new Date().toISOString() : ts.toISOString();
+
+    if (!ipMap.has(ip)) {
+      ipMap.set(ip, {
+        ip,
+        firstSeen: tsIso,
+        lastSeen: tsIso,
+        device: ev.device || 'Khác',
+        os: ev.os || '',
+        browser: ev.browser || 'Trình duyệt',
+        trafficSource: ev.trafficSource || 'Trực tiếp',
+        isSocial: Boolean(ev.trafficSource && ev.trafficSource !== 'Trực tiếp'),
+        viewCount: 0,
+        clickCount: 0,
+        shopCount: 0,
+        steps: []
+      });
+    }
+
+    const group = ipMap.get(ip);
+    group.lastSeen = tsIso;
+    if (ev.device && ev.device !== 'Khác') group.device = ev.device;
+    if (ev.os && ev.os !== 'Khác') group.os = ev.os;
+    if (ev.browser && ev.browser !== 'Trình duyệt') group.browser = ev.browser;
+    if (ev.trafficSource && ev.trafficSource !== 'Trực tiếp') {
+      group.trafficSource = ev.trafficSource;
+      group.isSocial = true;
+    }
+
+    const evType = ev.type || 'view';
+    if (evType === 'click' || evType === 'order') {
+      group.clickCount++;
+    } else if (evType === 'shop_view') {
+      group.shopCount++;
+      group.viewCount++;
+    } else {
+      group.viewCount++;
+    }
+
+    const title =
+      ev.targetTitle ||
+      (evType === 'click' ? 'Bấm Link' : evType === 'shop_view' ? 'Vào Cửa hàng /shop' : 'Xem trang Bio');
+
+    // Merge consecutive identical view refreshes within 4 seconds so rapid F5 doesn't clutter the 1-line flow
+    const prevStep = group.steps[group.steps.length - 1];
+    if (
+      prevStep &&
+      prevStep.type === evType &&
+      prevStep.title === title &&
+      Math.abs(new Date(tsIso).getTime() - new Date(prevStep.timestamp).getTime()) < 4000
+    ) {
+      prevStep.repeat = (prevStep.repeat || 1) + 1;
+      prevStep.timestamp = tsIso;
+    } else {
+      group.steps.push({
+        type: evType,
+        title,
+        url: ev.targetUrl || '/',
+        timestamp: tsIso,
+        repeat: 1
+      });
+    }
+  }
+
+  // Sort IP rows by most recent activity descending
+  return Array.from(ipMap.values()).sort(
+    (a, b) => new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime()
+  );
+}
+
+// Get detailed real-time analytics & IP-grouped visitor flows (with range & 30-row pagination)
 app.get('/api/analytics', requireAuth, async (req, res) => {
   const config = loadConfigFromFile();
-  let recentLogs = loadLocalLogs();
+  const range = String(req.query.range || 'week'); // 'day' | 'week' | 'month' | 'year' | 'all'
+  const filter = String(req.query.filter || 'all'); // 'all' | 'clicked' | 'social' | 'shop'
+  const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(String(req.query.pageSize || '30'), 10) || 30));
+
+  const now = new Date();
+  let startDate = new Date(0);
+  if (range === 'day') {
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (range === 'week') {
+    startDate = new Date(now);
+    startDate.setDate(now.getDate() - 7);
+  } else if (range === 'month') {
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else if (range === 'year') {
+    startDate = new Date(now.getFullYear(), 0, 1);
+  }
+
+  const localLogs = loadLocalLogs().filter((l) => new Date(l.timestamp) >= startDate);
+  let allLogs = localLogs;
 
   if (mongoConnected && mongoDb) {
     try {
+      const query = range === 'all' ? {} : { timestamp: { $gte: startDate } };
       const mongoLogs = await mongoDb
         .collection('bio_analytics')
-        .find({})
+        .find(query)
         .sort({ timestamp: -1 })
-        .limit(100)
+        .limit(5000)
         .toArray();
-      if (mongoLogs.length > 0) {
-        recentLogs = mongoLogs;
+
+      // Merge MongoDB + local logs deduplicated by id
+      const seenIds = new Set();
+      const merged = [];
+      for (const item of [...mongoLogs, ...localLogs]) {
+        const key = item.id || (item._id ? String(item._id) : `${item.ip}_${item.timestamp}`);
+        if (!seenIds.has(key)) {
+          seenIds.add(key);
+          merged.push(item);
+        }
       }
+      allLogs = merged;
     } catch (e) {}
   }
+
+  const allFlows = buildIpFlowsFromLogs(allLogs);
+
+  const counts = {
+    all: allFlows.length,
+    clicked: allFlows.filter((f) => f.clickCount > 0).length,
+    social: allFlows.filter((f) => f.isSocial).length,
+    shop: allFlows.filter((f) => f.shopCount > 0).length
+  };
+
+  let filteredFlows = allFlows;
+  if (filter === 'clicked') {
+    filteredFlows = allFlows.filter((f) => f.clickCount > 0);
+  } else if (filter === 'social') {
+    filteredFlows = allFlows.filter((f) => f.isSocial);
+  } else if (filter === 'shop') {
+    filteredFlows = allFlows.filter((f) => f.shopCount > 0);
+  }
+
+  const totalItems = filteredFlows.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pagedFlows = filteredFlows.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   const totalViews = Number(config.analytics?.totalViews) || 0;
   const linksClicks = (config.links || []).reduce((sum, l) => sum + (Number(l.clicks) || 0), 0);
@@ -678,7 +812,6 @@ app.get('/api/analytics', requireAuth, async (req, res) => {
   const activeLinks = (config.links || []).filter((l) => l.enabled !== false).length;
   const ctr = totalViews > 0 ? Math.min(100, Number(((totalClicks / totalViews) * 100).toFixed(1))) : 0;
 
-  const uniqueIps = new Set(recentLogs.map((l) => l.ip).filter(Boolean)).size;
   const settings = loadMongoSettings();
 
   res.json({
@@ -688,7 +821,7 @@ app.get('/api/analytics', requireAuth, async (req, res) => {
       totalClicks,
       activeLinks,
       ctr,
-      uniqueVisitors: uniqueIps
+      uniqueVisitors: allFlows.length
     },
     mongo: {
       connected: mongoConnected,
@@ -696,7 +829,17 @@ app.get('/api/analytics', requireAuth, async (req, res) => {
       uriMasked: settings.uri.replace(/:([^:@]+)@/, ':****@'),
       error: mongoErrorMsg
     },
-    recentLogs: recentLogs.slice(0, 50)
+    range,
+    filter,
+    counts,
+    pagination: {
+      page: safePage,
+      pageSize,
+      totalItems,
+      totalPages
+    },
+    ipFlows: pagedFlows,
+    recentLogs: allLogs.slice(0, 50)
   });
 });
 
@@ -896,7 +1039,8 @@ app.delete('/api/storage/files', requireAuth, async (req, res) => {
 registerShopRoutes(app, {
   dataDir: DATA_DIR,
   getMongoDb: () => (mongoConnected ? mongoDb : null),
-  requireAuth
+  requireAuth,
+  recordAnalyticsEvent
 });
 
 // Page Routes

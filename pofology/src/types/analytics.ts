@@ -78,6 +78,8 @@ export interface AnalyticsStats {
   facebookSummary?: FacebookAnalyticsSummary;
   contactClicksSummary?: ContactClicksSummary;
   recentVisitors?: VisitorLogItem[];
+  storageSource?: 'mongodb' | 'fallback';
+  storageError?: string;
 }
 
-export type TimeRange = 'day' | 'week' | 'month' | 'year';
+export type TimeRange = 'day' | 'week' | 'month' | 'year' | 'all';

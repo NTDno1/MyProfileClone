@@ -12,7 +12,7 @@ const Statistics: NextPage = () => {
   const router = useRouter();
   const [stats, setStats] = useState<AnalyticsStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState<TimeRange>('day');
+  const [timeRange, setTimeRange] = useState<TimeRange>('all');
   const [lastUpdate, setLastUpdate] = useState<string>('');
   const [mounted, setMounted] = useState(false);
   const [filterSource, setFilterSource] = useState<'all' | 'facebook' | 'contact'>('all');
@@ -176,6 +176,12 @@ const Statistics: NextPage = () => {
               <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 font-medium">
                 <FiShield /> Quản trị viên
               </span>
+              {stats?.storageSource === 'mongodb' && (
+                <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  MongoDB: signalr_chat
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-3">
@@ -194,6 +200,17 @@ const Statistics: NextPage = () => {
             </div>
           </div>
 
+          {stats?.storageSource === 'fallback' && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-4 text-xs text-amber-900 dark:text-amber-200">
+              <p className="font-bold text-sm mb-1">
+                ⚠️ VPS chưa kết nối được vào MongoDB Atlas (đang hiển thị dữ liệu dự phòng trên VPS)
+              </p>
+              <p>
+                Vào <strong>cloud.mongodb.com</strong> → mục <strong>Network Access</strong> → bấm <strong>Add IP Address</strong> → nhập IP VPS <code>103.82.26.134</code> (hoặc chọn <strong>Allow Access from Anywhere 0.0.0.0/0</strong>) rồi bấm Confirm. Hệ thống sẽ tự động kết nối lại ngay sau vài giây mà không cần khởi động lại Docker!
+              </p>
+            </div>
+          )}
+
           {/* Page Title & Time Range Filters */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -206,12 +223,13 @@ const Statistics: NextPage = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="inline-flex p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+              <div className="inline-flex flex-wrap p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
                 {[
                   { key: 'day', label: 'Hôm nay' },
                   { key: 'week', label: '7 ngày' },
                   { key: 'month', label: 'Tháng này' },
                   { key: 'year', label: 'Năm nay' },
+                  { key: 'all', label: 'Tất cả' },
                 ].map((item) => (
                   <button
                     key={item.key}

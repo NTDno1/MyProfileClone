@@ -12,8 +12,8 @@ export default async function handler(
   }
 
   try {
-    console.log('[API Stats] 📈 Fetching statistics for range:', req.query.range || 'day');
-    const { range = 'day' } = req.query;
+    console.log('[API Stats] 📈 Fetching statistics for range:', req.query.range || 'all');
+    const { range = 'all' } = req.query;
 
     const now = new Date();
     let startDate: Date;
@@ -32,46 +32,37 @@ export default async function handler(
     case 'year':
       startDate = new Date(now.getFullYear(), 0, 1);
       break;
+    case 'all':
+      startDate = new Date(0);
+      break;
     default:
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      startDate = new Date(0);
     }
 
-    // Try MongoDB first, fallback to in-memory
+    // Try MongoDB first, merge any fallback records, fallback cleanly on error
     let data: any[] = [];
+    let storageSource: 'mongodb' | 'fallback' = 'mongodb';
+    let storageError: string | undefined;
+
     try {
       const collection = await getAnalyticsCollection();
       console.log('[API Stats] 🔍 Querying MongoDB from:', startDate.toISOString());
-      const allData = await collection
-        .find({
-          timestamp: { $gte: startDate },
-        })
-        .toArray();
-      // Filter out admin pages
-      data = allData.filter((item: any) => !item.page?.startsWith('/admin'));
-      console.log('[API Stats] 📊 Found', data.length, 'records from MongoDB (excluding admin pages)');
-      console.log('[API Stats] 🔍 Sample records:', data.slice(0, 3).map((d: any) => ({
-        page: d.page,
-        timeOnPage: d.timeOnPage,
-        browser: d.browser,
-        country: d.country,
-        timestamp: d.timestamp
-      })));
+      const queryFilter = range === 'all' ? {} : { timestamp: { $gte: startDate } };
+      const allData = await collection.find(queryFilter).toArray();
+      const fallbackData = inMemoryStorage.find(
+        range === 'all' ? {} : { timestamp: { $gte: startDate } }
+      );
+      data = [...allData, ...fallbackData].filter((item: any) => !item.page?.startsWith('/admin'));
+      storageSource = 'mongodb';
+      console.log('[API Stats] 📊 Found', data.length, 'records from MongoDB + fallback');
     } catch (mongoError: any) {
-      console.warn('[API Stats] ⚠️ MongoDB unavailable, using in-memory storage:', mongoError?.message);
-      console.log('[API Stats] 🔍 Querying in-memory storage from:', startDate.toISOString());
-      const allData = inMemoryStorage.find({
-        timestamp: { $gte: startDate },
-      });
-      // Filter out admin pages
+      storageSource = 'fallback';
+      storageError = mongoError?.message || 'MongoDB connection failed';
+      console.warn('[API Stats] ⚠️ MongoDB unavailable, using fallback storage:', storageError);
+      const allData = inMemoryStorage.find(
+        range === 'all' ? {} : { timestamp: { $gte: startDate } }
+      );
       data = allData.filter((item: any) => !item.page?.startsWith('/admin'));
-      console.log('[API Stats] 📊 Found', data.length, 'records from memory (total:', inMemoryStorage.count(), ', excluding admin pages)');
-      console.log('[API Stats] 🔍 Sample records:', data.slice(0, 3).map((d: any) => ({
-        page: d.page,
-        timeOnPage: d.timeOnPage,
-        browser: d.browser,
-        country: d.country,
-        timestamp: d.timestamp
-      })));
     }
 
     // Calculate statistics
@@ -259,7 +250,7 @@ export default async function handler(
     const combinedRecent = [...actualPageViews, ...contactClickEvents];
     const recentVisitors = combinedRecent
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, 80)
+      .slice(0, 250)
       .map((item) => {
         const isFb = item.isFacebook || !!item.fbclid || (item.referrer && item.referrer.toLowerCase().includes('facebook.com'));
         const isFbApp = item.isFacebookApp || (item.userAgent && /FBAN|FBAV/i.test(item.userAgent));
@@ -301,6 +292,8 @@ export default async function handler(
       facebookSummary,
       contactClicksSummary,
       recentVisitors,
+      storageSource,
+      storageError,
     };
     
     console.log('[API Stats] ✅ Returning stats:', {

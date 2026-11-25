@@ -136,6 +136,9 @@ async function initMongoConnection(customUri, customDbName) {
       );
     }
 
+    // Sync unified Admin Account (/admin & /shop-admin) with MongoDB `na2hand_shop`
+    await syncAuthWithMongo(mongoDb);
+
     // Write Keep-Alive heartbeat into `na2hand_shop`
     await mongoDb.collection('keepalive_heartbeats').updateOne(
       { _id: 'na2hand_keepalive' },
@@ -466,31 +469,111 @@ async function recordAnalyticsEvent(req, eventData) {
   return logItem;
 }
 
-// --- AUTH HELPERS ---
+// --- UNIFIED AUTH HELPERS (Shared 100% between /admin and /shop-admin) ---
+const AUTH_SYNC_VERSION = 'unified_admin_123_v2';
+const TOKEN_SIGN_SECRET = process.env.ADMIN_TOKEN_SECRET || 'na2hand_unified_secret_2026';
+
 function loadAuth() {
+  const defaultAuth = { username: 'admin', password: '123', syncVersion: AUTH_SYNC_VERSION };
   try {
     if (!fs.existsSync(AUTH_FILE)) {
-      const defaultAuth = { username: 'admin', password: '123' };
       fs.writeFileSync(AUTH_FILE, JSON.stringify(defaultAuth, null, 2), 'utf8');
       return defaultAuth;
     }
-    return JSON.parse(fs.readFileSync(AUTH_FILE, 'utf8'));
+    const parsed = JSON.parse(fs.readFileSync(AUTH_FILE, 'utf8'));
+    // Auto-reset once to admin / 123 when upgrading to unified v2
+    if (parsed.syncVersion !== AUTH_SYNC_VERSION) {
+      fs.writeFileSync(AUTH_FILE, JSON.stringify(defaultAuth, null, 2), 'utf8');
+      return defaultAuth;
+    }
+    return {
+      username: parsed.username || 'admin',
+      password: String(parsed.password ?? '123'),
+      syncVersion: AUTH_SYNC_VERSION
+    };
   } catch (err) {
-    return { username: 'admin', password: '123' };
+    return defaultAuth;
   }
 }
 
-function saveAuth(auth) {
-  fs.writeFileSync(AUTH_FILE, JSON.stringify(auth, null, 2), 'utf8');
+async function saveAuth(auth) {
+  const payload = {
+    username: String(auth.username || 'admin').trim() || 'admin',
+    password: String(auth.password ?? '123'),
+    syncVersion: AUTH_SYNC_VERSION
+  };
+  fs.writeFileSync(AUTH_FILE, JSON.stringify(payload, null, 2), 'utf8');
+  if (mongoConnected && mongoDb) {
+    try {
+      await mongoDb.collection('admin_auth').updateOne(
+        { _id: 'shared_admin_account' },
+        { $set: { ...payload, updatedAt: new Date() } },
+        { upsert: true }
+      );
+    } catch {}
+  }
+  return payload;
 }
 
-const activeTokens = new Set();
+async function syncAuthWithMongo(db) {
+  if (!db) return;
+  try {
+    const col = db.collection('admin_auth');
+    const remote = await col.findOne({ _id: 'shared_admin_account' });
+    if (remote && remote.syncVersion === AUTH_SYNC_VERSION && remote.username && remote.password !== undefined) {
+      const synced = {
+        username: remote.username,
+        password: String(remote.password),
+        syncVersion: AUTH_SYNC_VERSION
+      };
+      fs.writeFileSync(AUTH_FILE, JSON.stringify(synced, null, 2), 'utf8');
+    } else {
+      const resetAuth = { username: 'admin', password: '123', syncVersion: AUTH_SYNC_VERSION };
+      fs.writeFileSync(AUTH_FILE, JSON.stringify(resetAuth, null, 2), 'utf8');
+      await col.updateOne(
+        { _id: 'shared_admin_account' },
+        { $set: { ...resetAuth, updatedAt: new Date() } },
+        { upsert: true }
+      );
+      console.log('🔐 [Auth] Đã đồng bộ tài khoản dùng chung (/admin & /shop-admin): tk=admin | mk=123');
+    }
+  } catch {}
+}
+
+function issueUnifiedToken(auth) {
+  const sig = crypto
+    .createHmac('sha256', TOKEN_SIGN_SECRET)
+    .update(`${String(auth.username).toLowerCase()}:${auth.password}`)
+    .digest('hex');
+  return `na2u_${sig}`;
+}
+
+function parseCookies(req) {
+  const raw = req.headers.cookie || '';
+  const out = {};
+  raw.split(';').forEach((part) => {
+    const idx = part.indexOf('=');
+    if (idx > 0) {
+      out[part.slice(0, idx).trim()] = decodeURIComponent(part.slice(idx + 1).trim());
+    }
+  });
+  return out;
+}
 
 function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  if (!token || !activeTokens.has(token)) {
-    return res.status(401).json({ success: false, message: 'Phiên đăng nhập hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.' });
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+  const cookieToken = parseCookies(req).na2hand_admin_token || '';
+  const token = bearerToken || cookieToken;
+
+  const auth = loadAuth();
+  const expected = issueUnifiedToken(auth);
+
+  if (!token || token !== expected) {
+    return res.status(401).json({
+      success: false,
+      message: 'Phiên đăng nhập hết hạn hoặc mật khẩu vừa thay đổi. Vui lòng đăng nhập lại!'
+    });
   }
   next();
 }
@@ -633,7 +716,7 @@ app.post('/api/mongo/connect', requireAuth, async (req, res) => {
   });
 });
 
-// Admin Login
+// Admin Login (Unified for both /admin and /shop-admin)
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body || {};
   const auth = loadAuth();
@@ -642,8 +725,11 @@ app.post('/api/login', (req, res) => {
     String(username || '').trim().toLowerCase() === String(auth.username).toLowerCase() &&
     String(password || '') === String(auth.password)
   ) {
-    const token = crypto.randomBytes(24).toString('hex');
-    activeTokens.add(token);
+    const token = issueUnifiedToken(auth);
+    res.setHeader(
+      'Set-Cookie',
+      `na2hand_admin_token=${encodeURIComponent(token)}; Path=/; Max-Age=${60 * 60 * 24 * 30}; SameSite=Lax`
+    );
     return res.json({
       success: true,
       token,
@@ -657,10 +743,15 @@ app.post('/api/login', (req, res) => {
   });
 });
 
+app.post('/api/logout', (req, res) => {
+  res.setHeader('Set-Cookie', 'na2hand_admin_token=; Path=/; Max-Age=0; SameSite=Lax');
+  res.json({ success: true });
+});
+
 // Verify token
 app.get('/api/auth/verify', requireAuth, (req, res) => {
   const auth = loadAuth();
-  res.json({ success: true, username: auth.username });
+  res.json({ success: true, username: auth.username, token: issueUnifiedToken(auth) });
 });
 
 // Update full config (Preserves real click & view counters!)
@@ -722,8 +813,8 @@ app.post('/api/reset', requireAuth, async (req, res) => {
   return res.json({ success: true, message: 'Đã khôi phục cấu hình mẫu mặc định.', data: fresh });
 });
 
-// Change admin credentials
-app.post('/api/password', requireAuth, (req, res) => {
+// Change admin credentials (syncs immediately across /admin, /shop-admin & MongoDB)
+app.post('/api/password', requireAuth, async (req, res) => {
   const { currentPassword, newUsername, newPassword } = req.body || {};
   const auth = loadAuth();
 
@@ -734,12 +825,21 @@ app.post('/api/password', requireAuth, (req, res) => {
     return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 3 ký tự.' });
   }
 
-  const updatedAuth = {
+  const saved = await saveAuth({
     username: String(newUsername || auth.username).trim() || 'admin',
     password: String(newPassword)
-  };
-  saveAuth(updatedAuth);
-  res.json({ success: true, message: 'Đổi thông tin đăng nhập thành công!' });
+  });
+  const newToken = issueUnifiedToken(saved);
+  res.setHeader(
+    'Set-Cookie',
+    `na2hand_admin_token=${encodeURIComponent(newToken)}; Path=/; Max-Age=${60 * 60 * 24 * 30}; SameSite=Lax`
+  );
+  res.json({
+    success: true,
+    token: newToken,
+    username: saved.username,
+    message: 'Đã đổi thông tin đăng nhập đồng bộ cho cả trang Bio Admin & Shop Admin!'
+  });
 });
 
 // Upload file directly to dedicated `file-storage` Docker container

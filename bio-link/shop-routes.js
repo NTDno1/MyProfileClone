@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { rewriteLegacyBioUrls } = require('./file-storage-client');
+const { rewriteLegacyBioUrls, uploadToFileStorage } = require('./file-storage-client');
 
 const DEFAULT_CATEGORIES = [
   { id: 'vay-dam', name: 'Đầm & Váy Tiểu Thư', icon: '👗', slug: 'vay-dam' },
@@ -194,6 +194,16 @@ const DEFAULT_COUPONS = [
     maxDiscount: 30000,
     description: 'Giảm ngay 30.000đ cho đơn từ 350k',
     enabled: true
+  },
+  {
+    id: 'cp-4',
+    code: 'NANGTHO15',
+    type: 'percent',
+    value: 15,
+    minOrder: 250000,
+    maxDiscount: 65000,
+    description: 'Quà Hộp Nơ May Mắn: Giảm 15% (tối đa 65k) đơn từ 250k',
+    enabled: true
   }
 ];
 
@@ -291,6 +301,19 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth }) {
   // (auto-rewrites legacy /uploads/... links -> /media/bio-link/... served by `file-storage` container)
   async function getShopStore() {
     const raw = await getShopStoreRaw();
+    // Ensure NANGTHO15 lucky-box coupon exists for interactive gift box
+    if (Array.isArray(raw.coupons) && !raw.coupons.some((c) => c.code === 'NANGTHO15')) {
+      raw.coupons.push({
+        id: 'cp-4',
+        code: 'NANGTHO15',
+        type: 'percent',
+        value: 15,
+        minOrder: 250000,
+        maxDiscount: 65000,
+        description: 'Quà Hộp Nơ May Mắn: Giảm 15% (tối đa 65k) đơn từ 250k',
+        enabled: true
+      });
+    }
     const migrated = rewriteLegacyBioUrls(raw);
     if (migrated.changed) {
       saveShopStore(migrated.data).catch(() => {});
@@ -583,6 +606,9 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth }) {
         district: String(body.district || '').trim(),
         address: String(body.address).trim(),
         note: String(body.note || '').trim(),
+        scentChoice: String(body.scentChoice || 'Hương Đào Trắng').trim(),
+        giftWrap: Boolean(body.giftWrap),
+        giftCardMessage: String(body.giftCardMessage || '').trim(),
         items: normalizedItems,
         subtotal,
         discount,
@@ -621,7 +647,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth }) {
     }
   });
 
-  // Customer confirms they scanned and paid via QR
+  // Customer confirms they scanned and paid via QR (with optional transfer screenshot uploaded to file-storage)
   app.post('/api/shop/orders/:orderCode/confirm-qr', async (req, res) => {
     const code = String(req.params.orderCode || '').trim().toUpperCase();
     const store = await getShopStore();
@@ -629,14 +655,59 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth }) {
     if (!order) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng.' });
     }
+
+    const { receiptDataUrl } = req.body || {};
+    if (receiptDataUrl && typeof receiptDataUrl === 'string' && receiptDataUrl.startsWith('data:image/')) {
+      try {
+        const up = await uploadToFileStorage({
+          project: 'bio-link',
+          folder: 'receipts',
+          filename: `bill_${order.orderCode}.jpg`,
+          dataUrl: receiptDataUrl
+        });
+        order.receiptImageUrl = up.url;
+      } catch (e) {}
+    }
+
     order.paymentStatus = 'customer_confirmed_qr';
     order.updatedAt = new Date().toISOString();
     await saveShopStore(store);
     res.json({
       success: true,
-      message: 'Shop đã ghi nhận thông báo chuyển khoản QR của nàng! Tụi mình sẽ kiểm tra và gói hàng ngay nhé 🌸',
+      message: 'Tiệm đã nhận được xác nhận chuyển khoản của nàng! Tụi mình sẽ kiểm tra và gói hàng ướp hương ngay nhé.',
       order
     });
+  });
+
+  // Customer cancels a pending order (restores stock automatically)
+  app.post('/api/shop/orders/:orderCode/cancel', async (req, res) => {
+    const code = String(req.params.orderCode || '').trim().toUpperCase();
+    const phone = String(req.body?.phone || '').replace(/\s+/g, '');
+    const store = await getShopStore();
+    const order = (store.orders || []).find((o) => String(o.orderCode).toUpperCase() === code);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng.' });
+    }
+    if (phone && String(order.customerPhone || '').replace(/\s+/g, '') !== phone) {
+      return res.status(403).json({ success: false, message: 'Số điện thoại xác thực không khớp với đơn hàng.' });
+    }
+    if (order.orderStatus !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Đơn hàng đã được tiệm xác nhận/đóng gói nên không thể tự hủy. Nàng nhắn Zalo để tiệm hỗ trợ nhé!'
+      });
+    }
+    order.orderStatus = 'cancelled';
+    order.updatedAt = new Date().toISOString();
+    for (const it of order.items || []) {
+      const prod = (store.products || []).find((p) => p.id === it.productId);
+      if (prod) {
+        prod.stock = Number(prod.stock || 0) + Number(it.qty || 1);
+        prod.sold = Math.max(0, Number(prod.sold || 0) - Number(it.qty || 1));
+      }
+    }
+    await saveShopStore(store);
+    res.json({ success: true, order, message: `Đã hủy đơn #${order.orderCode} thành công.` });
   });
 
   // Order Tracking Lookup by Phone or Order Code
@@ -657,20 +728,36 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth }) {
     });
   });
 
-  // Customer Product Review
+  // Customer Product Review (with optional OOTD photo stored in file-storage container)
   app.post('/api/shop/reviews', async (req, res) => {
-    const { productId, authorName, rating, comment } = req.body || {};
+    const { productId, authorName, rating, comment, photoDataUrl, fitNote } = req.body || {};
     if (!productId || !authorName || !comment) {
       return res.status(400).json({ success: false, message: 'Vui lòng nhập tên và nội dung đánh giá nhé!' });
     }
     const store = await getShopStore();
     const star = Math.min(5, Math.max(1, Number(rating || 5)));
+
+    let photoUrl = '';
+    if (photoDataUrl && typeof photoDataUrl === 'string' && photoDataUrl.startsWith('data:image/')) {
+      try {
+        const up = await uploadToFileStorage({
+          project: 'bio-link',
+          folder: 'reviews',
+          filename: `ootd_${Date.now()}.jpg`,
+          dataUrl: photoDataUrl
+        });
+        photoUrl = up.url;
+      } catch (e) {}
+    }
+
     const rev = {
       id: `rev_${Date.now()}`,
       productId,
-      authorName: String(authorName).trim(),
+      authorName: String(authorName).trim().slice(0, 50),
       rating: star,
-      comment: String(comment).trim(),
+      comment: String(comment).trim().slice(0, 500),
+      fitNote: String(fitNote || '').trim().slice(0, 60),
+      photoUrl,
       createdAt: new Date().toISOString()
     };
     store.reviews.unshift(rev);
@@ -774,6 +861,31 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth }) {
     store.products = (store.products || []).filter((p) => p.id !== req.params.id);
     await saveShopStore(store);
     res.json({ success: true, message: 'Đã xóa sản phẩm.' });
+  });
+
+  // Duplicate Product
+  app.post('/api/shop/admin/products/:id/duplicate', requireAuth, async (req, res) => {
+    const store = await getShopStore();
+    const orig = (store.products || []).find((p) => p.id === req.params.id);
+    if (!orig) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm gốc.' });
+    const clone = {
+      ...JSON.parse(JSON.stringify(orig)),
+      id: `prod_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
+      name: `${orig.name} (Bản sao)`,
+      sold: 0,
+      createdAt: new Date().toISOString()
+    };
+    store.products.unshift(clone);
+    await saveShopStore(store);
+    res.json({ success: true, product: clone, message: 'Đã nhân bản sản phẩm thành công!' });
+  });
+
+  // Delete Review
+  app.delete('/api/shop/admin/reviews/:id', requireAuth, async (req, res) => {
+    const store = await getShopStore();
+    store.reviews = (store.reviews || []).filter((r) => r.id !== req.params.id);
+    await saveShopStore(store);
+    res.json({ success: true, reviews: store.reviews, message: 'Đã xóa đánh giá.' });
   });
 
   // Update Order Status / Payment Status

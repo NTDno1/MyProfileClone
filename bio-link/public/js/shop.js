@@ -1,4 +1,6 @@
-// NA 2HAND Boutique — 2026 Cute Feminine Storefront Engine
+// NA 2HAND Boutique — Art-Directed 2026 Storefront Engine
+// Interactive Lookbook Studio, Gliding Tabs, Quick-Size Fly-to-Bag, Smart Size Advisor,
+// Lucky Ribbon Unbox, Scented Gift Checkout, Direct QR + Receipt Upload & Order Journey
 
 (function () {
   let settings = {};
@@ -10,59 +12,173 @@
   let activeCategory = 'all';
   let wishlistOnly = false;
   let searchQuery = '';
+  let priceBracket = 'all';
+  let saleOnly = false;
   let sortBy = 'featured';
   let selectedPayment = 'qr';
+  let selectedScent = 'Hương Đào Trắng';
   let appliedCoupon = null; // { code, discount }
+  let activeLookIdx = 0;
 
   let cart = JSON.parse(localStorage.getItem('na2hand_cart') || '[]');
   let wishlist = JSON.parse(localStorage.getItem('na2hand_wishlist') || '[]');
+  let recentlyViewed = JSON.parse(localStorage.getItem('na2hand_recent') || '[]');
+  let savedOrders = JSON.parse(localStorage.getItem('na2hand_my_orders') || '[]');
 
   const vnd = (n) => `${Number(n || 0).toLocaleString('vi-VN')}đ`;
 
-  // --- 1. BLINK-BLINK STARLIGHT & TAP HEART BURST EFFECTS ---
-  function initSparkles() {
-    const container = document.getElementById('ambient-sparkles');
-    if (!container) return;
-    const symbols = ['✦', '✧', '✨', '⋆', '♡'];
-    for (let i = 0; i < 26; i++) {
-      const s = document.createElement('span');
-      s.className = 'blink-star';
-      s.textContent = symbols[i % symbols.length];
-      s.style.left = `${Math.random() * 98}%`;
-      s.style.top = `${Math.random() * 96}%`;
-      s.style.fontSize = `${11 + Math.random() * 13}px`;
-      s.style.animationDuration = `${1.8 + Math.random() * 2.8}s`;
-      s.style.animationDelay = `${Math.random() * 3}s`;
-      container.appendChild(s);
-    }
-
-    document.addEventListener('click', (e) => {
-      const btn = e.target.closest('button, .cute-pill-btn, .cat-pill');
-      if (!btn) return;
-      spawnBurst(e.clientX, e.clientY);
-    });
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
   }
 
-  function spawnBurst(x, y) {
-    const icons = ['✨', '💖', '🌸', '✦', '🎀'];
-    for (let i = 0; i < 7; i++) {
+  function escapeAttr(str) {
+    return escapeHtml(str).replace(/"/g, '&quot;');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('shop-toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  // --- 1. CELESTIAL VECTOR SPARKLES, CURSOR PEARL TRAIL & SCROLL REVEAL ---
+  function initAtmosphereAndMotion() {
+    const container = document.getElementById('ambient-sparkles');
+    if (container) {
+      for (let i = 0; i < 22; i++) {
+        const wrap = document.createElement('span');
+        wrap.className = 'celestial-star';
+        const sz = 9 + Math.round(Math.random() * 11);
+        wrap.style.left = `${2 + Math.random() * 96}%`;
+        wrap.style.top = `${2 + Math.random() * 95}%`;
+        wrap.style.animationDuration = `${2.4 + Math.random() * 3.2}s`;
+        wrap.style.animationDelay = `${Math.random() * 3.5}s`;
+        wrap.innerHTML = `<svg width="${sz}" height="${sz}"><use href="#ico-star4"></use></svg>`;
+        container.appendChild(wrap);
+      }
+    }
+
+    // Desktop Pearl Cursor Aura & Subtle Sparkle Trail
+    const aura = document.getElementById('cursor-aura');
+    let lastTrailTime = 0;
+    window.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      if (aura) {
+        aura.style.opacity = '1';
+        aura.style.left = `${e.clientX}px`;
+        aura.style.top = `${e.clientY}px`;
+      }
+      const now = Date.now();
+      if (now - lastTrailTime > 95) {
+        lastTrailTime = now;
+        const dot = document.createElement('span');
+        dot.className = 'cursor-trail-dot';
+        dot.style.left = `${e.clientX}px`;
+        dot.style.top = `${e.clientY}px`;
+        dot.innerHTML = `<svg width="9" height="9"><use href="#ico-star4"></use></svg>`;
+        document.body.appendChild(dot);
+        setTimeout(() => dot.remove(), 720);
+      }
+    });
+
+    // Vector Star & Heart Burst on Interactive Clicks
+    document.addEventListener('click', (e) => {
+      const target = e.target.closest('button, .cta-ribbon, .nav-pill, .cat-pill');
+      if (!target) return;
+      spawnVectorBurst(e.clientX, e.clientY);
+    });
+
+    // Sticky Header Shadow on Scroll
+    const hdr = document.getElementById('shop-header');
+    window.addEventListener('scroll', () => {
+      if (hdr) hdr.classList.toggle('scrolled', window.scrollY > 18);
+    }, { passive: true });
+
+    // Subtle Hero Polaroid Parallax on Desktop
+    const heroSec = document.getElementById('hero-section');
+    const pol1 = document.getElementById('hero-polaroid-1');
+    const pol2 = document.getElementById('hero-polaroid-2');
+    if (heroSec && pol1 && pol2) {
+      heroSec.addEventListener('pointermove', (e) => {
+        if (e.pointerType !== 'mouse') return;
+        const rect = heroSec.getBoundingClientRect();
+        const nx = (e.clientX - rect.left) / rect.width - 0.5;
+        const ny = (e.clientY - rect.top) / rect.height - 0.5;
+        pol1.style.transform = `rotate(${-3.5 + nx * 3}deg) translate(${-26 + nx * 10}px, ${ny * 8}px)`;
+        pol2.style.transform = `rotate(${5.5 - nx * 3}deg) translate(${nx * -8}px, ${ny * -10}px)`;
+      });
+    }
+
+    // IntersectionObserver Scroll Reveal
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((ent) => {
+          if (ent.isIntersecting) {
+            ent.target.classList.add('is-visible');
+          }
+        });
+      },
+      { threshold: 0.08 }
+    );
+    document.querySelectorAll('.reveal-up').forEach((el) => observer.observe(el));
+  }
+
+  function spawnVectorBurst(x, y) {
+    if (!x && !y) return;
+    const symbols = ['#ico-star4', '#ico-heart', '#ico-star4', '#ico-bow', '#ico-star4', '#ico-heart'];
+    for (let i = 0; i < 6; i++) {
       const el = document.createElement('span');
-      el.className = 'tap-sparkle-particle';
-      el.textContent = icons[i % icons.length];
+      el.className = 'tap-burst-svg';
       el.style.left = `${x}px`;
       el.style.top = `${y}px`;
-      const angle = (Math.PI * 2 * i) / 7;
-      const dist = 28 + Math.random() * 36;
+      const angle = (Math.PI * 2 * i) / 6;
+      const dist = 26 + Math.random() * 34;
       el.style.setProperty('--dx', `${Math.round(Math.cos(angle) * dist)}px`);
-      el.style.setProperty('--dy', `${Math.round(Math.sin(angle) * dist - 18)}px`);
+      el.style.setProperty('--dy', `${Math.round(Math.sin(angle) * dist - 14)}px`);
+      el.innerHTML = `<svg width="13" height="13"><use href="${symbols[i]}"></use></svg>`;
       document.body.appendChild(el);
-      setTimeout(() => el.remove(), 860);
+      setTimeout(() => el.remove(), 840);
     }
   }
 
-  // --- 2. FLASH SALE COUNTDOWN TIMER ---
+  // Parabolic Fly-to-Bag Thumbnail Animation
+  function animateFlyToBag(imgSrc, sourceEl) {
+    const bagBtn = document.getElementById('btn-open-cart');
+    if (!bagBtn || !sourceEl) return;
+    const sRect = sourceEl.getBoundingClientRect();
+    const bRect = bagBtn.getBoundingClientRect();
+
+    const clone = document.createElement('img');
+    clone.src = imgSrc || '/media/bio-link/girlfriend-1.jpg';
+    clone.className = 'fly-to-bag-clone';
+    clone.style.left = `${sRect.left + sRect.width / 2 - 28}px`;
+    clone.style.top = `${sRect.top + sRect.height / 2 - 34}px`;
+    document.body.appendChild(clone);
+
+    requestAnimationFrame(() => {
+      const dx = bRect.left + bRect.width / 2 - (sRect.left + sRect.width / 2);
+      const dy = bRect.top + bRect.height / 2 - (sRect.top + sRect.height / 2);
+      clone.style.transform = `translate(${dx}px, ${dy}px) scale(0.22) rotate(14deg)`;
+      clone.style.opacity = '0.2';
+    });
+
+    setTimeout(() => {
+      clone.remove();
+      bagBtn.classList.remove('bag-bounce');
+      void bagBtn.offsetWidth;
+      bagBtn.classList.add('bag-bounce');
+    }, 700);
+  }
+
+  // --- 2. FLASH DEAL COUNTDOWN ---
   function startFlashTimer() {
-    let remaining = 4 * 3600 + 45 * 60 + 59;
+    let remaining = 4 * 3600 + 45 * 60 + 52;
     setInterval(() => {
       remaining = remaining > 0 ? remaining - 1 : 4 * 3600;
       const h = String(Math.floor(remaining / 3600)).padStart(2, '0');
@@ -92,8 +208,10 @@
 
       applyStoreSettings();
       renderVouchers();
+      renderLookbookStudio();
       renderCategories();
       renderProducts();
+      renderRecentlyViewed();
       updateBadgesAndCart();
       startLiveProofToast();
     } catch (err) {
@@ -103,47 +221,52 @@
 
   function applyStoreSettings() {
     if (settings.shopName) {
-      document.title = `${settings.shopName} ✨ ${settings.tagline || ''}`;
+      document.title = `${settings.shopName} — Tủ Đồ Tiểu Thư & 2Hand Tuyển Chọn`;
       document.getElementById('header-shop-name').textContent = settings.shopName;
     }
-    if (settings.tagline) document.getElementById('header-tagline').textContent = settings.tagline;
-    if (settings.announcement) {
-      document.getElementById('marquee-track').innerHTML =
-        `${escapeHtml(settings.announcement)} &nbsp;&nbsp;✦&nbsp;&nbsp; ${escapeHtml(settings.announcement)} &nbsp;&nbsp;✦&nbsp;&nbsp;`;
+    if (settings.tagline) {
+      document.getElementById('header-tagline').textContent = settings.tagline.replace(/[✨🌸🎀]/g, '').trim();
     }
-    if (settings.heroTitle) document.getElementById('hero-title').textContent = settings.heroTitle;
-    if (settings.heroSubtitle) document.getElementById('hero-subtitle').textContent = settings.heroSubtitle;
-    if (settings.heroBannerImage) document.getElementById('hero-photo').src = settings.heroBannerImage;
+    if (settings.announcement) {
+      const cleanAnn = settings.announcement.replace(/[✨🌸🎀]/g, '✦');
+      document.getElementById('marquee-track').innerHTML =
+        `${escapeHtml(cleanAnn)} &nbsp;&nbsp;✦&nbsp;&nbsp; ${escapeHtml(cleanAnn)} &nbsp;&nbsp;✦&nbsp;&nbsp;`;
+    }
+    if (settings.heroBannerImage) {
+      document.getElementById('hero-photo').src = settings.heroBannerImage;
+    }
+    if (settings.messengerUrl) {
+      const mLink = document.getElementById('floating-mess-link');
+      if (mLink) mLink.href = settings.messengerUrl;
+    }
 
-    // Payment method toggles
     document.getElementById('pay-card-qr').style.display = settings.qrEnabled === false ? 'none' : 'flex';
     document.getElementById('pay-card-cod').style.display = settings.codEnabled === false ? 'none' : 'flex';
 
     const qrImg = document.getElementById('checkout-qr-preview-img');
-    if (qrImg) qrImg.src = settings.qrImageUrl || '/images/cute-qr-placeholder.svg';
+    if (qrImg) qrImg.src = settings.qrImageUrl || '/media/bio-link/cute-qr-placeholder.svg';
     const bankTxt = document.getElementById('checkout-qr-bank-text');
     if (bankTxt && settings.bankName) {
       bankTxt.textContent = `${settings.bankName} • STK: ${settings.bankAccountNo || ''} (${settings.bankAccountName || ''})`;
     }
   }
 
+  // --- 4. VOUCHER TICKETS ---
   function renderVouchers() {
     const el = document.getElementById('voucher-strip');
     if (!el) return;
     el.innerHTML = coupons
-      .slice(0, 3)
+      .slice(0, 4)
       .map(
         (c) => `
-      <div class="voucher-ticket">
-        <div>
-          <div class="voucher-code">🎟️ ${escapeHtml(c.code)}</div>
-          <div class="voucher-desc">${escapeHtml(c.description || '')}</div>
+        <div class="voucher-ticket">
+          <div>
+            <div class="voucher-code">${escapeHtml(c.code)}</div>
+            <div class="voucher-desc">${escapeHtml(c.description || '')}</div>
+          </div>
+          <button type="button" class="btn-save-voucher" data-code="${escapeAttr(c.code)}">Lưu mã</button>
         </div>
-        <button type="button" class="cute-pill-btn primary btn-save-voucher" data-code="${escapeAttr(c.code)}" style="padding: 7px 13px; font-size: 0.76rem;">
-          Lưu mã
-        </button>
-      </div>
-    `
+      `
       )
       .join('');
 
@@ -153,36 +276,188 @@
         document.getElementById('cart-coupon-input').value = code;
         navigator.clipboard?.writeText(code).catch(() => {});
         btn.textContent = 'Đã lưu ✓';
-        setTimeout(() => { btn.textContent = 'Lưu mã'; }, 2000);
+        btn.classList.add('saved');
+        showToast(`Đã lưu mã ${code} vào Túi Đồ của nàng!`);
+        setTimeout(() => {
+          btn.textContent = 'Lưu mã';
+          btn.classList.remove('saved');
+        }, 2500);
       });
     });
+  }
+
+  // --- 5. INTERACTIVE "SHOP THE LOOK" MIX & MATCH STUDIO ---
+  function renderLookbookStudio() {
+    const stage = document.getElementById('lookbook-stage');
+    if (!stage || products.length === 0) return;
+
+    const p0 = products[0];
+    const p1 = products[Math.min(5, products.length - 1)];
+    const p2 = products[Math.min(1, products.length - 1)];
+    const p3 = products[Math.min(4, products.length - 1)];
+
+    const looks = [
+      {
+        photo: '/media/bio-link/girlfriend-1.jpg',
+        title: 'Look 01 — Hẹn Hò Cuối Tuần Dịu Dàng',
+        pins: [
+          { x: 48, y: 42, prod: p0 },
+          { x: 66, y: 68, prod: p1 }
+        ]
+      },
+      {
+        photo: '/media/bio-link/girlfriend-2.jpg',
+        title: 'Look 02 — Dạo Phố Năng Động Ngọt Ngào',
+        pins: [
+          { x: 46, y: 45, prod: p2 },
+          { x: 58, y: 74, prod: p3 }
+        ]
+      }
+    ];
+
+    const cur = looks[activeLookIdx] || looks[0];
+    const uniquePins = cur.pins.filter((item, idx, arr) => item.prod && arr.findIndex((x) => x.prod?.id === item.prod?.id) === idx);
+    const totalSetPrice = uniquePins.reduce((s, x) => s + Number(x.prod.price || 0), 0);
+
+    stage.innerHTML = `
+      <div class="look-photo-stage">
+        <img src="${escapeAttr(cur.photo)}" alt="${escapeAttr(cur.title)}" />
+        ${uniquePins
+          .map(
+            (pin, idx) => `
+          <button type="button" class="hotspot-pin ${idx === 0 ? 'active' : ''}" data-pin-idx="${idx}" style="left:${pin.x}%; top:${pin.y}%;" aria-label="Xem món đồ ${idx + 1}">
+            ${idx + 1}
+          </button>
+        `
+          )
+          .join('')}
+      </div>
+
+      <div class="look-items-panel">
+        <div style="font-family:var(--font-serif); font-size:1.35rem; font-weight:700; color:var(--ink);">
+          ${escapeHtml(cur.title)}
+        </div>
+        <p style="font-size:0.8rem; color:var(--ink-muted); margin-top:-6px;">
+          Phối sẵn tông màu hài hòa — nàng có thể chọn lẻ từng món hoặc rinh trọn bộ vào túi đồ.
+        </p>
+
+        ${uniquePins
+          .map(
+            (pin, idx) => `
+          <div class="look-piece-card ${idx === 0 ? 'highlighted' : ''}" data-piece-idx="${idx}" data-id="${escapeAttr(pin.prod.id)}">
+            <img src="${escapeAttr((pin.prod.images && pin.prod.images[0]) || '/media/bio-link/girlfriend-1.jpg')}" alt="${escapeAttr(pin.prod.name)}" />
+            <div style="flex:1;">
+              <div style="font-size:0.7rem; font-weight:700; color:var(--cherry);">Món số 0${idx + 1}</div>
+              <div style="font-weight:700; font-size:0.86rem;">${escapeHtml(pin.prod.name)}</div>
+              <div style="font-weight:800; font-size:0.88rem; color:var(--cherry); margin-top:2px;">${vnd(pin.prod.price)}</div>
+            </div>
+            <button type="button" class="prod-detail-btn btn-look-view" data-id="${escapeAttr(pin.prod.id)}">Xem chi tiết</button>
+          </div>
+        `
+          )
+          .join('')}
+
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:8px; border-top:1px dashed var(--line-strong); flex-wrap:wrap;">
+          <div>
+            <span style="font-size:0.75rem; color:var(--ink-muted);">Trọn bộ ${uniquePins.length} món:</span>
+            <strong style="font-size:1.1rem; color:var(--cherry); margin-left:6px;">${vnd(totalSetPrice)}</strong>
+          </div>
+          <button type="button" class="cta-ribbon shimmer-sheen" id="btn-buy-whole-look" style="padding:10px 18px; font-size:0.81rem;">
+            <span>Thêm trọn Set vào Túi Đồ</span>
+          </button>
+        </div>
+      </div>
+    `;
+
+    stage.querySelectorAll('.hotspot-pin').forEach((pinBtn) => {
+      pinBtn.addEventListener('click', () => {
+        const i = Number(pinBtn.dataset.pinIdx);
+        stage.querySelectorAll('.hotspot-pin').forEach((b) => b.classList.remove('active'));
+        stage.querySelectorAll('.look-piece-card').forEach((c) => c.classList.remove('highlighted'));
+        pinBtn.classList.add('active');
+        const card = stage.querySelector(`.look-piece-card[data-piece-idx="${i}"]`);
+        if (card) card.classList.add('highlighted');
+      });
+    });
+
+    stage.querySelectorAll('.look-piece-card').forEach((card) => {
+      card.addEventListener('click', () => openProductModal(card.dataset.id));
+    });
+
+    stage.querySelector('#btn-buy-whole-look')?.addEventListener('click', (e) => {
+      uniquePins.forEach((pin) => {
+        addToCart(
+          pin.prod,
+          (pin.prod.sizes && pin.prod.sizes[0]) || 'Freesize',
+          (pin.prod.colors && pin.prod.colors[0]) || 'Theo hình',
+          1
+        );
+      });
+      animateFlyToBag(cur.photo, e.currentTarget);
+      showToast(`Đã thêm trọn bộ ${uniquePins.length} món vào Túi Đồ!`);
+      setTimeout(openCartDrawer, 550);
+    });
+  }
+
+  document.querySelectorAll('.look-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.look-tab').forEach((t) => t.classList.remove('active'));
+      tab.classList.add('active');
+      activeLookIdx = Number(tab.dataset.look || 0);
+      renderLookbookStudio();
+    });
+  });
+
+  // --- 6. SLIDING CATEGORY GLIDER & PRODUCT CATALOG ---
+  function updateCategoryGlider() {
+    const wrap = document.getElementById('category-pills');
+    const chip = document.getElementById('cat-glider-chip');
+    const activeBtn = wrap?.querySelector('.cat-pill.active');
+    if (!wrap || !chip || !activeBtn) return;
+    chip.style.width = `${activeBtn.offsetWidth}px`;
+    chip.style.transform = `translateX(${activeBtn.offsetLeft - 5}px)`;
   }
 
   function renderCategories() {
     const wrap = document.getElementById('category-pills');
-    const allCats = [{ id: 'all', name: 'Tất cả đồ xinh', icon: '✨' }, ...categories];
-    wrap.innerHTML = allCats
-      .map(
-        (c) => `
-      <button type="button" class="cat-pill ${activeCategory === c.id && !wishlistOnly ? 'active' : ''}" data-cat="${escapeAttr(c.id)}">
-        ${escapeHtml(c.icon || '🌸')} ${escapeHtml(c.name)}
-      </button>
-    `
-      )
+    if (!wrap) return;
+    const allCats = [{ id: 'all', name: 'Tất cả thiết kế' }, ...categories];
+    const buttonsHtml = allCats
+      .map((c) => {
+        const cleanName = String(c.name || '').replace(/[👗👚🎀🌸👜✨]/g, '').trim();
+        const isActive = activeCategory === c.id && !wishlistOnly;
+        return `<button type="button" role="tab" class="cat-pill ${isActive ? 'active' : ''}" data-cat="${escapeAttr(c.id)}">${escapeHtml(cleanName)}</button>`;
+      })
       .join('');
+
+    wrap.innerHTML = `<span class="glider-chip" id="cat-glider-chip" aria-hidden="true"></span>${buttonsHtml}`;
 
     wrap.querySelectorAll('.cat-pill').forEach((b) => {
       b.addEventListener('click', () => {
         wishlistOnly = false;
+        document.getElementById('btn-filter-wishlist')?.classList.remove('active-filter');
         activeCategory = b.getAttribute('data-cat');
-        renderCategories();
+        wrap.querySelectorAll('.cat-pill').forEach((x) => x.classList.remove('active'));
+        b.classList.add('active');
+        updateCategoryGlider();
         renderProducts();
       });
     });
+
+    requestAnimationFrame(updateCategoryGlider);
+    window.addEventListener('resize', updateCategoryGlider, { passive: true });
+  }
+
+  function getCategoryLabel(catId) {
+    const found = categories.find((c) => c.id === catId);
+    return found ? String(found.name).replace(/[👗👚🎀🌸👜✨]/g, '').trim() : 'Tuyển chọn';
   }
 
   function renderProducts() {
     const grid = document.getElementById('products-grid');
+    const countLabel = document.getElementById('catalog-count-label');
+    if (!grid) return;
+
     let list = [...products];
 
     if (wishlistOnly) {
@@ -200,6 +475,18 @@
       );
     }
 
+    if (priceBracket === 'under180') {
+      list = list.filter((p) => Number(p.price) < 180000);
+    } else if (priceBracket === '180to280') {
+      list = list.filter((p) => Number(p.price) >= 180000 && Number(p.price) <= 280000);
+    } else if (priceBracket === 'over280') {
+      list = list.filter((p) => Number(p.price) > 280000);
+    }
+
+    if (saleOnly) {
+      list = list.filter((p) => Number(p.originalPrice || 0) > Number(p.price || 0) || p.isFlashSale);
+    }
+
     if (sortBy === 'newest') {
       list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     } else if (sortBy === 'bestseller') {
@@ -212,20 +499,41 @@
       list.sort((a, b) => Number(Boolean(b.isFeatured)) - Number(Boolean(a.isFeatured)));
     }
 
+    if (countLabel) {
+      countLabel.textContent = wishlistOnly
+        ? `Tủ đồ yêu thích của nàng (${list.length} thiết kế)`
+        : `Hiển thị ${list.length} thiết kế tuyển chọn`;
+    }
+
     if (list.length === 0) {
       grid.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; background: #fff; border-radius: 24px; border: 1.5px dashed var(--pink-200);">
-          <div style="font-size: 2.4rem; margin-bottom: 8px;">🌸</div>
-          <p style="font-weight: 800;">Chưa tìm thấy món đồ phù hợp nàng ơi!</p>
-          <p style="font-size: 0.82rem; color: var(--ink-muted); margin-top: 4px;">Thử chọn danh mục khác hoặc xóa từ khóa tìm kiếm nhé ♡</p>
+        <div style="grid-column: 1 / -1; text-align: center; padding: 52px 20px; background: #fff; border-radius: 24px; border: 1px dashed var(--line-strong);">
+          <div style="font-family:var(--font-serif); font-size:1.5rem; font-weight:700; margin-bottom:6px;">Chưa tìm thấy mẫu phù hợp nàng ơi</div>
+          <p style="font-size: 0.83rem; color: var(--ink-muted); margin-bottom: 14px;">Thử đặt lại bộ lọc mức giá hoặc xem toàn bộ kệ đồ của tiệm nhé.</p>
+          <button type="button" class="cta-outline" id="btn-reset-all-filters">Xem lại tất cả thiết kế</button>
         </div>
       `;
+      document.getElementById('btn-reset-all-filters')?.addEventListener('click', () => {
+        activeCategory = 'all';
+        wishlistOnly = false;
+        searchQuery = '';
+        priceBracket = 'all';
+        saleOnly = false;
+        document.getElementById('search-input').value = '';
+        document.getElementById('price-filter-select').value = 'all';
+        document.getElementById('chk-only-sale').checked = false;
+        renderCategories();
+        renderProducts();
+      });
       return;
     }
 
     grid.innerHTML = list
       .map((p) => {
-        const img = (p.images && p.images[0]) || '/uploads/girlfriend-1.jpg';
+        const imgs = Array.isArray(p.images) && p.images.length > 0 ? p.images : ['/media/bio-link/girlfriend-1.jpg'];
+        const img1 = imgs[0];
+        const img2 = imgs[1] || '';
+        const sizes = Array.isArray(p.sizes) && p.sizes.length > 0 ? p.sizes : ['Freesize'];
         const disc =
           p.originalPrice && p.originalPrice > p.price
             ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)
@@ -233,37 +541,54 @@
         const isLiked = wishlist.includes(p.id);
         const platLabel =
           p.sourcePlatform === 'shopee'
-            ? '🧡 Shopee'
+            ? 'Shopee Mall'
             : p.sourcePlatform === 'tiktok'
-            ? '🎵 TikTok Shop'
-            : '🎀 Boutique';
+            ? 'TikTok Shop'
+            : 'Atelier';
 
         return `
         <article class="product-card" data-id="${escapeAttr(p.id)}">
-          <div class="prod-img-wrap open-detail">
-            <img src="${escapeAttr(img)}" alt="${escapeAttr(p.name)}" loading="lazy" />
+          <div class="prod-img-wrap">
+            <img src="${escapeAttr(img1)}" alt="${escapeAttr(p.name)}" class="prod-img-primary ${img2 ? 'has-alt' : ''} open-detail" loading="lazy" />
+            ${img2 ? `<img src="${escapeAttr(img2)}" alt="" class="prod-img-secondary open-detail" loading="lazy" aria-hidden="true" />` : ''}
+
             <div class="prod-badges-top">
-              ${disc > 0 ? `<span class="badge-discount blink-shimmer">-${disc}%</span>` : ''}
-              ${p.isFlashSale ? `<span class="badge-discount" style="background:linear-gradient(135deg,#f59e0b,#ec4899);">⚡ DEAL XINH</span>` : ''}
-              <span class="badge-platform">${platLabel}</span>
+              ${disc > 0 ? `<span class="tag-pill-sale">-${disc}%</span>` : ''}
+              <span class="tag-pill-source">${platLabel}</span>
             </div>
-            <button type="button" class="wishlist-heart-btn ${isLiked ? 'liked' : ''}" data-like="${escapeAttr(p.id)}" title="Yêu thích">
-              ${isLiked ? '❤️' : '🤍'}
+
+            <button type="button" class="wishlist-heart-btn ${isLiked ? 'liked' : ''}" data-like="${escapeAttr(p.id)}" aria-label="Lưu vào yêu thích">
+              <svg width="16" height="16"><use href="#ico-heart"></use></svg>
             </button>
+
+            <div class="quick-add-overlay">
+              <div class="quick-size-label">Chạm thêm nhanh vào Túi Đồ:</div>
+              <div class="quick-size-row">
+                ${sizes
+                  .slice(0, 4)
+                  .map(
+                    (sz) =>
+                      `<button type="button" class="quick-size-chip" data-size="${escapeAttr(sz)}">+ ${escapeHtml(sz)}</button>`
+                  )
+                  .join('')}
+              </div>
+            </div>
           </div>
+
           <div class="prod-body">
+            <div class="prod-cat-kicker">${escapeHtml(getCategoryLabel(p.category))}</div>
             <h3 class="prod-title open-detail">${escapeHtml(p.name)}</h3>
             <div class="prod-meta-row">
-              <span>⭐ ${Number(p.rating || 5).toFixed(1)} (${p.reviewCount || 1})</span>
+              <span>★ ${Number(p.rating || 5).toFixed(1)} (${p.reviewCount || 1})</span>
               <span>Đã bán ${Number(p.sold || 0)}</span>
             </div>
             <div class="prod-price-row">
-              <span class="prod-price">${vnd(p.price)}</span>
-              ${p.originalPrice > p.price ? `<span class="prod-orig-price">${vnd(p.originalPrice)}</span>` : ''}
+              <div>
+                <span class="prod-price">${vnd(p.price)}</span>
+                ${p.originalPrice > p.price ? `<span class="prod-orig-price">${vnd(p.originalPrice)}</span>` : ''}
+              </div>
+              <button type="button" class="prod-detail-btn open-detail">Chọn mẫu</button>
             </div>
-            <button type="button" class="prod-buy-btn blink-shimmer open-detail">
-              🛍️ Chọn Size / Mua Ngay
-            </button>
           </div>
         </article>
       `;
@@ -272,13 +597,27 @@
 
     grid.querySelectorAll('.product-card').forEach((card) => {
       const id = card.getAttribute('data-id');
+      const prod = products.find((x) => x.id === id);
+
       card.querySelectorAll('.open-detail').forEach((el) => {
         el.addEventListener('click', () => openProductModal(id));
       });
-      const heartBtn = card.querySelector('.wishlist-heart-btn');
-      heartBtn.addEventListener('click', (e) => {
+
+      card.querySelector('.wishlist-heart-btn')?.addEventListener('click', (e) => {
         e.stopPropagation();
         toggleWishlist(id);
+      });
+
+      card.querySelectorAll('.quick-size-chip').forEach((chip) => {
+        chip.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (!prod) return;
+          const sz = chip.getAttribute('data-size') || 'Freesize';
+          const col = (prod.colors && prod.colors[0]) || 'Theo hình';
+          addToCart(prod, sz, col, 1);
+          animateFlyToBag((prod.images && prod.images[0]) || '', card.querySelector('.prod-img-wrap'));
+          showToast(`Đã thêm "${prod.name.slice(0, 26)}..." (${sz}) vào Túi Đồ!`);
+        });
       });
     });
   }
@@ -286,40 +625,140 @@
   function toggleWishlist(id) {
     if (wishlist.includes(id)) {
       wishlist = wishlist.filter((x) => x !== id);
+      showToast('Đã bỏ khỏi Tủ đồ yêu thích');
     } else {
       wishlist.push(id);
+      showToast('Đã lưu vào Tủ đồ yêu thích ♡');
     }
     localStorage.setItem('na2hand_wishlist', JSON.stringify(wishlist));
     updateBadgesAndCart();
     renderProducts();
   }
 
-  // --- 4. PRODUCT DETAIL & REVIEW MODAL ---
+  // --- 7. RECENTLY VIEWED ---
+  function recordRecentlyViewed(id) {
+    recentlyViewed = [id, ...recentlyViewed.filter((x) => x !== id)].slice(0, 8);
+    localStorage.setItem('na2hand_recent', JSON.stringify(recentlyViewed));
+    renderRecentlyViewed();
+  }
+
+  function renderRecentlyViewed() {
+    const sec = document.getElementById('recently-viewed-section');
+    const row = document.getElementById('recently-viewed-list');
+    if (!sec || !row) return;
+
+    const items = recentlyViewed
+      .map((id) => products.find((p) => p.id === id))
+      .filter(Boolean);
+
+    if (items.length === 0) {
+      sec.style.display = 'none';
+      return;
+    }
+
+    sec.style.display = 'block';
+    sec.classList.add('is-visible');
+    row.innerHTML = items
+      .map(
+        (p) => `
+        <div class="recent-mini-card" data-id="${escapeAttr(p.id)}">
+          <img src="${escapeAttr((p.images && p.images[0]) || '/media/bio-link/girlfriend-1.jpg')}" alt="${escapeAttr(p.name)}" />
+          <div style="overflow:hidden;">
+            <div style="font-size:0.78rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(p.name)}</div>
+            <div style="font-size:0.8rem; font-weight:800; color:var(--cherry); margin-top:2px;">${vnd(p.price)}</div>
+          </div>
+        </div>
+      `
+      )
+      .join('');
+
+    row.querySelectorAll('.recent-mini-card').forEach((el) => {
+      el.addEventListener('click', () => openProductModal(el.dataset.id));
+    });
+  }
+
+  document.getElementById('btn-clear-recent')?.addEventListener('click', () => {
+    recentlyViewed = [];
+    localStorage.removeItem('na2hand_recent');
+    renderRecentlyViewed();
+  });
+
+  // --- 8. PRODUCT DETAIL, RELATED OUTFITS & PHOTO REVIEWS MODAL ---
+  function compressImageClient(file, maxW = 900) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width;
+          let h = img.height;
+          if (w > maxW) {
+            h = Math.round((h * maxW) / w);
+            w = maxW;
+          }
+          const c = document.createElement('canvas');
+          c.width = w;
+          c.height = h;
+          c.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(c.toDataURL('image/jpeg', 0.84));
+        };
+        img.onerror = reject;
+        img.src = ev.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function openLightbox(src) {
+    const lb = document.getElementById('image-lightbox');
+    const im = document.getElementById('lightbox-img');
+    if (!lb || !im) return;
+    im.src = src;
+    lb.classList.add('open');
+  }
+
+  document.getElementById('btn-close-lightbox')?.addEventListener('click', () => {
+    document.getElementById('image-lightbox')?.classList.remove('open');
+  });
+  document.getElementById('image-lightbox')?.addEventListener('click', (e) => {
+    if (e.target.id === 'image-lightbox') e.currentTarget.classList.remove('open');
+  });
+
   function openProductModal(id) {
     const p = products.find((x) => x.id === id);
     if (!p) return;
 
+    recordRecentlyViewed(id);
+
     const modal = document.getElementById('product-modal');
     const content = document.getElementById('product-modal-content');
-    const imgs = Array.isArray(p.images) && p.images.length > 0 ? p.images : ['/uploads/girlfriend-1.jpg'];
+    const imgs = Array.isArray(p.images) && p.images.length > 0 ? p.images : ['/media/bio-link/girlfriend-1.jpg'];
     const sizes = Array.isArray(p.sizes) && p.sizes.length > 0 ? p.sizes : ['Freesize'];
-    const colors = Array.isArray(p.colors) && p.colors.length > 0 ? p.colors : ['Mặc định'];
+    const colors = Array.isArray(p.colors) && p.colors.length > 0 ? p.colors : ['Theo hình'];
     const prodReviews = reviews.filter((r) => r.productId === p.id);
+    const related = products.filter((x) => x.id !== p.id).slice(0, 3);
 
     let chosenSize = sizes[0];
     let chosenColor = colors[0];
     let qty = 1;
+    let chosenStars = 5;
+    let pendingRevPhotoDataUrl = '';
 
     content.innerHTML = `
-      <button type="button" class="modal-close-btn" id="close-prod-modal">✕</button>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 22px;">
+      <button type="button" class="modal-close-btn" id="close-prod-modal" aria-label="Đóng">✕</button>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 26px;">
         <div>
-          <img id="detail-main-img" src="${escapeAttr(imgs[0])}" alt="${escapeAttr(p.name)}" style="width:100%; aspect-ratio:3/3.6; object-fit:cover; object-position:center 20%; border-radius:20px; border:1.5px solid var(--pink-200);" />
+          <div style="position:relative; border-radius:20px; overflow:hidden; border:1px solid var(--line); cursor:zoom-in;" id="detail-zoom-trigger">
+            <img id="detail-main-img" src="${escapeAttr(imgs[0])}" alt="${escapeAttr(p.name)}" style="width:100%; aspect-ratio:3/3.7; object-fit:cover; object-position:center 20%; display:block;" />
+            <span style="position:absolute; right:10px; bottom:10px; background:rgba(255,255,255,0.9); font-size:0.68rem; font-weight:700; padding:4px 10px; border-radius:999px;">Chạm phóng to ảnh</span>
+          </div>
+
           <div style="display:flex; gap:8px; margin-top:10px; overflow-x:auto;">
             ${imgs
               .map(
                 (u, i) => `
-              <img src="${escapeAttr(u)}" class="detail-thumb" data-src="${escapeAttr(u)}" style="width:58px; height:64px; object-fit:cover; border-radius:12px; cursor:pointer; border:2px solid ${i === 0 ? 'var(--pink-500)' : 'var(--pink-200)'};" />
+              <img src="${escapeAttr(u)}" class="detail-thumb" data-src="${escapeAttr(u)}" style="width:60px; height:68px; object-fit:cover; border-radius:12px; cursor:pointer; border:2px solid ${i === 0 ? 'var(--cherry)' : 'var(--line)'};" />
             `
               )
               .join('')}
@@ -327,89 +766,140 @@
         </div>
 
         <div>
-          <div style="font-size:0.75rem; font-weight:800; color:var(--pink-500); margin-bottom:4px;">✦ NA 2HAND BOUTIQUE • HÀNG TUYỂN CHỌN</div>
-          <h2 style="font-size:1.25rem; font-weight:800; line-height:1.35; margin-bottom:8px;">${escapeHtml(p.name)}</h2>
-          <div style="font-size:0.8rem; color:var(--ink-muted); margin-bottom:12px;">
-            ⭐ ${Number(p.rating || 5).toFixed(1)} (${p.reviewCount || 1} đánh giá) • Đã bán ${p.sold || 0} • Kho còn: <strong>${p.stock ?? 10}</strong>
+          <div class="modal-kicker">NA 2HAND ATELIER • ${escapeHtml(getCategoryLabel(p.category)).toUpperCase()}</div>
+          <h2 style="font-family:var(--font-serif); font-size:1.7rem; font-weight:700; line-height:1.2; margin-bottom:8px;">${escapeHtml(p.name)}</h2>
+
+          <div style="font-size:0.8rem; color:var(--ink-muted); margin-bottom:14px;">
+            ★ ${Number(p.rating || 5).toFixed(1)} (${p.reviewCount || 1} đánh giá) &nbsp;·&nbsp; Đã bán ${p.sold || 0} &nbsp;·&nbsp; Còn <strong>${p.stock ?? 10}</strong> chiếc
           </div>
 
-          <div style="background:var(--pink-50); padding:12px 16px; border-radius:16px; margin-bottom:14px; display:flex; align-items:baseline; gap:10px;">
-            <span style="font-size:1.45rem; font-weight:800; color:var(--pink-600);">${vnd(p.price)}</span>
-            ${p.originalPrice > p.price ? `<span style="text-decoration:line-through; color:#b38d9d; font-size:0.88rem;">${vnd(p.originalPrice)}</span>` : ''}
+          <div style="background:var(--rose-50); border:1px solid var(--rose-200); padding:13px 16px; border-radius:16px; margin-bottom:16px; display:flex; align-items:baseline; gap:10px;">
+            <span class="prod-price" style="font-size:1.5rem;">${vnd(p.price)}</span>
+            ${p.originalPrice > p.price ? `<span class="prod-orig-price" style="font-size:0.9rem;">${vnd(p.originalPrice)}</span>` : ''}
           </div>
 
-          <div style="margin-bottom:12px;">
-            <div style="font-size:0.8rem; font-weight:800; margin-bottom:6px;">🎨 Chọn Màu Sắc:</div>
+          <div style="margin-bottom:13px;">
+            <div class="field-lbl">Màu sắc:</div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;" id="detail-colors">
               ${colors.map((c, i) => `<button type="button" class="variant-pill ${i === 0 ? 'selected' : ''}" data-val="${escapeAttr(c)}">${escapeHtml(c)}</button>`).join('')}
             </div>
           </div>
 
-          <div style="margin-bottom:14px;">
-            <div style="font-size:0.8rem; font-weight:800; margin-bottom:6px;">📏 Chọn Kích Cỡ (Size):</div>
+          <div style="margin-bottom:15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+              <span class="field-lbl" style="margin-bottom:0;">Kích cỡ (Size):</span>
+              <button type="button" class="text-link-btn" id="detail-open-size-calc" style="color:var(--cherry); font-weight:700;">Gợi ý size theo chiều cao/cân nặng</button>
+            </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;" id="detail-sizes">
               ${sizes.map((s, i) => `<button type="button" class="variant-pill ${i === 0 ? 'selected' : ''}" data-val="${escapeAttr(s)}">${escapeHtml(s)}</button>`).join('')}
             </div>
           </div>
 
           <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
-            <span style="font-size:0.8rem; font-weight:800;">Số lượng:</span>
-            <div style="display:inline-flex; align-items:center; border:1.5px solid var(--pink-200); border-radius:12px; overflow:hidden;">
-              <button type="button" id="qty-minus" style="padding:6px 12px; border:none; background:var(--pink-50); font-weight:800; cursor:pointer;">-</button>
-              <span id="qty-val" style="padding:0 14px; font-weight:800;">1</span>
-              <button type="button" id="qty-plus" style="padding:6px 12px; border:none; background:var(--pink-50); font-weight:800; cursor:pointer;">+</button>
+            <span class="field-lbl" style="margin-bottom:0;">Số lượng:</span>
+            <div style="display:inline-flex; align-items:center; border:1px solid var(--line-strong); border-radius:10px; overflow:hidden;">
+              <button type="button" id="qty-minus" style="padding:6px 13px; border:none; background:var(--paper); font-weight:800; cursor:pointer;">−</button>
+              <span id="qty-val" style="padding:0 14px; font-weight:700;">1</span>
+              <button type="button" id="qty-plus" style="padding:6px 13px; border:none; background:var(--paper); font-weight:800; cursor:pointer;">+</button>
             </div>
           </div>
 
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:14px;">
-            <button type="button" id="btn-detail-add" class="cute-pill-btn" style="justify-content:center; padding:12px; border-color:var(--pink-400); color:var(--pink-600);">
-              🛍️ Thêm Vào Giỏ
+            <button type="button" id="btn-detail-add" class="cta-outline" style="justify-content:center;">
+              Thêm vào Túi Đồ
             </button>
-            <button type="button" id="btn-detail-buy-now" class="prod-buy-btn blink-shimmer" style="padding:12px;">
-              💖 Mua Ngay
+            <button type="button" id="btn-detail-buy-now" class="cta-ribbon shimmer-sheen" style="justify-content:center;">
+              Đặt mua ngay
             </button>
           </div>
 
           ${
             p.sourceUrl
-              ? `<a href="${escapeAttr(p.sourceUrl)}" target="_blank" rel="noopener noreferrer" style="display:block; text-align:center; font-size:0.76rem; color:var(--ink-muted); text-decoration:underline; margin-bottom:12px;">
-                  ↗ Xem sản phẩm này trên ${p.sourcePlatform === 'tiktok' ? 'TikTok Shop' : 'Shopee'} của Shop
+              ? `<a href="${escapeAttr(p.sourceUrl)}" target="_blank" rel="noopener noreferrer" style="display:block; text-align:center; font-size:0.76rem; color:var(--ink-muted); text-decoration:underline; margin-bottom:14px;">
+                  Xem đồng thời trên ${p.sourcePlatform === 'tiktok' ? 'TikTok Shop' : 'Shopee'} chính thức của tiệm &rarr;
                 </a>`
               : ''
           }
 
-          <div style="font-size:0.83rem; line-height:1.55; color:#5e3347; background:#fff9fb; padding:12px; border-radius:14px; border:1px solid var(--border-cute);">
-            <strong>✨ Mô tả chi tiết:</strong><br/>
+          <div style="font-size:0.84rem; line-height:1.6; color:var(--ink-soft); background:var(--paper); padding:13px 15px; border-radius:14px; border:1px solid var(--line);">
+            <strong style="color:var(--ink);">Chi tiết chất liệu &amp; phom dáng:</strong><br/>
             ${escapeHtml(p.description || '')}
           </div>
         </div>
       </div>
 
-      <!-- Reviews Section -->
-      <div style="margin-top:22px; padding-top:16px; border-top:1.5px dashed var(--pink-200);">
-        <h3 style="font-size:0.95rem; font-weight:800; margin-bottom:10px;">💬 Đánh giá từ các nàng thơ (${prodReviews.length})</h3>
-        <div style="space-y:8px; margin-bottom:14px;">
+      <!-- Cross-sell Related Pieces -->
+      ${
+        related.length > 0
+          ? `
+        <div style="margin-top:24px; padding-top:18px; border-top:1px solid var(--line);">
+          <div style="font-family:var(--font-serif); font-size:1.3rem; font-weight:700; margin-bottom:10px;">Phối Cùng Mẫu Này <em>Cực Hợp</em></div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:10px;">
+            ${related
+              .map(
+                (rp) => `
+              <div class="recent-mini-card related-jump" data-id="${escapeAttr(rp.id)}" style="max-width:none;">
+                <img src="${escapeAttr((rp.images && rp.images[0]) || '/media/bio-link/girlfriend-1.jpg')}" alt="${escapeAttr(rp.name)}" />
+                <div style="overflow:hidden;">
+                  <div style="font-size:0.78rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(rp.name)}</div>
+                  <div style="font-size:0.8rem; font-weight:800; color:var(--cherry);">${vnd(rp.price)}</div>
+                </div>
+              </div>
+            `
+              )
+              .join('')}
+          </div>
+        </div>
+      `
+          : ''
+      }
+
+      <!-- Reviews + Real OOTD Photo Upload -->
+      <div style="margin-top:24px; padding-top:18px; border-top:1px solid var(--line);">
+        <h3 style="font-family:var(--font-serif); font-size:1.35rem; font-weight:700; margin-bottom:12px;">Cảm Nhận Từ <em>Các Nàng Thơ</em> (${prodReviews.length})</h3>
+        <div style="margin-bottom:14px;">
           ${
             prodReviews.length > 0
               ? prodReviews
-                  .slice(0, 5)
+                  .slice(0, 6)
                   .map(
                     (r) => `
-                <div style="background:var(--pink-50); padding:10px 14px; border-radius:14px; margin-bottom:8px; font-size:0.8rem;">
-                  <div style="font-weight:800; color:var(--pink-600);">${escapeHtml(r.authorName)} • ${'⭐'.repeat(Number(r.rating || 5))}</div>
-                  <div style="margin-top:3px;">${escapeHtml(r.comment)}</div>
+                <div style="background:var(--paper); border:1px solid var(--line); padding:11px 14px; border-radius:14px; margin-bottom:8px; font-size:0.81rem;">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <strong style="color:var(--cherry);">${escapeHtml(r.authorName)}</strong>
+                    <span style="color:#d97706; font-size:0.78rem;">${'★'.repeat(Number(r.rating || 5))}</span>
+                  </div>
+                  ${r.fitNote ? `<div style="font-size:0.72rem; color:var(--ink-muted); margin-top:2px;">Số đo tham khảo: ${escapeHtml(r.fitNote)}</div>` : ''}
+                  <div style="margin-top:4px; color:var(--ink);">${escapeHtml(r.comment)}</div>
+                  ${r.photoUrl ? `<img src="${escapeAttr(r.photoUrl)}" class="rev-ootd-img" style="width:74px; height:86px; object-fit:cover; border-radius:10px; margin-top:8px; cursor:zoom-in; border:1px solid var(--line);" />` : ''}
                 </div>
               `
                   )
                   .join('')
-              : `<p style="font-size:0.78rem; color:var(--ink-muted);">Chưa có đánh giá nào. Hãy là nàng thơ đầu tiên feedback cho mẫu này nhé!</p>`
+              : `<p style="font-size:0.8rem; color:var(--ink-muted);">Chưa có feedback cho thiết kế này. Nàng hãy là người đầu tiên gửi ảnh OOTD nhé!</p>`
           }
         </div>
 
-        <form id="review-form" style="display:flex; gap:8px; flex-wrap:wrap;">
-          <input type="text" id="rev-name" placeholder="Tên của nàng..." required style="padding:8px 12px; border-radius:12px; border:1px solid var(--pink-200); font-size:0.8rem; width:150px;" />
-          <input type="text" id="rev-comment" placeholder="Viết cảm nhận về món đồ xinh..." required style="flex:1; min-width:180px; padding:8px 12px; border-radius:12px; border:1px solid var(--pink-200); font-size:0.8rem;" />
-          <button type="submit" class="cute-pill-btn primary" style="padding:8px 14px;">Gửi 5⭐</button>
+        <form id="review-form" style="background:var(--rose-50); padding:14px; border-radius:16px; border:1px solid var(--rose-200);">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+            <span style="font-size:0.78rem; font-weight:700;">Gửi đánh giá &amp; ảnh diện đồ:</span>
+            <div id="star-picker" style="display:inline-flex; gap:4px; cursor:pointer; font-size:1.1rem; color:#d97706;">
+              ${[1, 2, 3, 4, 5].map((st) => `<span data-star="${st}">★</span>`).join('')}
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <input type="text" id="rev-name" class="cute-input" placeholder="Tên của nàng *" required />
+            <input type="text" id="rev-fit" class="cute-input" placeholder="Chiều cao/cân nặng (VD: 1m60 - 47kg mặc S)" />
+          </div>
+          <input type="text" id="rev-comment" class="cute-input" placeholder="Chia sẻ cảm nhận về chất vải, mùi hương gói hàng... *" required />
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+            <label class="nav-pill" style="cursor:pointer;">
+              <span>+ Đính kèm ảnh OOTD</span>
+              <input type="file" id="rev-photo-file" accept="image/*" style="display:none;" />
+            </label>
+            <span id="rev-photo-status" style="font-size:0.74rem; color:var(--cherry); font-weight:600;"></span>
+            <button type="submit" class="cta-ribbon" style="padding:9px 18px; margin-left:auto;">Gửi đánh giá</button>
+          </div>
         </form>
       </div>
     `;
@@ -417,10 +907,27 @@
     modal.classList.add('open');
 
     content.querySelector('#close-prod-modal').onclick = () => modal.classList.remove('open');
+    content.querySelector('#detail-zoom-trigger').onclick = () =>
+      openLightbox(content.querySelector('#detail-main-img').src);
+
+    content.querySelectorAll('.rev-ootd-img').forEach((im) => {
+      im.onclick = () => openLightbox(im.src);
+    });
+
     content.querySelectorAll('.detail-thumb').forEach((th) => {
       th.onclick = () => {
         content.querySelector('#detail-main-img').src = th.getAttribute('data-src');
+        content.querySelectorAll('.detail-thumb').forEach((x) => (x.style.borderColor = 'var(--line)'));
+        th.style.borderColor = 'var(--cherry)';
       };
+    });
+
+    content.querySelectorAll('.related-jump').forEach((el) => {
+      el.onclick = () => openProductModal(el.dataset.id);
+    });
+
+    content.querySelector('#detail-open-size-calc')?.addEventListener('click', () => {
+      document.getElementById('size-modal')?.classList.add('open');
     });
 
     content.querySelectorAll('#detail-colors .variant-pill').forEach((b) => {
@@ -448,8 +955,9 @@
       content.querySelector('#qty-val').textContent = qty;
     };
 
-    content.querySelector('#btn-detail-add').onclick = () => {
+    content.querySelector('#btn-detail-add').onclick = (e) => {
       addToCart(p, chosenSize, chosenColor, qty);
+      animateFlyToBag(imgs[0], e.currentTarget);
       modal.classList.remove('open');
       openCartDrawer();
     };
@@ -460,36 +968,155 @@
       openCheckoutModal();
     };
 
-    content.querySelector('#review-form').onsubmit = async (e) => {
-      e.preventDefault();
-      const authorName = content.querySelector('#rev-name').value;
-      const comment = content.querySelector('#rev-comment').value;
+    // Star rating picker
+    content.querySelectorAll('#star-picker span').forEach((stEl) => {
+      stEl.onclick = () => {
+        chosenStars = Number(stEl.dataset.star || 5);
+        content.querySelectorAll('#star-picker span').forEach((s) => {
+          s.textContent = Number(s.dataset.star) <= chosenStars ? '★' : '☆';
+        });
+      };
+    });
+
+    content.querySelector('#rev-photo-file')?.addEventListener('change', async (ev) => {
+      const f = ev.target.files?.[0];
+      if (!f) return;
+      const st = content.querySelector('#rev-photo-status');
+      st.textContent = 'Đang xử lý ảnh...';
+      try {
+        pendingRevPhotoDataUrl = await compressImageClient(f, 800);
+        st.textContent = 'Đã đính kèm 1 ảnh OOTD ✓';
+      } catch {
+        st.textContent = 'Không đọc được ảnh';
+      }
+    });
+
+    content.querySelector('#review-form').onsubmit = async (ev) => {
+      ev.preventDefault();
+      const authorName = content.querySelector('#rev-name').value.trim();
+      const fitNote = content.querySelector('#rev-fit').value.trim();
+      const comment = content.querySelector('#rev-comment').value.trim();
+      if (!authorName || !comment) return;
+
       const res = await fetch('/api/shop/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: p.id, authorName, rating: 5, comment })
+        body: JSON.stringify({
+          productId: p.id,
+          authorName,
+          fitNote,
+          rating: chosenStars,
+          comment,
+          photoDataUrl: pendingRevPhotoDataUrl
+        })
       });
-      const data = await res.json();
-      if (data.success && data.review) {
-        reviews.unshift(data.review);
+      const out = await res.json();
+      if (out.success) {
+        reviews.unshift(out.review);
+        p.reviewCount = Number(p.reviewCount || 0) + 1;
+        showToast('Cảm ơn đánh giá đáng yêu của nàng!');
         openProductModal(p.id);
+        renderProducts();
       }
     };
   }
 
-  // --- 5. SHOPPING BAG & CHECKOUT (DIRECT QR + COD) ---
+  // --- 9. INTERACTIVE SMART SIZE ADVISOR ---
+  function updateSizeCalculation() {
+    const h = Number(document.getElementById('calc-height')?.value || 158);
+    const w = Number(document.getElementById('calc-weight')?.value || 48);
+    const fit = document.querySelector('#fit-pref-pills .variant-pill.selected')?.dataset.fit || 'regular';
+
+    document.getElementById('calc-h-val').textContent = `${h} cm`;
+    document.getElementById('calc-w-val').textContent = `${w} kg`;
+
+    let adjWeight = w + (fit === 'loose' ? 3 : fit === 'slim' ? -2 : 0) - (h - 158) * 0.25;
+    let rec = 'Size S';
+    let waist = '60–65cm';
+    if (adjWeight >= 47 && adjWeight <= 53.5) {
+      rec = 'Size M';
+      waist = '66–70cm';
+    } else if (adjWeight > 53.5) {
+      rec = 'Size L';
+      waist = '71–76cm';
+    }
+
+    document.getElementById('size-rec-letter').textContent = rec;
+    document.getElementById('size-rec-title').textContent = `Gợi ý chuẩn nhất: ${rec} (hoặc Freesize)`;
+    document.getElementById('size-rec-desc').textContent = `Với chiều cao ${h}cm & cân nặng ${w}kg (vòng eo ước tính ~${waist}), ${rec} sẽ lên phom tôn dáng và thoải mái nhất cho nàng.`;
+  }
+
+  ['btn-open-size-guide', 'hero-btn-size'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('click', () => {
+      updateSizeCalculation();
+      document.getElementById('size-modal')?.classList.add('open');
+    });
+  });
+  document.getElementById('btn-close-size')?.addEventListener('click', () => {
+    document.getElementById('size-modal')?.classList.remove('open');
+  });
+  document.getElementById('calc-height')?.addEventListener('input', updateSizeCalculation);
+  document.getElementById('calc-weight')?.addEventListener('input', updateSizeCalculation);
+  document.querySelectorAll('#fit-pref-pills .variant-pill').forEach((b) => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#fit-pref-pills .variant-pill').forEach((x) => x.classList.remove('selected'));
+      b.classList.add('selected');
+      updateSizeCalculation();
+    });
+  });
+
+  // --- 10. INTERACTIVE LUCKY RIBBON GIFT BOX ---
+  let luckyWonCode = 'NANGTHO15';
+
+  function openLuckyModal() {
+    document.getElementById('lucky-modal')?.classList.add('open');
+  }
+  ['btn-open-lucky', 'btn-voucher-lucky'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('click', openLuckyModal);
+  });
+  document.getElementById('btn-close-lucky')?.addEventListener('click', () => {
+    document.getElementById('lucky-modal')?.classList.remove('open');
+  });
+
+  document.getElementById('btn-unbox-gift')?.addEventListener('click', (e) => {
+    const boxBtn = e.currentTarget;
+    boxBtn.classList.add('shaking');
+    const pool = coupons.length > 0 ? coupons : [{ code: 'NANGTHO15', description: 'Giảm 15% đơn từ 250k' }];
+    const picked = pool[Math.floor(Math.random() * pool.length)];
+    luckyWonCode = picked.code;
+
+    setTimeout(() => {
+      boxBtn.style.display = 'none';
+      const panel = document.getElementById('gift-won-panel');
+      document.getElementById('gift-won-code').textContent = picked.code;
+      document.getElementById('gift-won-desc').textContent = picked.description || 'Ưu đãi dành riêng cho nàng hôm nay';
+      panel.style.display = 'block';
+      const rect = panel.getBoundingClientRect();
+      spawnVectorBurst(rect.left + rect.width / 2, rect.top + 30);
+    }, 620);
+  });
+
+  document.getElementById('btn-use-lucky-code')?.addEventListener('click', () => {
+    document.getElementById('cart-coupon-input').value = luckyWonCode;
+    navigator.clipboard?.writeText(luckyWonCode).catch(() => {});
+    document.getElementById('lucky-modal')?.classList.remove('open');
+    showToast(`Đã chép mã ${luckyWonCode} vào Túi Đồ!`);
+    openCartDrawer();
+  });
+
+  // --- 11. SHOPPING BAG, SCENTED TISSUE & COUPON ---
   function addToCart(prod, size, color, qty) {
     const key = `${prod.id}__${size}__${color}`;
-    const existing = cart.find((x) => x.key === key);
-    if (existing) {
-      existing.qty += qty;
+    const found = cart.find((it) => it.key === key);
+    if (found) {
+      found.qty += qty;
     } else {
       cart.push({
         key,
         productId: prod.id,
         name: prod.name,
-        image: (prod.images && prod.images[0]) || '/uploads/girlfriend-1.jpg',
         price: Number(prod.price),
+        image: (prod.images && prod.images[0]) || '/media/bio-link/girlfriend-1.jpg',
         size,
         color,
         qty
@@ -500,63 +1127,98 @@
 
   function saveCart() {
     localStorage.setItem('na2hand_cart', JSON.stringify(cart));
+    revalidateAppliedCoupon();
     updateBadgesAndCart();
   }
 
   function getCartTotals() {
-    const subtotal = cart.reduce((s, item) => s + item.price * item.qty, 0);
+    const subtotal = cart.reduce((s, it) => s + Number(it.price) * Number(it.qty), 0);
     const freeThreshold = Number(settings.freeShipThreshold || 299000);
-    const baseShip = Number(settings.shippingFee || 25000);
+    const baseShip = Number(settings.shippingFee ?? 25000);
     const shipping = subtotal === 0 || subtotal >= freeThreshold ? 0 : baseShip;
-    const discount = appliedCoupon ? Math.min(appliedCoupon.discount, subtotal) : 0;
+    const discount = appliedCoupon ? Math.min(Number(appliedCoupon.discount || 0), subtotal) : 0;
     const total = Math.max(0, subtotal - discount + shipping);
     return { subtotal, freeThreshold, shipping, discount, total };
   }
 
+  function revalidateAppliedCoupon() {
+    if (!appliedCoupon) return;
+    const subtotal = cart.reduce((s, it) => s + Number(it.price) * Number(it.qty), 0);
+    const cp = coupons.find((c) => c.code === appliedCoupon.code);
+    if (!cp || subtotal < Number(cp.minOrder || 0)) {
+      appliedCoupon = null;
+      const fb = document.getElementById('coupon-feedback');
+      if (fb) fb.style.display = 'none';
+    } else {
+      let d = cp.type === 'percent' ? Math.round((subtotal * Number(cp.value)) / 100) : Number(cp.value);
+      if (cp.maxDiscount && d > Number(cp.maxDiscount)) d = Number(cp.maxDiscount);
+      appliedCoupon.discount = Math.min(d, subtotal);
+    }
+  }
+
   function updateBadgesAndCart() {
-    const totalQty = cart.reduce((s, i) => s + i.qty, 0);
+    const totalQty = cart.reduce((s, it) => s + Number(it.qty), 0);
     document.getElementById('cart-count').textContent = totalQty;
     document.getElementById('wishlist-count').textContent = wishlist.length;
 
-    const listEl = document.getElementById('cart-items-list');
     const { subtotal, freeThreshold, shipping, discount, total } = getCartTotals();
 
-    // Freeship progress
-    const pct = freeThreshold > 0 ? Math.min(100, Math.round((subtotal / freeThreshold) * 100)) : 100;
+    const pct = Math.min(100, Math.round((subtotal / freeThreshold) * 100));
     document.getElementById('freeship-fill').style.width = `${pct}%`;
-    document.getElementById('freeship-msg').textContent =
-      subtotal >= freeThreshold && subtotal > 0
-        ? '🎉 Tuyệt vời! Đơn của nàng đã được MIỄN PHÍ VẬN CHUYỂN!'
-        : `✨ Mua thêm ${vnd(Math.max(0, freeThreshold - subtotal))} nữa để được Freeship nhé nàng!`;
+    document.getElementById('freeship-msg').innerHTML =
+      subtotal >= freeThreshold
+        ? `Tuyệt vời! Đơn của nàng đã được <strong>Miễn phí vận chuyển</strong>`
+        : `Mua thêm <strong>${vnd(freeThreshold - subtotal)}</strong> để được <strong>Freeship</strong> nhé!`;
 
+    const listEl = document.getElementById('cart-items-list');
     if (cart.length === 0) {
       listEl.innerHTML = `
-        <div style="text-align:center; padding:40px 10px; color:var(--ink-muted);">
-          <div style="font-size:2.4rem; margin-bottom:8px;">🛍️</div>
-          <p style="font-weight:700;">Túi đồ của nàng đang trống</p>
-          <p style="font-size:0.78rem; margin-top:4px;">Hãy dạo một vòng chọn váy xinh nha ♡</p>
+        <div style="text-align:center; padding:44px 12px; color:var(--ink-muted);">
+          <div style="font-family:var(--font-serif); font-size:1.35rem; color:var(--ink); margin-bottom:4px;">Túi đồ đang trống</div>
+          <p style="font-size:0.8rem;">Hãy dạo tủ đồ và chọn cho mình một thiết kế thật ưng ý nhé ♡</p>
         </div>
       `;
     } else {
       listEl.innerHTML = cart
         .map(
-          (item, i) => `
-        <div style="display:flex; gap:10px; padding:10px 0; border-bottom:1px solid var(--pink-100); align-items:center;">
-          <img src="${escapeAttr(item.image)}" style="width:58px; height:66px; border-radius:12px; object-fit:cover;" />
-          <div style="flex:1; min-width:0;">
-            <div style="font-size:0.82rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(item.name)}</div>
-            <div style="font-size:0.72rem; color:var(--ink-muted);">${escapeHtml(item.color)} • Size ${escapeHtml(item.size)}</div>
-            <div style="font-size:0.84rem; font-weight:800; color:var(--pink-600); margin-top:2px;">${vnd(item.price)} x ${item.qty}</div>
+          (it, idx) => `
+          <div style="display:flex; gap:11px; padding:10px; border-radius:14px; background:#fff; border:1px solid var(--line); margin-bottom:9px;">
+            <img src="${escapeAttr(it.image)}" style="width:56px; height:66px; object-fit:cover; border-radius:10px;" />
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:0.81rem; font-weight:700; line-height:1.3;">${escapeHtml(it.name)}</div>
+              <div style="font-size:0.72rem; color:var(--ink-muted); margin:2px 0 6px;">${escapeHtml(it.color)} · ${escapeHtml(it.size)}</div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <strong style="color:var(--cherry); font-size:0.85rem;">${vnd(it.price * it.qty)}</strong>
+                <div style="display:inline-flex; align-items:center; gap:6px;">
+                  <button type="button" class="c-dec" data-idx="${idx}" style="width:22px; height:22px; border-radius:6px; border:1px solid var(--line-strong); background:var(--paper); cursor:pointer; font-weight:700;">−</button>
+                  <span style="font-size:0.78rem; font-weight:700;">${it.qty}</span>
+                  <button type="button" class="c-inc" data-idx="${idx}" style="width:22px; height:22px; border-radius:6px; border:1px solid var(--line-strong); background:var(--paper); cursor:pointer; font-weight:700;">+</button>
+                  <button type="button" class="c-del" data-idx="${idx}" style="border:none; background:none; color:var(--ink-muted); cursor:pointer; font-size:0.76rem; margin-left:4px;">Xóa</button>
+                </div>
+              </div>
+            </div>
           </div>
-          <button type="button" class="cart-del-btn" data-idx="${i}" style="border:none; background:#ffe4ef; color:var(--pink-600); width:28px; height:28px; border-radius:8px; cursor:pointer; font-weight:800;">✕</button>
-        </div>
-      `
+        `
         )
         .join('');
 
-      listEl.querySelectorAll('.cart-del-btn').forEach((b) => {
+      listEl.querySelectorAll('.c-dec').forEach((b) => {
         b.onclick = () => {
-          cart.splice(Number(b.getAttribute('data-idx')), 1);
+          const i = Number(b.dataset.idx);
+          if (cart[i].qty > 1) cart[i].qty--;
+          else cart.splice(i, 1);
+          saveCart();
+        };
+      });
+      listEl.querySelectorAll('.c-inc').forEach((b) => {
+        b.onclick = () => {
+          cart[Number(b.dataset.idx)].qty++;
+          saveCart();
+        };
+      });
+      listEl.querySelectorAll('.c-del').forEach((b) => {
+        b.onclick = () => {
+          cart.splice(Number(b.dataset.idx), 1);
           saveCart();
         };
       });
@@ -564,275 +1226,439 @@
 
     document.getElementById('cart-subtotal').textContent = vnd(subtotal);
     document.getElementById('cart-discount').textContent = `-${vnd(discount)}`;
-    document.getElementById('cart-shipping').textContent = shipping === 0 && subtotal > 0 ? 'Miễn phí ✨' : vnd(shipping);
+    document.getElementById('cart-shipping').textContent = shipping === 0 && subtotal > 0 ? 'Miễn phí' : vnd(shipping);
     document.getElementById('cart-total').textContent = vnd(total);
-    document.getElementById('chk-btn-total').textContent = vnd(total);
+    const chkTotal = document.getElementById('chk-btn-total');
+    if (chkTotal) chkTotal.textContent = vnd(total);
   }
+
+  document.querySelectorAll('#scent-chips .scent-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#scent-chips .scent-chip').forEach((c) => c.classList.remove('active'));
+      chip.classList.add('active');
+      selectedScent = chip.dataset.scent;
+      showToast(`Đã chọn ướp giấy gói: ${selectedScent}`);
+    });
+  });
 
   function openCartDrawer() {
     document.getElementById('cart-drawer-backdrop').classList.add('open');
   }
-
-  function openCheckoutModal() {
-    if (cart.length === 0) return alert('Nàng hãy chọn ít nhất 1 món đồ xinh vào giỏ trước nhé!');
+  function closeCartDrawer() {
     document.getElementById('cart-drawer-backdrop').classList.remove('open');
+  }
+
+  // --- 12. CHECKOUT (DIRECT QR & COD + GIFT CARD + RECEIPT UPLOAD) ---
+  function openCheckoutModal() {
+    if (cart.length === 0) {
+      showToast('Nàng hãy chọn ít nhất 1 sản phẩm vào Túi Đồ trước nhé!');
+      return;
+    }
+    closeCartDrawer();
     document.getElementById('checkout-form-step').style.display = 'block';
     document.getElementById('checkout-success-step').style.display = 'none';
     updateBadgesAndCart();
     document.getElementById('checkout-modal').classList.add('open');
   }
 
-  // Coupon validation
-  document.getElementById('btn-apply-coupon').addEventListener('click', async () => {
-    const code = document.getElementById('cart-coupon-input').value.trim();
-    const fb = document.getElementById('coupon-feedback');
-    if (!code) return;
-    const { subtotal } = getCartTotals();
+  document.getElementById('chk-gift-wrap')?.addEventListener('change', (e) => {
+    document.getElementById('chk-gift-msg').style.display = e.target.checked ? 'block' : 'none';
+  });
 
-    const res = await fetch('/api/shop/coupon/validate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, subtotal })
-    });
-    const data = await res.json();
-    fb.style.display = 'block';
-    if (res.ok && data.success) {
-      appliedCoupon = { code: data.coupon.code, discount: data.discount };
-      fb.style.color = '#16a34a';
-      fb.textContent = data.message;
-    } else {
-      appliedCoupon = null;
-      fb.style.color = '#e11d48';
-      fb.textContent = data.message;
+  function renderOrderSuccessAndQR(order, paymentInfo) {
+    const stepForm = document.getElementById('checkout-form-step');
+    const stepOk = document.getElementById('checkout-success-step');
+    stepForm.style.display = 'none';
+    stepOk.style.display = 'block';
+
+    // Save to local device order history
+    savedOrders = [
+      { orderCode: order.orderCode, phone: order.customerPhone, createdAt: order.createdAt },
+      ...savedOrders.filter((x) => x.orderCode !== order.orderCode)
+    ].slice(0, 10);
+    localStorage.setItem('na2hand_my_orders', JSON.stringify(savedOrders));
+
+    const isQr = paymentInfo.method === 'qr';
+
+    stepOk.innerHTML = `
+      <div class="modal-kicker">ĐẶT HÀNG THÀNH CÔNG</div>
+      <h2 class="modal-heading">Cảm Ơn Nàng <em>${escapeHtml(order.customerName)}</em></h2>
+      <p style="font-size:0.84rem; color:var(--ink-soft); margin-bottom:14px;">
+        Mã đơn của nàng: <strong style="color:var(--cherry); font-size:0.98rem;">#${escapeHtml(order.orderCode)}</strong>
+        · Hương giấy gói: <strong>${escapeHtml(order.scentChoice || 'Hương Đào Trắng')}</strong>
+      </p>
+
+      ${
+        isQr
+          ? `
+        <div style="background:var(--rose-50); border:1.5px solid var(--rose-200); border-radius:20px; padding:18px; margin-bottom:14px;">
+          <div style="font-weight:800; color:var(--cherry); font-size:0.88rem; margin-bottom:8px;">
+            Quét Mã QR Để Thanh Toán Trực Tiếp
+          </div>
+          <img src="${escapeAttr(paymentInfo.qrDisplayUrl)}" alt="QR Thanh toán" style="width:215px; height:215px; object-fit:contain; background:#fff; padding:8px; border-radius:16px; border:1px solid var(--line); margin:0 auto 10px; display:block;" />
+
+          <div style="font-size:0.82rem; line-height:1.65; background:#fff; border-radius:12px; padding:10px 14px; text-align:left; border:1px solid var(--line);">
+            ${paymentInfo.bankName ? `<div>Ngân hàng: <strong>${escapeHtml(paymentInfo.bankName)}</strong></div>` : ''}
+            ${paymentInfo.bankAccountNo ? `<div>Số tài khoản: <strong>${escapeHtml(paymentInfo.bankAccountNo)}</strong></div>` : ''}
+            ${paymentInfo.bankAccountName ? `<div>Chủ tài khoản: <strong>${escapeHtml(paymentInfo.bankAccountName)}</strong></div>` : ''}
+            <div>Số tiền cần chuyển: <strong style="color:var(--cherry); font-size:0.95rem;">${vnd(paymentInfo.totalAmount)}</strong></div>
+            <div>Nội dung CK: <strong style="background:var(--rose-100); padding:2px 8px; border-radius:6px; color:var(--cherry);">${escapeHtml(paymentInfo.transferNote)}</strong></div>
+          </div>
+
+          <div style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
+            <label class="cta-outline" style="justify-content:center; font-size:0.79rem;">
+              <span>Đính kèm ảnh chụp màn hình chuyển khoản (Tùy chọn)</span>
+              <input type="file" id="qr-receipt-file" accept="image/*" style="display:none;" />
+            </label>
+            <div id="qr-receipt-name" style="font-size:0.74rem; color:var(--sage-ink); font-weight:700;"></div>
+
+            <button type="button" id="btn-i-paid-qr" class="cta-ribbon shimmer-sheen" style="width:100%; justify-content:center; padding:13px;">
+              <span>Xác nhận em đã quét QR chuyển khoản xong</span>
+            </button>
+          </div>
+        </div>
+      `
+          : `
+        <div style="background:var(--sage); border:1px solid #b7e4c7; border-radius:18px; padding:16px; margin-bottom:16px; font-size:0.84rem; color:var(--sage-ink);">
+          <strong>Đơn Ship COD — Nhận Hàng Rồi Thanh Toán</strong><br/>
+          Tiệm sẽ gọi xác nhận và gửi gói hàng thơm đi sớm nhất. Khi nhận hàng nàng chuẩn bị giúp bưu tá <strong>${vnd(order.totalAmount)}</strong> nhé!
+        </div>
+      `
+      }
+
+      <button type="button" id="btn-done-order" class="nav-pill" style="padding:10px 22px;">
+        Tiếp tục dạo cửa hàng
+      </button>
+    `;
+
+    let uploadedReceiptDataUrl = '';
+    const receiptInput = stepOk.querySelector('#qr-receipt-file');
+    if (receiptInput) {
+      receiptInput.onchange = async (ev) => {
+        const f = ev.target.files?.[0];
+        if (!f) return;
+        const lbl = stepOk.querySelector('#qr-receipt-name');
+        lbl.textContent = 'Đang tải ảnh biên lai...';
+        try {
+          uploadedReceiptDataUrl = await compressImageClient(f, 950);
+          lbl.textContent = 'Đã đính kèm ảnh biên lai chuyển khoản ✓';
+        } catch {
+          lbl.textContent = 'Không thể đọc file ảnh';
+        }
+      };
     }
-    updateBadgesAndCart();
-  });
 
-  // Payment option toggle
-  document.querySelectorAll('.pay-option-card').forEach((card) => {
-    card.addEventListener('click', () => {
-      document.querySelectorAll('.pay-option-card').forEach((c) => c.classList.remove('selected'));
-      card.classList.add('selected');
-      selectedPayment = card.getAttribute('data-pay');
-      document.getElementById('checkout-qr-preview-box').style.display = selectedPayment === 'qr' ? 'block' : 'none';
+    const paidBtn = stepOk.querySelector('#btn-i-paid-qr');
+    if (paidBtn) {
+      paidBtn.onclick = async () => {
+        paidBtn.disabled = true;
+        paidBtn.textContent = 'Đang gửi xác nhận...';
+        const res = await fetch(`/api/shop/orders/${encodeURIComponent(order.orderCode)}/confirm-qr`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ receiptDataUrl: uploadedReceiptDataUrl })
+        });
+        const d = await res.json();
+        paidBtn.textContent = 'Tiệm đã ghi nhận chuyển khoản ✓';
+        paidBtn.style.background = '#15803d';
+        showToast(d.message || 'Đã ghi nhận thanh toán QR!');
+      };
+    }
+
+    stepOk.querySelector('#btn-done-order').onclick = () => {
+      document.getElementById('checkout-modal').classList.remove('open');
+    };
+  }
+
+  // --- 13. ORDER TRACKING & 5-STEP TIMELINE + CANCEL PENDING ORDER ---
+  function renderSavedOrderChips() {
+    const box = document.getElementById('my-recent-orders-chips');
+    if (!box) return;
+    if (savedOrders.length === 0) {
+      box.innerHTML = '';
+      return;
+    }
+    box.innerHTML = `
+      <div style="font-size:0.73rem; color:var(--ink-muted); margin-bottom:5px;">Đơn đặt gần đây trên thiết bị này:</div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        ${savedOrders
+          .map(
+            (so) =>
+              `<button type="button" class="quick-size-chip saved-ord-chip" data-code="${escapeAttr(so.orderCode)}">#${escapeHtml(so.orderCode)}</button>`
+          )
+          .join('')}
+      </div>
+    `;
+    box.querySelectorAll('.saved-ord-chip').forEach((b) => {
+      b.onclick = () => {
+        document.getElementById('track-query-input').value = b.dataset.code;
+        executeOrderLookup(b.dataset.code);
+      };
     });
-  });
+  }
 
-  // Submit Order
-  document.getElementById('checkout-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('btn-submit-order');
-    btn.disabled = true;
-    btn.textContent = '⏳ Đang tạo đơn xinh cho nàng...';
+  async function executeOrderLookup(rawQuery) {
+    const q = String(rawQuery || document.getElementById('track-query-input').value || '').trim();
+    const box = document.getElementById('track-results-box');
+    if (!q) return;
+    box.innerHTML = `<p style="font-size:0.82rem; color:var(--ink-muted);">Đang tìm kiếm đơn hàng...</p>`;
+    const res = await fetch(`/api/shop/orders/track?q=${encodeURIComponent(q)}`);
+    const d = await res.json();
+    if (!d.success || !d.orders || d.orders.length === 0) {
+      box.innerHTML = `<p style="font-size:0.82rem; color:var(--cherry); font-weight:600;">${escapeHtml(d.message || 'Không tìm thấy đơn hàng nào khớp với thông tin này.')}</p>`;
+      return;
+    }
 
-    try {
+    const stages = ['pending', 'confirmed', 'packing', 'shipping', 'completed'];
+    const stageNames = ['Chờ duyệt', 'Đã xác nhận', 'Ướp hương', 'Đang giao', 'Hoàn tất'];
+
+    box.innerHTML = d.orders
+      .map((o) => {
+        const curIdx = stages.indexOf(o.orderStatus);
+        const isCancelled = o.orderStatus === 'cancelled';
+
+        const timelineHtml = isCancelled
+          ? `<div style="padding:8px 12px; border-radius:10px; background:#fef2f2; color:#b91c1c; font-size:0.78rem; font-weight:700; margin:8px 0;">Đơn hàng này đã được hủy</div>`
+          : `
+            <div class="order-journey-steps">
+              ${stages
+                .map(
+                  (st, i) => `
+                <div class="journey-step ${i <= curIdx ? 'done' : ''}">
+                  <div class="journey-dot">${i <= curIdx ? '✓' : i + 1}</div>
+                  <div>${stageNames[i]}</div>
+                </div>
+              `
+                )
+                .join('')}
+            </div>
+          `;
+
+        return `
+          <div style="background:var(--paper); border:1px solid var(--line-strong); border-radius:18px; padding:14px 16px; margin-bottom:12px; font-size:0.81rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong style="color:var(--cherry); font-size:0.92rem;">Đơn #${escapeHtml(o.orderCode)}</strong>
+              <span style="font-size:0.73rem; color:var(--ink-muted);">${new Date(o.createdAt).toLocaleString('vi-VN')}</span>
+            </div>
+
+            ${timelineHtml}
+
+            <div style="color:var(--ink-soft); line-height:1.55;">
+              <div>Hình thức: <strong>${o.paymentMethod === 'qr' ? 'Quét mã QR' : 'Ship COD'}</strong> (${o.paymentStatus === 'paid' ? 'Đã thanh toán' : o.paymentStatus === 'customer_confirmed_qr' ? 'Chờ tiệm đối soát QR' : 'Chờ thanh toán'})</div>
+              <div>Tổng thanh toán: <strong style="color:var(--cherry);">${vnd(o.totalAmount)}</strong></div>
+              ${o.scentChoice ? `<div>Hương giấy gói: <strong>${escapeHtml(o.scentChoice)}</strong></div>` : ''}
+            </div>
+
+            ${
+              o.orderStatus === 'pending'
+                ? `<div style="margin-top:10px; text-align:right;">
+                    <button type="button" class="text-link-btn btn-cancel-my-order" data-code="${escapeAttr(o.orderCode)}" data-phone="${escapeAttr(o.customerPhone)}" style="color:#be123c; font-weight:700;">Hủy đơn hàng này</button>
+                  </div>`
+                : ''
+            }
+          </div>
+        `;
+      })
+      .join('');
+
+    box.querySelectorAll('.btn-cancel-my-order').forEach((btn) => {
+      btn.onclick = async () => {
+        if (!confirm(`Nàng chắc chắn muốn hủy đơn #${btn.dataset.code}?`)) return;
+        const r = await fetch(`/api/shop/orders/${encodeURIComponent(btn.dataset.code)}/cancel`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: btn.dataset.phone })
+        });
+        const j = await r.json();
+        showToast(j.message || 'Đã cập nhật đơn hàng');
+        executeOrderLookup(q);
+      };
+    });
+  }
+
+  // --- 14. LIVE BOUTIQUE ACTIVITY TOAST ---
+  function startLiveProofToast() {
+    if (settings.liveProofEnabled === false || products.length === 0) return;
+    const names = ['Khánh Linh', 'Bảo Ngọc', 'Thảo Nhi', 'Minh Châu', 'Phương Anh', 'Quỳnh Trang'];
+    const cities = ['Hà Nội', 'TP.HCM', 'Đà Nẵng', 'Hải Phòng', 'Đà Lạt'];
+    const toast = document.getElementById('live-proof-toast');
+    if (!toast) return;
+
+    setInterval(() => {
+      const prod = products[Math.floor(Math.random() * products.length)];
+      const girl = names[Math.floor(Math.random() * names.length)];
+      const city = cities[Math.floor(Math.random() * cities.length)];
+      document.getElementById('proof-img').src = (prod.images && prod.images[0]) || '/media/bio-link/girlfriend-1.jpg';
+      document.getElementById('proof-title').textContent = `${girl} (${city}) vừa đặt`;
+      document.getElementById('proof-prod').textContent = `${prod.name.slice(0, 30)}...`;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 4500);
+    }, 24000);
+  }
+
+  // --- 15. GLOBAL EVENT LISTENERS ---
+  function bindEvents() {
+    const searchInput = document.getElementById('search-input');
+    const searchClear = document.getElementById('search-clear');
+
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      if (searchClear) searchClear.style.display = searchQuery ? 'block' : 'none';
+      renderProducts();
+    });
+
+    searchClear?.addEventListener('click', () => {
+      searchQuery = '';
+      searchInput.value = '';
+      searchClear.style.display = 'none';
+      renderProducts();
+    });
+
+    document.querySelectorAll('.hot-tag').forEach((tag) => {
+      tag.addEventListener('click', () => {
+        searchQuery = tag.dataset.q || '';
+        searchInput.value = searchQuery;
+        if (searchClear) searchClear.style.display = 'block';
+        document.getElementById('catalog-anchor')?.scrollIntoView({ behavior: 'smooth' });
+        renderProducts();
+      });
+    });
+
+    document.getElementById('price-filter-select')?.addEventListener('change', (e) => {
+      priceBracket = e.target.value;
+      renderProducts();
+    });
+
+    document.getElementById('chk-only-sale')?.addEventListener('change', (e) => {
+      saleOnly = e.target.checked;
+      renderProducts();
+    });
+
+    document.getElementById('sort-select').addEventListener('change', (e) => {
+      sortBy = e.target.value;
+      renderProducts();
+    });
+
+    document.getElementById('btn-filter-wishlist').addEventListener('click', (e) => {
+      wishlistOnly = !wishlistOnly;
+      e.currentTarget.classList.toggle('active-filter', wishlistOnly);
+      renderCategories();
+      renderProducts();
+    });
+
+    document.getElementById('btn-open-cart').addEventListener('click', openCartDrawer);
+    document.getElementById('btn-close-cart').addEventListener('click', closeCartDrawer);
+    document.getElementById('cart-drawer-backdrop').addEventListener('click', (e) => {
+      if (e.target.id === 'cart-drawer-backdrop') closeCartDrawer();
+    });
+
+    document.getElementById('product-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'product-modal') e.currentTarget.classList.remove('open');
+    });
+
+    // Apply coupon
+    document.getElementById('btn-apply-coupon').addEventListener('click', async () => {
+      const code = document.getElementById('cart-coupon-input').value.trim();
+      const fb = document.getElementById('coupon-feedback');
+      if (!code) return;
+      const subtotal = cart.reduce((s, it) => s + Number(it.price) * Number(it.qty), 0);
+      const res = await fetch('/api/shop/coupon/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, subtotal })
+      });
+      const data = await res.json();
+      fb.style.display = 'block';
+      if (data.success) {
+        appliedCoupon = { code: data.coupon.code, discount: data.discount };
+        fb.style.color = '#15803d';
+        fb.textContent = data.message;
+      } else {
+        appliedCoupon = null;
+        fb.style.color = '#be123c';
+        fb.textContent = data.message;
+      }
+      updateBadgesAndCart();
+    });
+
+    document.getElementById('btn-proceed-checkout').addEventListener('click', openCheckoutModal);
+    document.getElementById('btn-close-checkout').addEventListener('click', () => {
+      document.getElementById('checkout-modal').classList.remove('open');
+    });
+
+    // Payment method selection
+    document.querySelectorAll('.pay-option-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.pay-option-card').forEach((c) => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedPayment = card.getAttribute('data-pay');
+        document.getElementById('checkout-qr-preview-box').style.display =
+          selectedPayment === 'qr' ? 'block' : 'none';
+      });
+    });
+
+    // Submit Order
+    document.getElementById('checkout-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-submit-order');
+      btn.disabled = true;
+
       const payload = {
-        customerName: document.getElementById('chk-name').value,
-        customerPhone: document.getElementById('chk-phone').value,
-        province: document.getElementById('chk-province').value,
-        district: document.getElementById('chk-district').value,
-        address: document.getElementById('chk-address').value,
-        note: document.getElementById('chk-note').value,
+        customerName: document.getElementById('chk-name').value.trim(),
+        customerPhone: document.getElementById('chk-phone').value.trim(),
+        province: document.getElementById('chk-province').value.trim(),
+        district: document.getElementById('chk-district').value.trim(),
+        address: document.getElementById('chk-address').value.trim(),
+        note: document.getElementById('chk-note').value.trim(),
+        scentChoice: selectedScent,
+        giftWrap: document.getElementById('chk-gift-wrap').checked,
+        giftCardMessage: document.getElementById('chk-gift-msg').value.trim(),
         paymentMethod: selectedPayment,
         couponCode: appliedCoupon ? appliedCoupon.code : '',
         items: cart
       };
 
-      const res = await fetch('/api/shop/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        alert(data.message || 'Lỗi tạo đơn hàng');
-        return;
+      try {
+        const res = await fetch('/api/shop/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!data.success) {
+          showToast(data.message || 'Đặt hàng thất bại');
+          btn.disabled = false;
+          return;
+        }
+        cart = [];
+        appliedCoupon = null;
+        saveCart();
+        renderOrderSuccessAndQR(data.order, data.paymentInfo);
+      } catch {
+        showToast('Lỗi kết nối khi đặt hàng, vui lòng thử lại!');
+      } finally {
+        btn.disabled = false;
       }
+    });
 
-      // Clear cart
-      cart = [];
-      appliedCoupon = null;
-      saveCart();
-
-      renderOrderSuccessScreen(data.order, data.paymentInfo);
-    } catch (err) {
-      alert('Không thể kết nối máy chủ, vui lòng thử lại!');
-    } finally {
-      btn.disabled = false;
-      updateBadgesAndCart();
-    }
-  });
-
-  function renderOrderSuccessScreen(order, pay) {
-    document.getElementById('checkout-form-step').style.display = 'none';
-    const step2 = document.getElementById('checkout-success-step');
-    step2.style.display = 'block';
-
-    if (order.paymentMethod === 'qr') {
-      step2.innerHTML = `
-        <div style="font-size:2.4rem; margin-bottom:4px;">🎀✨</div>
-        <h2 style="font-family:var(--font-display); font-size:1.75rem; color:var(--pink-600);">Quét Mã QR Để Thanh Toán</h2>
-        <p style="font-size:0.82rem; color:var(--ink-muted); margin:4px 0 14px;">
-          Mã đơn của nàng: <strong style="color:var(--ink-dark); font-size:0.95rem;">${escapeHtml(order.orderCode)}</strong>
-        </p>
-
-        <div style="background:var(--pink-50); border:2px solid var(--pink-200); border-radius:22px; padding:16px; margin-bottom:14px;">
-          <img src="${escapeAttr(pay.qrDisplayUrl)}" alt="QR Payment" style="width:230px; height:230px; object-fit:contain; background:#fff; padding:8px; border-radius:18px; border:1.5px solid var(--pink-200);" />
-          <div style="margin-top:10px; font-size:0.84rem; line-height:1.6;">
-            <div>Ngân hàng: <strong>${escapeHtml(pay.bankName || 'Quét trực tiếp ảnh QR')}</strong></div>
-            <div>Số tài khoản: <strong>${escapeHtml(pay.bankAccountNo || '')}</strong> (${escapeHtml(pay.bankAccountName || '')})</div>
-            <div>Số tiền: <strong style="color:var(--pink-600); font-size:1.05rem;">${vnd(order.totalAmount)}</strong></div>
-            <div>Nội dung CK: <strong style="background:#fff; padding:2px 8px; border-radius:8px; border:1px dashed var(--pink-400);">${escapeHtml(pay.transferNote)}</strong></div>
-          </div>
-          <div style="margin-top:10px; display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
-            <a href="${escapeAttr(pay.qrDisplayUrl)}" download="QR_${escapeAttr(order.orderCode)}.png" class="cute-pill-btn" style="font-size:0.76rem;">📥 Lưu ảnh QR</a>
-            <button type="button" id="btn-copy-ck" class="cute-pill-btn" style="font-size:0.76rem;">📋 Sao chép nội dung CK</button>
-          </div>
-        </div>
-
-        <button type="button" id="btn-confirm-qr-paid" class="prod-buy-btn blink-shimmer" style="padding:13px; font-size:0.92rem; border-radius:16px;">
-          💖 Mình Đã Quét QR Chuyển Khoản Xong!
-        </button>
-      `;
-
-      step2.querySelector('#btn-copy-ck').onclick = function () {
-        navigator.clipboard?.writeText(pay.transferNote);
-        this.textContent = 'Đã sao chép ✓';
-      };
-
-      step2.querySelector('#btn-confirm-qr-paid').onclick = async function () {
-        this.disabled = true;
-        const r = await fetch(`/api/shop/orders/${encodeURIComponent(order.orderCode)}/confirm-qr`, { method: 'POST' });
-        const d = await r.json();
-        step2.innerHTML = `
-          <div style="font-size:2.8rem; margin-bottom:8px;">🌸💖✨</div>
-          <h2 style="font-family:var(--font-display); font-size:1.85rem; color:var(--pink-600);">Cảm Ơn Nàng Thơ Nhiều Lắm!</h2>
-          <p style="font-size:0.86rem; line-height:1.55; margin:8px 0 18px;">
-            ${escapeHtml(d.message || 'Shop đã nhận được thông báo thanh toán QR của nàng!')}<br/>
-            Mã tra cứu đơn: <strong>${escapeHtml(order.orderCode)}</strong>
-          </p>
-          <button type="button" class="cute-pill-btn primary" onclick="document.getElementById('checkout-modal').classList.remove('open')">
-            ✨ Tiếp tục dạo shop
-          </button>
-        `;
-      };
-    } else {
-      step2.innerHTML = `
-        <div style="font-size:2.8rem; margin-bottom:8px;">🎁🌸✨</div>
-        <h2 style="font-family:var(--font-display); font-size:1.85rem; color:var(--pink-600);">Đặt Hàng Ship COD Thành Công!</h2>
-        <p style="font-size:0.86rem; line-height:1.55; margin:8px 0 16px;">
-          Mã đơn hàng của nàng là: <strong style="color:var(--pink-600); font-size:1.05rem;">${escapeHtml(order.orderCode)}</strong><br/>
-          Tổng thanh toán khi nhận hàng: <strong>${vnd(order.totalAmount)}</strong>.<br/>
-          Tiệm sẽ sớm gọi xác nhận và gói hàng thơm phức gửi tới nàng nhé ♡
-        </p>
-        <button type="button" class="cute-pill-btn primary" onclick="document.getElementById('checkout-modal').classList.remove('open')">
-          ✨ Tiếp tục dạo shop
-        </button>
-      `;
-    }
+    // Order Tracking Modal
+    ['btn-open-track', 'footer-open-track'].forEach((id) => {
+      document.getElementById(id)?.addEventListener('click', () => {
+        renderSavedOrderChips();
+        document.getElementById('track-modal').classList.add('open');
+        if (savedOrders.length > 0 && !document.getElementById('track-query-input').value) {
+          executeOrderLookup(savedOrders[0].orderCode);
+        }
+      });
+    });
+    document.getElementById('btn-close-track').addEventListener('click', () => {
+      document.getElementById('track-modal').classList.remove('open');
+    });
+    document.getElementById('btn-do-track').addEventListener('click', () => executeOrderLookup());
   }
 
-  // --- 6. ORDER TRACKING LOOKUP ---
-  document.getElementById('btn-open-track').onclick = () => {
-    document.getElementById('track-modal').classList.add('open');
-  };
-  document.getElementById('btn-close-track').onclick = () => {
-    document.getElementById('track-modal').classList.remove('open');
-  };
-  document.getElementById('btn-do-track').onclick = async () => {
-    const q = document.getElementById('track-query-input').value.trim();
-    const box = document.getElementById('track-results-box');
-    const res = await fetch(`/api/shop/orders/track?q=${encodeURIComponent(q)}`);
-    const data = await res.json();
-    if (!res.ok || !data.orders || data.orders.length === 0) {
-      box.innerHTML = `<p style="text-align:center; font-size:0.82rem; color:var(--ink-muted); padding:14px;">Chưa tìm thấy đơn hàng nào khớp với "${escapeHtml(q)}".</p>`;
-      return;
-    }
-
-    const statusLabel = {
-      pending: '⏳ Chờ shop xác nhận',
-      confirmed: '💖 Đã xác nhận đơn',
-      packing: '🎀 Đang gói hàng thơm phức',
-      shipping: '🚚 Đang giao tới nàng',
-      completed: '🌸 Giao thành công',
-      cancelled: '❌ Đã hủy'
-    };
-
-    box.innerHTML = data.orders
-      .map(
-        (o) => `
-      <div style="border:1.5px solid var(--pink-200); border-radius:16px; padding:12px 14px; margin-bottom:10px; background:var(--pink-50); font-size:0.82rem;">
-        <div style="display:flex; justify-content:space-between; font-weight:800; margin-bottom:4px;">
-          <span>Mã đơn: ${escapeHtml(o.orderCode)}</span>
-          <span style="color:var(--pink-600);">${statusLabel[o.orderStatus] || o.orderStatus}</span>
-        </div>
-        <div>Người nhận: ${escapeHtml(o.customerName)} • Tổng: <strong>${vnd(o.totalAmount)}</strong> (${o.paymentMethod === 'qr' ? 'Quét QR' : 'Ship COD'})</div>
-        <div style="font-size:0.75rem; color:var(--ink-muted); margin-top:4px;">
-          ${(o.items || []).map((i) => `${escapeHtml(i.name)} x${i.qty}`).join(', ')}
-        </div>
-      </div>
-    `
-      )
-      .join('');
-  };
-
-  // --- 7. UI BINDINGS & SOCIAL PROOF TOAST ---
-  document.getElementById('btn-open-cart').onclick = openCartDrawer;
-  document.getElementById('btn-close-cart').onclick = () => document.getElementById('cart-drawer-backdrop').classList.remove('open');
-  document.getElementById('btn-proceed-checkout').onclick = openCheckoutModal;
-  document.getElementById('btn-close-checkout').onclick = () => document.getElementById('checkout-modal').classList.remove('open');
-
-  document.getElementById('btn-filter-wishlist').onclick = () => {
-    wishlistOnly = !wishlistOnly;
-    renderCategories();
-    renderProducts();
-  };
-
-  document.getElementById('search-input').addEventListener('input', (e) => {
-    searchQuery = e.target.value;
-    renderProducts();
-  });
-
-  document.getElementById('sort-select').addEventListener('change', (e) => {
-    sortBy = e.target.value;
-    renderProducts();
-  });
-
-  function startLiveProofToast() {
-    if (settings.liveProofEnabled === false || products.length === 0) return;
-    const names = ['Nàng Bảo Ngọc (Hà Nội)', 'Nàng Minh Anh (TP.HCM)', 'Nàng Thu Hà (Đà Nẵng)', 'Nàng Quỳnh Hương (Hải Phòng)'];
-    const toast = document.getElementById('live-proof-toast');
-    let idx = 0;
-
-    setInterval(() => {
-      const prod = products[idx % products.length];
-      const buyer = names[idx % names.length];
-      idx++;
-      if (!prod) return;
-      document.getElementById('proof-img').src = (prod.images && prod.images[0]) || '/uploads/girlfriend-1.jpg';
-      document.getElementById('proof-title').textContent = `🎀 ${buyer} vừa đặt`;
-      document.getElementById('proof-prod').textContent = `${prod.name.slice(0, 32)}... • Vừa xong`;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 4500);
-    }, 18000);
-  }
-
-  function escapeHtml(str) {
-    return String(str || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-  }
-
-  function escapeAttr(str) {
-    return String(str || '')
-      .replace(/&/g, '&amp;')
-      .replace(/"/g, '&quot;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-  }
-
-  initSparkles();
+  initAtmosphereAndMotion();
   startFlashTimer();
+  bindEvents();
   loadStorefront();
 })();

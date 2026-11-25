@@ -137,18 +137,31 @@
   }
 
   document.getElementById('btn-logout')?.addEventListener('click', () => {
+    fetch('/api/logout', { method: 'POST' }).catch(() => {});
     authToken = '';
     localStorage.removeItem(TOKEN_KEY);
     loginOverlay.style.display = 'flex';
   });
 
-  // --- LOAD ADMIN OVERVIEW ---
+  // --- LOAD ADMIN OVERVIEW (Unified SSO with /admin) ---
   async function loadOverview() {
-    if (!authToken) {
-      loginOverlay.style.display = 'flex';
-      return;
-    }
     try {
+      const verifyHeaders = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+      const vRes = await fetch('/api/auth/verify', { headers: verifyHeaders });
+      if (!vRes.ok) {
+        authToken = '';
+        localStorage.removeItem(TOKEN_KEY);
+        loginOverlay.style.display = 'flex';
+        return;
+      }
+      const vJson = await vRes.json();
+      if (vJson.token) {
+        authToken = vJson.token;
+        localStorage.setItem(TOKEN_KEY, authToken);
+      }
+      const sharedUserEl = document.getElementById('adm-shared-user');
+      if (sharedUserEl && vJson.username) sharedUserEl.value = vJson.username;
+
       const data = await apiFetch('/api/shop/admin/overview');
       loginOverlay.style.display = 'none';
       shopData = data.store;
@@ -188,16 +201,71 @@
   }
 
   // --- 1. ORDERS MANAGEMENT ---
+  let orderSearch = '';
+  let orderStatusFilter = 'all';
+
+  document.getElementById('ord-search-input')?.addEventListener('input', (e) => {
+    orderSearch = e.target.value.trim().toLowerCase();
+    renderOrders();
+  });
+  document.getElementById('ord-status-filter')?.addEventListener('change', (e) => {
+    orderStatusFilter = e.target.value;
+    renderOrders();
+  });
+
+  function printPackingSlip(o) {
+    const win = window.open('', '_blank', 'width=520,height=680');
+    if (!win) return;
+    const rows = (o.items || [])
+      .map(
+        (it) =>
+          `<tr><td style="padding:6px 0;border-bottom:1px solid #eee;">${escapeHtml(it.name)} (${escapeHtml(it.color)} / ${escapeHtml(it.size)})</td><td style="text-align:right;padding:6px 0;border-bottom:1px solid #eee;">x${it.qty}</td></tr>`
+      )
+      .join('');
+    win.document.write(`
+      <html><head><title>Phiếu Gói Hàng #${escapeHtml(o.orderCode)}</title></head>
+      <body style="font-family:sans-serif; padding:24px; color:#2b151e;">
+        <h2 style="margin:0 0 4px;">NA 2HAND BOUTIQUE — PHIẾU GÓI HÀNG</h2>
+        <p style="margin:0 0 14px; font-size:13px; color:#666;">Mã đơn: <strong>#${escapeHtml(o.orderCode)}</strong> • ${new Date(o.createdAt).toLocaleString('vi-VN')}</p>
+        <div style="border:1px solid #ccc; border-radius:10px; padding:12px; margin-bottom:14px; font-size:14px; line-height:1.6;">
+          <div>Người nhận: <strong>${escapeHtml(o.customerName)}</strong> — SĐT: <strong>${escapeHtml(o.customerPhone)}</strong></div>
+          <div>Địa chỉ: ${escapeHtml(o.address)}, ${escapeHtml(o.district || '')}, ${escapeHtml(o.province || '')}</div>
+          <div>Hương giấy lụa: <strong>${escapeHtml(o.scentChoice || 'Hương Đào Trắng')}</strong></div>
+          ${o.giftWrap ? `<div>Quà tặng: <strong>Gói hộp nơ</strong> — Thiệp: "${escapeHtml(o.giftCardMessage || '')}"</div>` : ''}
+          ${o.note ? `<div>Ghi chú khách: "${escapeHtml(o.note)}"</div>` : ''}
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:14px; margin-bottom:14px;">${rows}</table>
+        <div style="text-align:right; font-size:16px;">
+          Thu hộ / Tổng đơn: <strong>${o.paymentMethod === 'cod' && o.paymentStatus !== 'paid' ? formatVnd(o.totalAmount) : '0đ (Đã TT QR)'}</strong>
+        </div>
+        <script>window.print();<\/script>
+      </body></html>
+    `);
+    win.document.close();
+  }
+
   function renderOrders() {
     const tbody = document.getElementById('orders-tbody');
     if (!tbody || !shopData) return;
-    const orders = shopData.orders || [];
+    let orders = [...(shopData.orders || [])];
+
+    if (orderStatusFilter !== 'all') {
+      orders = orders.filter((o) => o.orderStatus === orderStatusFilter);
+    }
+    if (orderSearch) {
+      orders = orders.filter(
+        (o) =>
+          String(o.orderCode || '').toLowerCase().includes(orderSearch) ||
+          String(o.customerName || '').toLowerCase().includes(orderSearch) ||
+          String(o.customerPhone || '').toLowerCase().includes(orderSearch)
+      );
+    }
 
     if (orders.length === 0) {
       tbody.innerHTML = `
         <tr>
           <td colspan="5" style="text-align:center; padding:32px; color:var(--muted);">
-            🌸 Chưa có đơn đặt hàng nào. Hãy thử đặt 1 đơn mẫu trên trang <a href="/shop" target="_blank" style="color:var(--pri); font-weight:700;">/shop</a> nhé!
+            Chưa có đơn đặt hàng nào khớp bộ lọc. Hãy thử đặt 1 đơn mẫu trên trang <a href="/shop" target="_blank" style="color:var(--pri); font-weight:700;">/shop</a> nhé!
           </td>
         </tr>
       `;
@@ -211,7 +279,7 @@
           .map(
             (it) => `
             <div style="display:flex; align-items:center; gap:7px; margin-bottom:5px;">
-              <img src="${escapeHtml(it.image || '/uploads/girlfriend-1.jpg')}" style="width:34px; height:34px; border-radius:8px; object-fit:cover; border:1px solid #f2d6e3;" />
+              <img src="${escapeHtml(it.image || '/media/bio-link/girlfriend-1.jpg')}" style="width:34px; height:34px; border-radius:8px; object-fit:cover; border:1px solid #f2d6e3;" />
               <div>
                 <div style="font-weight:700; font-size:0.78rem;">${escapeHtml(it.name)}</div>
                 <div style="font-size:0.71rem; color:var(--muted);">${escapeHtml(it.color || '')} • ${escapeHtml(it.size || '')} × <strong>${it.qty}</strong></div>
@@ -223,8 +291,8 @@
 
         const payBadge =
           o.paymentMethod === 'qr'
-            ? `<span class="badge" style="background:#fce7f3; color:#be185d;">📱 Quét mã QR</span>`
-            : `<span class="badge" style="background:#fef3c7; color:#92400e;">💵 COD nhận hàng</span>`;
+            ? `<span class="badge" style="background:#fce7f3; color:#be185d;">Quét mã QR</span>`
+            : `<span class="badge" style="background:#fef3c7; color:#92400e;">COD nhận hàng</span>`;
 
         return `
           <tr>
@@ -232,39 +300,52 @@
               <div style="font-weight:800; color:var(--pri); font-size:0.88rem;">#${escapeHtml(o.orderCode)}</div>
               <div style="font-size:0.72rem; color:var(--muted); margin-top:2px;">${escapeHtml(dt)}</div>
               ${o.transferNote && o.paymentMethod === 'qr' ? `<div style="font-size:0.7rem; margin-top:4px; background:#fff5f9; padding:2px 6px; border-radius:6px; display:inline-block;">ND: <code>${escapeHtml(o.transferNote)}</code></div>` : ''}
+              <div style="margin-top:6px;">
+                <button type="button" class="btn btn-sm btn-print-slip" data-id="${escapeHtml(o.id)}">In Phiếu Gói</button>
+              </div>
             </td>
             <td>
               <div style="font-weight:700;">${escapeHtml(o.customerName)}</div>
-              <div style="font-size:0.78rem; color:#0f766e; font-weight:700;">📞 ${escapeHtml(o.customerPhone)}</div>
-              <div style="font-size:0.74rem; color:var(--muted); max-width:240px;">📍 ${escapeHtml(o.address)}${o.district ? `, ${escapeHtml(o.district)}` : ''}${o.province ? `, ${escapeHtml(o.province)}` : ''}</div>
-              ${o.note ? `<div style="font-size:0.72rem; color:#be185d; margin-top:3px;">📝 "${escapeHtml(o.note)}"</div>` : ''}
+              <div style="font-size:0.78rem; color:#0f766e; font-weight:700;">${escapeHtml(o.customerPhone)}</div>
+              <div style="font-size:0.74rem; color:var(--muted); max-width:250px;">${escapeHtml(o.address)}${o.district ? `, ${escapeHtml(o.district)}` : ''}${o.province ? `, ${escapeHtml(o.province)}` : ''}</div>
+              ${o.scentChoice ? `<div style="font-size:0.72rem; color:#9d174d; margin-top:3px;">Hương gói: <strong>${escapeHtml(o.scentChoice)}</strong></div>` : ''}
+              ${o.giftWrap ? `<div style="font-size:0.72rem; color:#7e22ce; margin-top:2px;">Gói quà nơ • Thiệp: "${escapeHtml(o.giftCardMessage || '')}"</div>` : ''}
+              ${o.note ? `<div style="font-size:0.72rem; color:#be185d; margin-top:2px;">Ghi chú: "${escapeHtml(o.note)}"</div>` : ''}
             </td>
             <td>${itemsHtml}</td>
             <td>
               <div style="font-weight:800; font-size:0.95rem; color:#be123c; margin-bottom:4px;">${formatVnd(o.totalAmount)}</div>
               ${payBadge}
+              ${o.receiptImageUrl ? `<div style="margin-top:4px;"><a href="${escapeHtml(o.receiptImageUrl)}" target="_blank" style="font-size:0.72rem; font-weight:700; color:#15803d;">Xem ảnh biên lai CK &rarr;</a></div>` : ''}
               <div style="margin-top:6px;">
                 <select class="select order-pay-select" data-id="${escapeHtml(o.id)}" style="margin-bottom:0; padding:5px 8px; font-size:0.74rem;">
-                  <option value="pending" ${o.paymentStatus === 'pending' ? 'selected' : ''}>⏳ Chờ thanh toán</option>
-                  <option value="customer_confirmed_qr" ${o.paymentStatus === 'customer_confirmed_qr' ? 'selected' : ''}>🔔 Khách báo đã quét QR</option>
-                  <option value="paid" ${o.paymentStatus === 'paid' ? 'selected' : ''}>✅ Đã nhận đủ tiền</option>
+                  <option value="pending" ${o.paymentStatus === 'pending' ? 'selected' : ''}>Chờ thanh toán</option>
+                  <option value="customer_confirmed_qr" ${o.paymentStatus === 'customer_confirmed_qr' ? 'selected' : ''}>Khách báo đã quét QR</option>
+                  <option value="paid" ${o.paymentStatus === 'paid' ? 'selected' : ''}>Đã nhận đủ tiền</option>
                 </select>
               </div>
             </td>
             <td>
               <select class="select order-status-select" data-id="${escapeHtml(o.id)}" style="margin-bottom:0; padding:6px 9px; font-size:0.76rem; font-weight:700;">
-                <option value="pending" ${o.orderStatus === 'pending' ? 'selected' : ''}>🆕 Đơn mới chờ xác nhận</option>
-                <option value="confirmed" ${o.orderStatus === 'confirmed' ? 'selected' : ''}>💖 Đã xác nhận đơn</option>
-                <option value="packing" ${o.orderStatus === 'packing' ? 'selected' : ''}>🎀 Đang gói hàng thơm</option>
-                <option value="shipping" ${o.orderStatus === 'shipping' ? 'selected' : ''}>🚚 Đang giao cho nàng</option>
-                <option value="completed" ${o.orderStatus === 'completed' ? 'selected' : ''}>✨ Giao thành công</option>
-                <option value="cancelled" ${o.orderStatus === 'cancelled' ? 'selected' : ''}>❌ Đã hủy đơn</option>
+                <option value="pending" ${o.orderStatus === 'pending' ? 'selected' : ''}>Đơn mới chờ xác nhận</option>
+                <option value="confirmed" ${o.orderStatus === 'confirmed' ? 'selected' : ''}>Đã xác nhận đơn</option>
+                <option value="packing" ${o.orderStatus === 'packing' ? 'selected' : ''}>Đang ướp hương &amp; gói</option>
+                <option value="shipping" ${o.orderStatus === 'shipping' ? 'selected' : ''}>Đang giao cho khách</option>
+                <option value="completed" ${o.orderStatus === 'completed' ? 'selected' : ''}>Giao thành công</option>
+                <option value="cancelled" ${o.orderStatus === 'cancelled' ? 'selected' : ''}>Đã hủy đơn</option>
               </select>
             </td>
           </tr>
         `;
       })
       .join('');
+
+    tbody.querySelectorAll('.btn-print-slip').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const ord = (shopData.orders || []).find((x) => x.id === btn.dataset.id);
+        if (ord) printPackingSlip(ord);
+      });
+    });
 
     tbody.querySelectorAll('.order-pay-select').forEach((sel) => {
       sel.addEventListener('change', async () => {
@@ -441,8 +522,9 @@
             </td>
             <td>
               <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                <button type="button" class="btn btn-sm btn-edit-prod" data-id="${escapeHtml(p.id)}">✏️ Sửa</button>
-                <button type="button" class="btn btn-sm btn-danger btn-del-prod" data-id="${escapeHtml(p.id)}">🗑️ Xóa</button>
+                <button type="button" class="btn btn-sm btn-edit-prod" data-id="${escapeHtml(p.id)}">Sửa</button>
+                <button type="button" class="btn btn-sm btn-dup-prod" data-id="${escapeHtml(p.id)}">Nhân bản</button>
+                <button type="button" class="btn btn-sm btn-danger btn-del-prod" data-id="${escapeHtml(p.id)}">Xóa</button>
               </div>
             </td>
           </tr>
@@ -469,6 +551,18 @@
         document.getElementById('pf-enabled').checked = prod.enabled !== false;
         document.getElementById('prod-form-heading').textContent = `✏️ Đang sửa: ${prod.name}`;
         window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    });
+
+    tbody.querySelectorAll('.btn-dup-prod').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        try {
+          await apiFetch(`/api/shop/admin/products/${btn.dataset.id}/duplicate`, { method: 'POST' });
+          showToast('Đã nhân bản sản phẩm!');
+          await loadOverview();
+        } catch (err) {
+          showToast(err.message, true);
+        }
       });
     });
 
@@ -713,6 +807,42 @@
         });
       });
     }
+
+    const revList = document.getElementById('reviews-admin-list');
+    if (revList) {
+      const revs = shopData.reviews || [];
+      revList.innerHTML =
+        revs.length === 0
+          ? `<p style="font-size:0.8rem; color:var(--muted);">Chưa có đánh giá nào.</p>`
+          : revs
+              .map(
+                (r) => `
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px; border-bottom:1px solid #f7e6ee;">
+                <div style="display:flex; gap:10px; align-items:center;">
+                  ${r.photoUrl ? `<img src="${escapeHtml(r.photoUrl)}" style="width:44px; height:50px; object-fit:cover; border-radius:8px;" />` : ''}
+                  <div>
+                    <div style="font-weight:700; font-size:0.82rem;">${escapeHtml(r.authorName)} • ${'★'.repeat(Number(r.rating || 5))}</div>
+                    <div style="font-size:0.78rem;">${escapeHtml(r.comment)}</div>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-danger btn-del-rev" data-id="${escapeHtml(r.id)}">Xóa</button>
+              </div>
+            `
+              )
+              .join('');
+
+      revList.querySelectorAll('.btn-del-rev').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          try {
+            await apiFetch(`/api/shop/admin/reviews/${btn.dataset.id}`, { method: 'DELETE' });
+            showToast('Đã xóa đánh giá');
+            await loadOverview();
+          } catch (err) {
+            showToast(err.message, true);
+          }
+        });
+      });
+    }
   }
 
   document.getElementById('btn-add-cat')?.addEventListener('click', async () => {
@@ -763,8 +893,8 @@
     document.getElementById('st-cod-enabled').checked = s.codEnabled !== false;
     document.getElementById('st-qr-mode').value = s.qrMode || 'custom_image';
     document.getElementById('st-qr-prefix').value = s.qrNotePrefix || 'NA2HAND';
-    document.getElementById('st-qr-url').value = s.qrImageUrl || '/images/cute-qr-placeholder.svg';
-    document.getElementById('st-qr-preview').src = s.qrImageUrl || '/images/cute-qr-placeholder.svg';
+    document.getElementById('st-qr-url').value = s.qrImageUrl || '/media/bio-link/cute-qr-placeholder.svg';
+    document.getElementById('st-qr-preview').src = s.qrImageUrl || '/media/bio-link/cute-qr-placeholder.svg';
     document.getElementById('st-bank-name').value = s.bankName || '';
     document.getElementById('st-bank-bin').value = s.bankBin || '970422';
     document.getElementById('st-bank-no').value = s.bankAccountNo || '';
@@ -805,7 +935,7 @@
       codEnabled: document.getElementById('st-cod-enabled').checked,
       qrMode: document.getElementById('st-qr-mode').value,
       qrNotePrefix: document.getElementById('st-qr-prefix').value.trim() || 'NA2HAND',
-      qrImageUrl: document.getElementById('st-qr-url').value.trim() || '/images/cute-qr-placeholder.svg',
+      qrImageUrl: document.getElementById('st-qr-url').value.trim() || '/media/bio-link/cute-qr-placeholder.svg',
       bankName: document.getElementById('st-bank-name').value.trim(),
       bankBin: document.getElementById('st-bank-bin').value.trim(),
       bankAccountNo: document.getElementById('st-bank-no').value.trim(),
@@ -825,6 +955,30 @@
       });
       showToast('Đã lưu cài đặt cửa hàng & Mã QR thanh toán! 💖');
       await loadOverview();
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  });
+
+  document.getElementById('btn-change-shared-pass')?.addEventListener('click', async () => {
+    const newUsername = document.getElementById('adm-shared-user').value.trim() || 'admin';
+    const currentPassword = document.getElementById('adm-cur-pass').value;
+    const newPassword = document.getElementById('adm-new-pass').value;
+    if (!currentPassword || !newPassword) {
+      return showToast('Vui lòng nhập mật khẩu hiện tại và mật khẩu mới!', true);
+    }
+    try {
+      const res = await apiFetch('/api/password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newUsername, newPassword })
+      });
+      if (res.token) {
+        authToken = res.token;
+        localStorage.setItem(TOKEN_KEY, authToken);
+      }
+      document.getElementById('adm-cur-pass').value = '';
+      document.getElementById('adm-new-pass').value = '';
+      showToast(res.message || 'Đã đổi mật khẩu đồng bộ thành công!');
     } catch (err) {
       showToast(err.message, true);
     }

@@ -171,10 +171,22 @@
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
           <div>
-            <h3 style="font-size:1.05rem;">📦 Danh Sách Đơn Đặt Hàng</h3>
-            <p style="font-size:0.78rem; color:var(--muted);">Quản lý đơn Quét QR trực tiếp & đơn Nhận hàng thanh toán (COD)</p>
+            <h3 style="font-size:1.05rem;">Danh Sách Đơn Đặt Hàng</h3>
+            <p style="font-size:0.78rem; color:var(--muted);">Quản lý đơn Quét QR, biên lai chuyển khoản, hương giấy gói &amp; Ship COD</p>
           </div>
-          <button type="button" class="btn btn-sm" id="btn-refresh-orders">🔄 Làm mới đơn hàng</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <input type="text" id="ord-search-input" class="input" style="margin-bottom:0; width:210px; padding:7px 11px; font-size:0.8rem;" placeholder="Tìm mã đơn, tên, SĐT..." />
+            <select id="ord-status-filter" class="select" style="margin-bottom:0; width:165px; padding:7px 10px; font-size:0.8rem;">
+              <option value="all">Tất cả trạng thái</option>
+              <option value="pending">Đơn mới chờ duyệt</option>
+              <option value="confirmed">Đã xác nhận</option>
+              <option value="packing">Đang ướp hương &amp; gói</option>
+              <option value="shipping">Đang giao</option>
+              <option value="completed">Hoàn thành</option>
+              <option value="cancelled">Đã hủy</option>
+            </select>
+            <button type="button" class="btn btn-sm" id="btn-refresh-orders">Làm mới</button>
+          </div>
         </div>
         <div style="overflow-x:auto;">
           <table>
@@ -399,6 +411,11 @@
           <div id="coupons-list" style="margin-top:14px;"></div>
         </div>
       </div>
+
+      <div class="card">
+        <h3 style="font-size:1rem; margin-bottom:10px;">Đánh Giá &amp; Ảnh OOTD Từ Khách Hàng</h3>
+        <div id="reviews-admin-list"></div>
+      </div>
     </section>
 
     <!-- PANE 5: QR PAYMENT & STORE SETTINGS -->
@@ -427,9 +444,9 @@
         <div style="margin-bottom:14px;">
           <label class="label">Hình ảnh Mã QR Thanh Toán (Bạn có thể tải ảnh QR ngân hàng/MoMo của bạn lên bất cứ lúc nào)</label>
           <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-            <img id="st-qr-preview" src="/images/cute-qr-placeholder.svg" alt="QR" style="width:96px; height:96px; object-fit:contain; border-radius:14px; border:1.5px solid var(--border); background:#fff; padding:4px;" />
+            <img id="st-qr-preview" src="/media/bio-link/cute-qr-placeholder.svg" alt="QR" style="width:96px; height:96px; object-fit:contain; border-radius:14px; border:1.5px solid var(--border); background:#fff; padding:4px;" />
             <div style="flex:1; min-width:220px;">
-              <input type="text" id="st-qr-url" class="input" placeholder="/images/cute-qr-placeholder.svg" />
+              <input type="text" id="st-qr-url" class="input" placeholder="/media/bio-link/cute-qr-placeholder.svg" />
               <label class="btn btn-sm" style="cursor:pointer;">
                 📤 Tải ảnh Mã QR thật của bạn lên
                 <input type="file" id="st-qr-file" accept="image/*" style="display:none;" />
@@ -496,13 +513,39 @@
           </div>
         </div>
 
-        <button type="button" class="btn btn-primary" id="btn-save-settings">💾 Lưu Cài Đặt Cửa Hàng & Thanh Toán</button>
+        <button type="button" class="btn btn-primary" id="btn-save-settings">Lưu Cài Đặt Cửa Hàng &amp; Thanh Toán</button>
+      </div>
+
+      <div class="card">
+        <h3 style="font-size:1.05rem; margin-bottom:6px;">Tài Khoản Quản Trị Dùng Chung (/admin &amp; /shop-admin)</h3>
+        <p style="font-size:0.78rem; color:var(--muted); margin-bottom:14px;">
+          Cả hai trang <code>/admin</code> (Bio Link) và <code>/shop-admin</code> (Cửa hàng) được đồng bộ 100% chung một tài khoản. Đổi tại đây sẽ cập nhật ngay cho cả hai trang.
+        </p>
+        <div class="grid-2">
+          <div>
+            <label class="label">Tên tài khoản quản trị</label>
+            <input type="text" id="adm-shared-user" class="input" value="admin" />
+          </div>
+          <div>
+            <label class="label">Mật khẩu hiện tại *</label>
+            <input type="password" id="adm-cur-pass" class="input" placeholder="Nhập mật khẩu hiện tại" />
+          </div>
+        </div>
+        <div class="grid-2" style="align-items:end;">
+          <div>
+            <label class="label">Mật khẩu mới *</label>
+            <input type="password" id="adm-new-pass" class="input" placeholder="Nhập mật khẩu mới (tối thiểu 3 ký tự)" />
+          </div>
+          <div style="margin-bottom:12px;">
+            <button type="button" class="btn btn-primary" id="btn-change-shared-pass">Đổi Mật Khẩu Đồng Bộ</button>
+          </div>
+        </div>
       </div>
     </section>
   </main>
 
-  <div class="toast" id="toast">Đã lưu thành công! ✨</div>
+  <div class="toast" id="toast">Đã lưu thành công!</div>
 
-  <script src="/js/shop-admin.js?v=1"></script>
+  <script src="/js/shop-admin.js?v=2"></script>
 </body>
 </html>

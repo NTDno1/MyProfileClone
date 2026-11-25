@@ -144,16 +144,11 @@
       .join('');
   }
 
-  // --- AUTHENTICATION ---
+  // --- AUTHENTICATION (Unified SSO with /shop-admin) ---
   async function checkAuthAndLoad() {
-    if (!authToken) {
-      loginOverlay.style.display = 'flex';
-      return;
-    }
     try {
-      const verifyRes = await fetch('/api/auth/verify', {
-        headers: { Authorization: `Bearer ${authToken}` }
-      });
+      const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+      const verifyRes = await fetch('/api/auth/verify', { headers });
       if (!verifyRes.ok) {
         localStorage.removeItem(TOKEN_KEY);
         authToken = '';
@@ -161,6 +156,10 @@
         return;
       }
       const verifyData = await verifyRes.json();
+      if (verifyData.token) {
+        authToken = verifyData.token;
+        localStorage.setItem(TOKEN_KEY, authToken);
+      }
       document.getElementById('auth-new-user').value = verifyData.username || 'admin';
       loginOverlay.style.display = 'none';
       await loadConfigData();
@@ -200,6 +199,7 @@
   });
 
   document.getElementById('btn-logout').addEventListener('click', () => {
+    fetch('/api/logout', { method: 'POST' }).catch(() => {});
     localStorage.removeItem(TOKEN_KEY);
     authToken = '';
     loginOverlay.style.display = 'flex';
@@ -882,9 +882,13 @@
     });
     const data = await res.json();
     if (res.ok && data.success) {
+      if (data.token) {
+        authToken = data.token;
+        localStorage.setItem(TOKEN_KEY, authToken);
+      }
       document.getElementById('auth-current-pass').value = '';
       document.getElementById('auth-new-pass').value = '';
-      showToast('🔑 Đã đổi mật khẩu quản trị thành công!');
+      showToast('Đã đổi mật khẩu đồng bộ cho cả Bio Admin & Shop Admin!');
     } else {
       showToast(data.message || 'Không thể đổi mật khẩu', true);
     }

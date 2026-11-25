@@ -1,9 +1,30 @@
 services:
+  file-storage:
+    build: ../file-storage
+    image: file-storage:latest
+    container_name: file-storage
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3010:3010"
+    volumes:
+      - ../storage-data:/storage
+    environment:
+      - PORT=3010
+      - STORAGE_API_KEY=${STORAGE_API_KEY:-myprofile_storage_2026_key}
+    networks:
+      - profile-net
+    deploy:
+      resources:
+        limits:
+          memory: 32M
+
   bio-link:
     build: .
     image: bio-link:latest
     container_name: bio-link
     restart: unless-stopped
+    depends_on:
+      - file-storage
     ports:
       - "127.0.0.1:3005:3005"
     volumes:
@@ -12,7 +33,15 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3005
+      - FILE_SERVER_URL=http://file-storage:3010
+      - STORAGE_API_KEY=${STORAGE_API_KEY:-myprofile_storage_2026_key}
+    networks:
+      - profile-net
     deploy:
       resources:
         limits:
           memory: 128M
+
+networks:
+  profile-net:
+    name: profile-net

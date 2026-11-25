@@ -219,7 +219,7 @@ export default function DeveloperPortfolio() {
                   </a>
                 </Link>
                 <a
-                  href="/CV/Nguyen_Tien_Dat_CV.pdf"
+                  href="/media/pofology/cv/Nguyen_Tien_Dat_CV.pdf"
                   download
                   className="figma-btn-secondary"
                 >
@@ -698,7 +698,7 @@ export default function DeveloperPortfolio() {
             </div>
 
             <div className="dev-about-bottom">
-              <a className="figma-btn-primary" href="/CV/Nguyen_Tien_Dat_CV.pdf" download>
+              <a className="figma-btn-primary" href="/media/pofology/cv/Nguyen_Tien_Dat_CV.pdf" download>
                 <FiDownload />
                 <span>{t('ui.download')}</span>
               </a>

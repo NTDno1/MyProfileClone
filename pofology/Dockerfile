@@ -37,6 +37,7 @@ COPY --chown=node:node --from=prod-deps /app/node_modules ./node_modules
 COPY --chown=node:node --from=builder /app/package.json ./package.json
 COPY --chown=node:node --from=builder /app/next.config.js* ./next.config.js
 COPY --chown=node:node --from=builder /app/public ./public
+COPY --chown=node:node --from=builder /app/CVProfile ./CVProfile
 COPY --chown=node:node --from=builder /app/.next ./.next
 
 EXPOSE 3000

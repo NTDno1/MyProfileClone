@@ -230,7 +230,7 @@ export default function Menu() {
                 </a>
               </Link>
               <a
-                href="/CV/Nguyen_Tien_Dat_CV.pdf"
+                href="/media/pofology/cv/Nguyen_Tien_Dat_CV.pdf"
                 download
                 className="dev-button dev-button-outline"
                 onClick={() => setOpen(false)}

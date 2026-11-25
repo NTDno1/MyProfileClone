@@ -5,3 +5,4 @@
 # Local Environment
 .env*
 node_modules/
+storage-data/

@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { rewriteLegacyBioUrls } = require('./file-storage-client');
 
 const DEFAULT_CATEGORIES = [
   { id: 'vay-dam', name: 'Đầm & Váy Tiểu Thư', icon: '👗', slug: 'vay-dam' },
@@ -19,7 +20,7 @@ const DEFAULT_PRODUCTS = [
     price: 245000,
     originalPrice: 350000,
     images: [
-      '/uploads/girlfriend-1.jpg',
+      '/media/bio-link/girlfriend-1.jpg',
       'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=85',
       'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=800&q=85'
     ],
@@ -45,7 +46,7 @@ const DEFAULT_PRODUCTS = [
     price: 189000,
     originalPrice: 260000,
     images: [
-      '/uploads/girlfriend-1.jpg',
+      '/media/bio-link/girlfriend-1.jpg',
       'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?auto=format&fit=crop&w=800&q=85'
     ],
     sizes: ['Freesize (< 58kg)'],
@@ -70,7 +71,7 @@ const DEFAULT_PRODUCTS = [
     price: 125000,
     originalPrice: 185000,
     images: [
-      '/uploads/girlfriend-2.jpg',
+      '/media/bio-link/girlfriend-2.jpg',
       'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=800&q=85'
     ],
     sizes: ['S', 'M'],
@@ -221,14 +222,14 @@ const DEFAULT_SHOP_SETTINGS = {
   announcement: '✨ FREESHIP ĐƠN TỪ 299K • NHẬP MÃ XINHXINH10 GIẢM NGAY 10% • ĐỒ TUYỂN CHỌN THƠM PHỨC 🌸',
   heroTitle: 'Tủ Đồ Xinh Lung Linh Của Nàng ✨',
   heroSubtitle: 'Tuyển chọn những mẫu váy đầm tiểu thư, áo xinh & 2hand cao cấp chỉ có1-0-2, gói hàng thơm tho gửi trao tận tay nàng ♡',
-  heroBannerImage: '/uploads/girlfriend-1.jpg',
+  heroBannerImage: '/media/bio-link/girlfriend-1.jpg',
   shippingFee: 25000,
   freeShipThreshold: 299000,
   codEnabled: true,
   qrEnabled: true,
   // 'custom_image' = hiển thị ảnh QR tự tải lên / ảnh mặc định; 'vietqr' = tự sinh QR theo số tài khoản + số tiền đơn hàng
   qrMode: 'custom_image',
-  qrImageUrl: '/images/cute-qr-placeholder.svg',
+  qrImageUrl: '/media/bio-link/cute-qr-placeholder.svg',
   bankBin: '970422', // MB Bank
   bankName: 'MB Bank (Ngân hàng Quân Đội)',
   bankAccountNo: '0983877462',
@@ -287,7 +288,17 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth }) {
   }
 
   // Sync between MongoDB `na2hand_shop` database and local cache
+  // (auto-rewrites legacy /uploads/... links -> /media/bio-link/... served by `file-storage` container)
   async function getShopStore() {
+    const raw = await getShopStoreRaw();
+    const migrated = rewriteLegacyBioUrls(raw);
+    if (migrated.changed) {
+      saveShopStore(migrated.data).catch(() => {});
+    }
+    return migrated.data;
+  }
+
+  async function getShopStoreRaw() {
     const local = loadLocalShopData();
     const db = getMongoDb();
     if (!db) return local;
@@ -547,7 +558,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth }) {
 
       // Build QR payment payload
       const transferNote = `${store.settings.qrNotePrefix || 'NA2HAND'} ${orderCode}`;
-      let qrDisplayUrl = store.settings.qrImageUrl || '/images/cute-qr-placeholder.svg';
+      let qrDisplayUrl = store.settings.qrImageUrl || '/media/bio-link/cute-qr-placeholder.svg';
       if (
         store.settings.qrMode === 'vietqr' &&
         store.settings.bankBin &&
@@ -715,7 +726,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth }) {
       category: String(b.category || 'vay-dam'),
       price: Math.max(0, Number(b.price || 0)),
       originalPrice: Math.max(0, Number(b.originalPrice || b.price || 0)),
-      images: Array.isArray(b.images) && b.images.length > 0 ? b.images : ['/uploads/girlfriend-1.jpg'],
+      images: Array.isArray(b.images) && b.images.length > 0 ? b.images : ['/media/bio-link/girlfriend-1.jpg'],
       sizes: Array.isArray(b.sizes) && b.sizes.length > 0 ? b.sizes : ['Freesize'],
       colors: Array.isArray(b.colors) && b.colors.length > 0 ? b.colors : ['Mặc định'],
       stock: Math.max(0, Number(b.stock ?? 10)),
@@ -890,7 +901,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth }) {
           category: item.category || (store.categories[0] ? store.categories[0].id : 'vay-dam'),
           price: cleanPrice > 0 ? cleanPrice : 199000,
           originalPrice: cleanOrig >= cleanPrice ? cleanOrig : cleanPrice,
-          images: imgs.length > 0 ? imgs.slice(0, 8) : ['/uploads/girlfriend-1.jpg'],
+          images: imgs.length > 0 ? imgs.slice(0, 8) : ['/media/bio-link/girlfriend-1.jpg'],
           sizes: Array.isArray(item.sizes) && item.sizes.length > 0 ? item.sizes : ['Freesize'],
           colors: Array.isArray(item.colors) && item.colors.length > 0 ? item.colors : ['Theo hình'],
           stock: Number(item.stock || 20),

@@ -5,12 +5,21 @@ const path = require('path');
 const crypto = require('crypto');
 const { MongoClient } = require('mongodb');
 const { registerShopRoutes } = require('./shop-routes');
+const {
+  uploadToFileStorage,
+  listProjectFiles,
+  deleteProjectFile,
+  rewriteLegacyBioUrls,
+  cloneExistingBioFilesToContainer,
+  streamFromStorageContainer
+} = require('./file-storage-client');
 
 const app = express();
 const PORT = process.env.PORT || 3005;
 
 const DATA_DIR = path.join(__dirname, 'data');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
+const PUBLIC_IMAGES_DIR = path.join(__dirname, 'public', 'images');
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 const AUTH_FILE = path.join(DATA_DIR, 'auth.json');
 const LOGS_FILE = path.join(DATA_DIR, 'analytics-logs.json');
@@ -21,11 +30,33 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 app.use(compression());
-app.use(express.json({ limit: '15mb' }));
-app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+
+// Stream media files directly from dedicated ultra-lightweight `file-storage` container
+app.get('/media/*', (req, res) => {
+  const relPath = req.params[0] || '';
+  streamFromStorageContainer(relPath, req, res, () => {
+    const baseName = path.basename(relPath);
+    const localUpload = path.join(UPLOADS_DIR, baseName);
+    if (fs.existsSync(localUpload)) return res.sendFile(localUpload);
+    const localImg = path.join(PUBLIC_IMAGES_DIR, baseName);
+    if (fs.existsSync(localImg)) return res.sendFile(localImg);
+    res.status(404).end('File not found');
+  });
+});
+
+// Backward-compatible redirect/stream for any legacy /uploads/:filename links
+app.get('/uploads/:filename', (req, res) => {
+  const filename = path.basename(req.params.filename || '');
+  streamFromStorageContainer(`bio-link/${filename}`, req, res, () => {
+    const localUpload = path.join(UPLOADS_DIR, filename);
+    if (fs.existsSync(localUpload)) return res.sendFile(localUpload);
+    res.status(404).end('File not found');
+  });
+});
 
 // Static assets
-app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '30d' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- MONGODB ATLAS CONNECTION (Dedicated Database `na2hand_shop` - Separated from Pofology!) ---
@@ -84,11 +115,18 @@ async function initMongoConnection(customUri, customDbName) {
     mongoErrorMsg = '';
     console.log(`✅ [MongoDB Atlas] Đã kết nối tới database riêng "${dbName}" (tách biệt hoàn toàn khỏi Pofology)`);
 
-    // Sync Bio config between MongoDB `na2hand_shop` and local disk
+    // Sync Bio config between MongoDB `na2hand_shop` and local disk (auto-rewriting legacy /uploads/ links -> /media/bio-link/)
     const col = mongoDb.collection('bio_config');
     const remoteDoc = await col.findOne({ _id: 'main_bio_config' });
     if (remoteDoc && remoteDoc.config) {
-      fs.writeFileSync(CONFIG_FILE, JSON.stringify(remoteDoc.config, null, 2), 'utf8');
+      const migrated = rewriteLegacyBioUrls(remoteDoc.config);
+      fs.writeFileSync(CONFIG_FILE, JSON.stringify(migrated.data, null, 2), 'utf8');
+      if (migrated.changed) {
+        await col.updateOne(
+          { _id: 'main_bio_config' },
+          { $set: { config: migrated.data, updatedAt: new Date() } }
+        );
+      }
     } else {
       const localCfg = loadConfigFromFile();
       await col.updateOne(
@@ -139,7 +177,7 @@ const DEFAULT_CONFIG = {
     name: 'HIKARI MAEVE',
     subtitle: 'Fashion | Lifestyle | Influencer',
     quote: "Fashion inspo for the girl who's always on the go ✨",
-    avatar: '/uploads/girlfriend-1.jpg',
+    avatar: '/media/bio-link/girlfriend-1.jpg',
     verifiedBadge: true
   },
   theme: {
@@ -150,7 +188,7 @@ const DEFAULT_CONFIG = {
     accentColor: '#b55672',
     bgType: 'image-overlay',
     bgImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1000&q=80',
-    portraitBgImage: '/uploads/girlfriend-1.jpg',
+    portraitBgImage: '/media/bio-link/girlfriend-1.jpg',
     bgGradientStart: '#f6c4d2',
     bgGradientMid: '#e89ab2',
     bgGradientEnd: '#c8738e',
@@ -222,7 +260,7 @@ const DEFAULT_CONFIG = {
     title: 'GET MY ENTIRE COLLECTION',
     subtitle: 'Khám phá trọn bộ sưu tập yêu thích của mình',
     url: 'https://shopee.vn',
-    image: '/uploads/girlfriend-2.jpg',
+    image: '/media/bio-link/girlfriend-2.jpg',
     clicks: 0
   },
   socials: [
@@ -254,7 +292,7 @@ function loadConfigFromFile() {
     }
     const raw = fs.readFileSync(CONFIG_FILE, 'utf8');
     const parsed = JSON.parse(raw);
-    return {
+    const merged = {
       ...DEFAULT_CONFIG,
       ...parsed,
       profile: { ...DEFAULT_CONFIG.profile, ...(parsed.profile || {}) },
@@ -263,6 +301,11 @@ function loadConfigFromFile() {
       seo: { ...DEFAULT_CONFIG.seo, ...(parsed.seo || {}) },
       analytics: { ...DEFAULT_CONFIG.analytics, ...(parsed.analytics || {}) }
     };
+    const migrated = rewriteLegacyBioUrls(merged);
+    if (migrated.changed) {
+      fs.writeFileSync(CONFIG_FILE, JSON.stringify(migrated.data, null, 2), 'utf8');
+    }
+    return migrated.data;
   } catch (err) {
     return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
   }
@@ -699,45 +742,53 @@ app.post('/api/password', requireAuth, (req, res) => {
   res.json({ success: true, message: 'Đổi thông tin đăng nhập thành công!' });
 });
 
-// Upload image
-app.post('/api/upload', requireAuth, (req, res) => {
+// Upload file directly to dedicated `file-storage` Docker container
+app.post('/api/upload', requireAuth, async (req, res) => {
   try {
-    const { dataUrl, filename } = req.body || {};
-    if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
-      return res.status(400).json({ success: false, message: 'Dữ liệu ảnh không hợp lệ.' });
+    const { dataUrl, filename, folder, overwriteExactName } = req.body || {};
+    if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
+      return res.status(400).json({ success: false, message: 'Dữ liệu file không hợp lệ.' });
     }
 
-    const matches = dataUrl.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
-    if (!matches || matches.length !== 3) {
-      return res.status(400).json({ success: false, message: 'Định dạng Base64 không hợp lệ.' });
-    }
-
-    let ext = matches[1].toLowerCase();
-    if (ext === 'jpeg') ext = 'jpg';
-    if (ext === 'svg+xml') ext = 'svg';
-    const allowedExts = ['jpg', 'png', 'webp', 'gif', 'svg', 'avif'];
-    if (!allowedExts.includes(ext)) {
-      return res.status(400).json({ success: false, message: 'Định dạng ảnh không được hỗ trợ.' });
-    }
-
-    const buffer = Buffer.from(matches[2], 'base64');
-    const safeBase = String(filename || 'img')
-      .replace(/\.[^/.]+$/, '')
-      .replace(/[^a-zA-Z0-9_-]/g, '')
-      .slice(0, 30) || 'image';
-
-    const finalName = `${safeBase}_${Date.now()}.${ext}`;
-    const filePath = path.join(UPLOADS_DIR, finalName);
-    fs.writeFileSync(filePath, buffer);
+    const result = await uploadToFileStorage({
+      project: 'bio-link',
+      folder: folder || '',
+      filename: filename || 'image.jpg',
+      dataUrl,
+      overwriteExactName: Boolean(overwriteExactName)
+    });
 
     return res.json({
       success: true,
-      url: `/uploads/${finalName}`,
-      message: 'Tải ảnh lên thành công!'
+      url: result.url,
+      relPath: result.relPath,
+      size: result.size,
+      message: 'Tải file lên Container Lưu Trữ Tập Trung thành công!'
     });
   } catch (err) {
-    console.error('Upload error:', err);
-    res.status(500).json({ success: false, message: 'Không thể lưu ảnh lên server.' });
+    console.error('Upload to file-storage error:', err);
+    res.status(500).json({ success: false, message: 'Không thể lưu file vào container lưu trữ: ' + err.message });
+  }
+});
+
+// Admin endpoint to inspect & manage files stored in `file-storage` container
+app.get('/api/storage/files', requireAuth, async (req, res) => {
+  try {
+    const data = await listProjectFiles('bio-link');
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.delete('/api/storage/files', requireAuth, async (req, res) => {
+  try {
+    const { relPath } = req.body || {};
+    if (!relPath) return res.status(400).json({ success: false, message: 'Thiếu đường dẫn file.' });
+    const data = await deleteProjectFile(relPath);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
@@ -765,8 +816,19 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Initialize MongoDB connection and start server
+// Initialize MongoDB connection, auto-clone any legacy files to `file-storage` container, and start server
 initMongoConnection().finally(() => {
+  cloneExistingBioFilesToContainer({
+    uploadsDir: UPLOADS_DIR,
+    publicImagesDir: PUBLIC_IMAGES_DIR
+  }).catch(() => {});
+  setTimeout(() => {
+    cloneExistingBioFilesToContainer({
+      uploadsDir: UPLOADS_DIR,
+      publicImagesDir: PUBLIC_IMAGES_DIR
+    }).catch(() => {});
+  }, 10000);
+
   app.listen(PORT, () => {
     console.log(`🌸 Bio Link đang chạy tại:        http://localhost:${PORT}`);
     console.log(`🛍️ Shop Bán Hàng Online (Cute):   http://localhost:${PORT}/shop`);

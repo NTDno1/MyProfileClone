@@ -499,7 +499,8 @@
     const seo = state.seo || {};
     document.getElementById('seo-title').value = seo.pageTitle || '';
     document.getElementById('seo-desc').value = seo.metaDescription || '';
-    document.getElementById('seo-footer').value = seo.footerText || '';
+    const footerInput = document.getElementById('seo-footer');
+    if (footerInput) footerInput.value = 'Made with ♡ by My Love';
     document.getElementById('seo-share-btn').checked = seo.showShareButton !== false;
 
     // 5. Render Dynamic Lists
@@ -988,10 +989,9 @@
     });
   });
 
-  // SEO bindings
+  // SEO bindings (footerText is permanently locked to 'Made with ♡ by My Love')
   bindInput('seo-title', (el) => { state.seo.pageTitle = el.value; });
   bindInput('seo-desc', (el) => { state.seo.metaDescription = el.value; });
-  bindInput('seo-footer', (el) => { state.seo.footerText = el.value; });
   bindInput('seo-share-btn', (el) => { state.seo.showShareButton = el.checked; });
 
   // Password Change

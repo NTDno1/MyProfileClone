@@ -280,11 +280,11 @@
     socialsTop.style.display = hasEnabledSocials && (pos === 'top' || pos === 'both') ? 'flex' : 'none';
     socialsBottom.style.display = hasEnabledSocials && (pos === 'bottom' || pos === 'both') ? 'flex' : 'none';
 
-    // 12. Footer
+    // 12. Footer (Locked permanently to 'Made with ♡ by My Love')
     const footerEl = document.getElementById('bio-footer');
     if (footerEl) {
-      footerEl.textContent = seo.footerText || '';
-      footerEl.style.display = seo.footerText ? 'block' : 'none';
+      footerEl.textContent = 'Made with ♡ by My Love';
+      footerEl.style.display = 'block';
     }
   }
 

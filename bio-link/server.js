@@ -583,6 +583,8 @@ function requireAuth(req, res, next) {
 // Get bio configuration & optionally track real page view
 app.get('/api/config', async (req, res) => {
   const config = loadConfigFromFile();
+  if (!config.seo) config.seo = {};
+  config.seo.footerText = 'Made with ♡ by My Love';
 
   if (req.query.track === '1') {
     config.analytics.totalViews = (Number(config.analytics.totalViews) || 0) + 1;
@@ -922,7 +924,11 @@ app.put('/api/config', requireAuth, async (req, res) => {
         clicks: Number(current.featuredCard?.clicks) || 0
       },
       socials: Array.isArray(incoming.socials) ? incoming.socials : current.socials,
-      seo: { ...current.seo, ...(incoming.seo || {}) },
+      seo: {
+        ...current.seo,
+        ...(incoming.seo || {}),
+        footerText: 'Made with ♡ by My Love'
+      },
       analytics: current.analytics
     };
 

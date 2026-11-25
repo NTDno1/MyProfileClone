@@ -187,9 +187,10 @@ if [ -z "$CHOICE" ]; then
   echo "║  1) Build & chạy CẢ 2 DỰ ÁN cùng lúc (datnguyentien + bio-link)║"
   echo "║  2) Chỉ build dự án datnguyentien (datnguyentien.online :3000) ║"
   echo "║  3) Chỉ build dự án bio-link      (na2hand.com          :3005) ║"
+  echo "║  4) Dọn dẹp file rác & tối ưu dung lượng ổ cứng VPS            ║"
   echo "║  0) Thoát                                                      ║"
   echo "╚════════════════════════════════════════════════════════════════╝"
-  read -rp "👉 Nhập lựa chọn của bạn (1 / 2 / 3): " CHOICE
+  read -rp "👉 Nhập lựa chọn của bạn (1 / 2 / 3 / 4): " CHOICE
 fi
 
 case "$CHOICE" in
@@ -209,18 +210,24 @@ case "$CHOICE" in
     ensure_infra_and_storage
     deploy_biolink
     ;;
+  4)
+    pull_latest_code
+    bash "$REPO_DIR/clean-server.sh"
+    exit 0
+    ;;
   0)
     log_info "Đã hủy thao tác."
     exit 0
     ;;
   *)
-    log_err "Lựa chọn không hợp lệ: '$CHOICE'. Vui lòng chọn 1, 2 hoặc 3."
+    log_err "Lựa chọn không hợp lệ: '$CHOICE'. Vui lòng chọn 1, 2, 3 hoặc 4."
     exit 1
     ;;
 esac
 
-# Dọn dẹp các image trung gian <none> để tiết kiệm dung lượng ổ cứng VPS
+# Dọn dẹp các image trung gian <none> và giữ build cache gọn (<512MB) để chống đầy ổ cứng VPS
 docker image prune -f >/dev/null 2>&1 || true
+docker builder prune -f --keep-storage=512m >/dev/null 2>&1 || true
 
 echo ""
 echo "=================================================================="

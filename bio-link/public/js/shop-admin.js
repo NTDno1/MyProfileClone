@@ -444,6 +444,70 @@
       .join('');
   }
 
+  let editingVariants = [];
+
+  function renderVariantEditorRows() {
+    const box = document.getElementById('pf-variants-list');
+    if (!box) return;
+    if (editingVariants.length === 0) {
+      box.innerHTML = `<div style="font-size:0.76rem; color:var(--muted); padding:4px 2px;">Chưa có phân hệ con riêng (sẽ dùng danh sách Màu sắc / Kích cỡ mặc định).</div>`;
+      return;
+    }
+    box.innerHTML = editingVariants
+      .map(
+        (v, idx) => `
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; background:#fff; padding:6px 8px; border-radius:10px; border:1px solid var(--border);">
+          ${v.image ? `<img src="${escapeHtml(v.image)}" style="width:30px; height:30px; border-radius:6px; object-fit:cover; border:1px solid var(--border);" />` : ''}
+          <input type="text" class="input var-inp-label" data-idx="${idx}" value="${escapeHtml(v.label || '')}" placeholder="Tên mẫu (VD: LS1)" style="width:110px; margin-bottom:0; padding:5px 8px; font-size:0.78rem;" />
+          <input type="text" class="input var-inp-img" data-idx="${idx}" value="${escapeHtml(v.image || '')}" placeholder="URL ảnh riêng của mẫu..." style="flex:1 1 160px; margin-bottom:0; padding:5px 8px; font-size:0.76rem;" />
+          <input type="number" class="input var-inp-price" data-idx="${idx}" value="${Number(v.price || 0)}" placeholder="Giá" style="width:92px; margin-bottom:0; padding:5px 8px; font-size:0.78rem;" title="Giá riêng của phân hệ" />
+          <input type="number" class="input var-inp-stock" data-idx="${idx}" value="${Number(v.stock ?? 1)}" placeholder="Kho" style="width:68px; margin-bottom:0; padding:5px 8px; font-size:0.78rem;" title="Tồn kho (0 = Hết hàng)" />
+          <button type="button" class="btn btn-sm btn-danger var-btn-del" data-idx="${idx}">✕</button>
+        </div>
+      `
+      )
+      .join('');
+
+    box.querySelectorAll('.var-inp-label').forEach((el) => {
+      el.addEventListener('input', () => {
+        editingVariants[Number(el.dataset.idx)].label = el.value;
+      });
+    });
+    box.querySelectorAll('.var-inp-img').forEach((el) => {
+      el.addEventListener('input', () => {
+        editingVariants[Number(el.dataset.idx)].image = el.value.trim();
+      });
+    });
+    box.querySelectorAll('.var-inp-price').forEach((el) => {
+      el.addEventListener('input', () => {
+        editingVariants[Number(el.dataset.idx)].price = Number(el.value || 0);
+      });
+    });
+    box.querySelectorAll('.var-inp-stock').forEach((el) => {
+      el.addEventListener('input', () => {
+        editingVariants[Number(el.dataset.idx)].stock = Math.max(0, Number(el.value || 0));
+      });
+    });
+    box.querySelectorAll('.var-btn-del').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        editingVariants.splice(Number(btn.dataset.idx), 1);
+        renderVariantEditorRows();
+      });
+    });
+  }
+
+  document.getElementById('btn-add-variant-row')?.addEventListener('click', () => {
+    const basePrice = Number(document.getElementById('pf-price')?.value || 110000);
+    editingVariants.push({
+      id: `var_${Date.now()}`,
+      label: `LS${editingVariants.length + 1}`,
+      image: '',
+      price: basePrice,
+      stock: 1
+    });
+    renderVariantEditorRows();
+  });
+
   function resetProductForm() {
     document.getElementById('pf-id').value = '';
     document.getElementById('pf-name').value = '';
@@ -455,6 +519,10 @@
     document.getElementById('pf-source-url').value = '';
     document.getElementById('pf-images').value = '';
     document.getElementById('pf-desc').value = '';
+    const vg = document.getElementById('pf-var-group');
+    if (vg) vg.value = 'Mẫu';
+    editingVariants = [];
+    renderVariantEditorRows();
     document.getElementById('pf-flash').checked = true;
     document.getElementById('pf-enabled').checked = true;
     document.getElementById('prod-form-heading').textContent = '➕ Thêm Sản Phẩm Mới';
@@ -503,6 +571,8 @@
         .map((s) => s.trim())
         .filter(Boolean),
       stock: Number(document.getElementById('pf-stock').value || 0),
+      variantGroupName: document.getElementById('pf-var-group')?.value.trim() || 'Mẫu',
+      variants: editingVariants.filter((v) => String(v.label || '').trim()),
       sourceUrl,
       sourcePlatform: sourceUrl.includes('tiktok') ? 'tiktok' : sourceUrl.includes('shopee') ? 'shopee' : 'manual',
       images: document
@@ -565,9 +635,16 @@
             </td>
             <td>
               <div style="font-weight:700;">${escapeHtml(p.name)}</div>
-              <div style="font-size:0.72rem; color:var(--muted);">
+              <div style="font-size:0.72rem; color:var(--muted); margin-top:2px;">
                 ${p.isFlashSale ? '⚡ DEAL XINH • ' : ''}
                 ${p.enabled === false ? '🙈 Đang ẩn' : '👁️ Đang hiện'}
+                ${
+                  Array.isArray(p.variants) && p.variants.length > 0
+                    ? ` • <span style="color:#15803d; font-weight:700;">🧩 ${p.variants.length} phân hệ (${p.variants.filter((v) => Number(v.stock ?? 1) > 0).length} còn)</span>`
+                    : p.sourcePlatform === 'shopee' || p.sourcePlatform === 'tiktok'
+                    ? ` • <span style="color:#b45309;">⚪ Chưa kéo phân hệ con</span>`
+                    : ''
+                }
               </div>
             </td>
             <td>
@@ -609,6 +686,10 @@
         document.getElementById('pf-source-url').value = prod.sourceUrl || '';
         document.getElementById('pf-images').value = (prod.images || []).join('\n');
         document.getElementById('pf-desc').value = prod.description || '';
+        const vg = document.getElementById('pf-var-group');
+        if (vg) vg.value = prod.variantGroupName || 'Mẫu';
+        editingVariants = Array.isArray(prod.variants) ? JSON.parse(JSON.stringify(prod.variants)) : [];
+        renderVariantEditorRows();
         document.getElementById('pf-flash').checked = !!prod.isFlashSale;
         document.getElementById('pf-enabled').checked = prod.enabled !== false;
         document.getElementById('prod-form-heading').textContent = `✏️ Đang sửa: ${prod.name}`;
@@ -642,7 +723,449 @@
     });
   }
 
-  // --- 3. SINGLE ZERO-INSTALL AUTO SYNC FROM SHOPEE & TIKTOK SHOP ---
+  // --- 3. SINGLE ZERO-INSTALL AUTO SYNC + DEEP INNER VARIANT HARVESTER ---
+  renderVariantEditorRows();
+
+  /* Self-contained in-browser deep harvester that runs directly inside the user's open Shopee / TikTok tab.
+     NOTE: Do not use single-line // comments inside this function so bookmarklet URI encoding stays 100% valid. */
+  function deepHarvesterRuntime(serverUrl, syncKey) {
+    (async function () {
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      if (!/shopee\.|tiktok\./i.test(location.hostname)) {
+        alert('Hãy mở trang Shop Shopee / TikTok Shop (VD: shopee.vn/na2hand3) hoặc trang sản phẩm rồi bấm nút này nhé!');
+        return;
+      }
+
+      const oldHud = document.getElementById('na2hand-deep-hud');
+      if (oldHud) oldHud.remove();
+
+      let stopped = false;
+      const hud = document.createElement('div');
+      hud.id = 'na2hand-deep-hud';
+      hud.style.cssText =
+        'position:fixed;right:18px;bottom:18px;width:350px;z-index:2147483647;background:#fff;border:2px solid #e14b85;border-radius:18px;padding:14px;box-shadow:0 20px 50px rgba(120,25,65,0.3);font-family:sans-serif;color:#3d1a29;font-size:13px;line-height:1.45;';
+      hud.innerHTML =
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+        '<strong style="color:#d63874;font-size:14px;">🎀 NA 2HAND — Kéo Sâu Phân Hệ</strong>' +
+        '<button id="na2h-stop" style="border:1px solid #f3b8d2;background:#fff0f6;color:#be123c;border-radius:8px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;">Đóng ✕</button>' +
+        '</div>' +
+        '<div id="na2h-status" style="margin-bottom:8px;font-weight:600;color:#54283b;">Đang chuẩn bị quét dữ liệu...</div>' +
+        '<div style="height:8px;background:#fce7f3;border-radius:99px;overflow:hidden;margin-bottom:8px;">' +
+        '<div id="na2h-bar" style="height:100%;width:4%;background:linear-gradient(90deg,#f4669d,#d63874);transition:width 0.3s;"></div>' +
+        '</div>' +
+        '<div id="na2h-stage" style="display:none;width:318px;height:195px;overflow:hidden;border-radius:10px;border:1px solid #f3cada;background:#fdf7fa;position:relative;"></div>';
+      document.body.appendChild(hud);
+
+      const statusEl = hud.querySelector('#na2h-status');
+      const barEl = hud.querySelector('#na2h-bar');
+      const stageEl = hud.querySelector('#na2h-stage');
+      let workerWin = null;
+
+      hud.querySelector('#na2h-stop').onclick = function () {
+        stopped = true;
+        if (workerWin && !workerWin.closed) {
+          try { workerWin.close(); } catch (e) {}
+        }
+        hud.remove();
+      };
+
+      const cleanImg = (u) =>
+        String(u || '')
+          .trim()
+          .replace(/&amp;/g, '&')
+          .replace(/@resize[^"'\s?]*/gi, '')
+          .replace(/_tn(?=$|\?)/i, '');
+
+      const cleanUrl = (u) => {
+        const s = String(u || '').trim().replace(/&amp;/g, '&');
+        const m = s.match(/^(https?:\/\/(?:www\.)?shopee\.vn\/[^?#]+-i\.\d+\.\d+)/i);
+        return m ? m[1] : s;
+      };
+
+      const parseVnd = (txt) => {
+        const s = String(txt || '').split('-')[0].replace(/[^\d]/g, '');
+        return s ? parseInt(s, 10) : 0;
+      };
+
+      const readPrice = (doc) => {
+        let best = 0;
+        let bestSize = 0;
+        const nodes = doc.querySelectorAll('div, span');
+        for (let i = 0; i < nodes.length; i++) {
+          const el = nodes[i];
+          if (el.children.length > 1) continue;
+          const t = (el.textContent || '').trim();
+          if (t.length > 28) continue;
+          if (!/(\d{2,3}(?:[.,]\d{3})+)\s*[₫đ]|[₫đ]\s*(\d{2,3}(?:[.,]\d{3})+)/.test(t)) continue;
+          const r = el.getBoundingClientRect();
+          if (r.top < 80 || r.top > 720 || r.width === 0) continue;
+          const cs = doc.defaultView.getComputedStyle(el);
+          if (cs.textDecorationLine && cs.textDecorationLine.indexOf('line-through') > -1) continue;
+          const fs = parseFloat(cs.fontSize || '14');
+          const val = parseVnd(t);
+          if (val >= 1000 && fs >= bestSize) {
+            bestSize = fs;
+            best = val;
+          }
+        }
+        return best || 110000;
+      };
+
+      const readStock = (doc) => {
+        const txt = doc.body ? doc.body.innerText : '';
+        const m = txt.match(/(\d+)\s*(?:pieces?\s*available|sản phẩm có sẵn|sp có sẵn)/i);
+        return m ? parseInt(m[1], 10) : 1;
+      };
+
+      const readMainImg = (doc) => {
+        let bestSrc = '';
+        let bestArea = 0;
+        const imgs = doc.querySelectorAll('img');
+        for (let i = 0; i < imgs.length; i++) {
+          const im = imgs[i];
+          const src = im.currentSrc || im.src || '';
+          if (!/susercontent\.com\/file\/|tiktokcdn|ibyteimg/i.test(src)) continue;
+          const r = im.getBoundingClientRect();
+          if (r.top > 760 || r.width < 180 || r.height < 180) continue;
+          const area = r.width * r.height;
+          if (area > bestArea) {
+            bestArea = area;
+            bestSrc = cleanImg(src);
+          }
+        }
+        return bestSrc;
+      };
+
+      const extractProductDeep = async (doc, pageUrl) => {
+        const plat = pageUrl.indexOf('tiktok') > -1 ? 'tiktok' : 'shopee';
+        let title =
+          (doc.querySelector('[class*="WBVL"] span, h1') &&
+            doc.querySelector('[class*="WBVL"] span, h1').innerText.trim()) ||
+          doc.title.replace(/\s*\|\s*Shopee.*$/i, '').replace(/\s*-\s*TikTok.*$/i, '').trim();
+
+        const basePrice = readPrice(doc);
+        const baseMainImg = readMainImg(doc);
+
+        /* Group option buttons inside the top product brief by parentElement */
+        const groupMap = new Map();
+        const allBtns = doc.querySelectorAll('button');
+        for (let i = 0; i < allBtns.length; i++) {
+          const b = allBtns[i];
+          const r = b.getBoundingClientRect();
+          if (r.top < 110 || r.top > 880 || r.width < 26 || r.height < 22) continue;
+          const lbl = (b.innerText || b.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
+          if (!lbl || lbl.length > 42) continue;
+          if (
+            /^(add to cart|buy now|thêm vào giỏ.*|mua ngay|chat now|chat ngay|view shop|xem shop|follow|theo dõi|report|tố cáo|share|chia sẻ|favorite.*|yêu thích.*|size chart.*|bảng quy đổi.*|\+|-|×|✕)$/i.test(
+              lbl
+            )
+          ) {
+            continue;
+          }
+          const p = b.parentElement;
+          if (!p) continue;
+          if (!groupMap.has(p)) groupMap.set(p, []);
+          groupMap.get(p).push(b);
+        }
+
+        const tiers = [];
+        groupMap.forEach((btns, parentEl) => {
+          if (btns.length === 0) return;
+          const hasImg = btns.some((b) => !!b.querySelector('img'));
+          const hasVarAttr = btns.some(
+            (b) => /variation|sApkZm|sku|option/i.test(b.className || '') || b.hasAttribute('aria-label')
+          );
+          if (!hasImg && !hasVarAttr && btns.length < 2) return;
+          let tierName = 'Mẫu';
+          const row = parentEl.parentElement;
+          if (row && row.firstElementChild && !row.firstElementChild.contains(btns[0])) {
+            const cand = (row.firstElementChild.innerText || '').trim();
+            if (cand && cand.length <= 26) tierName = cand;
+          }
+          tiers.push({ tierName, btns, hasImg });
+        });
+
+        let variantGroupName = 'Mẫu';
+        const variants = [];
+        const sizes = [];
+
+        if (tiers.length > 0) {
+          /* Prefer tier with images (e.g. Mẫu LS1..LS15) or first tier as primary variants */
+          const primaryIdx = tiers.findIndex((t) => t.hasImg) >= 0 ? tiers.findIndex((t) => t.hasImg) : 0;
+          const primary = tiers[primaryIdx];
+          variantGroupName = primary.tierName || 'Mẫu';
+
+          for (let k = 0; k < primary.btns.length; k++) {
+            if (stopped) break;
+            const btn = primary.btns[k];
+            const label = (btn.innerText || btn.getAttribute('aria-label') || 'Mẫu ' + (k + 1))
+              .replace(/\s+/g, ' ')
+              .trim();
+            const imEl = btn.querySelector('img');
+            const btnImg = imEl ? cleanImg(imEl.currentSrc || imEl.src || '') : '';
+            const cs = doc.defaultView.getComputedStyle(btn);
+            const isDisabled =
+              btn.disabled ||
+              btn.getAttribute('aria-disabled') === 'true' ||
+              /disabled|sold-?out/i.test(btn.className || '') ||
+              cs.cursor === 'not-allowed' ||
+              parseFloat(cs.opacity || '1') < 0.56;
+
+            if (isDisabled) {
+              variants.push({
+                id: 'var_' + (k + 1),
+                label,
+                image: btnImg || baseMainImg,
+                price: basePrice,
+                stock: 0
+              });
+            } else {
+              const alreadySel =
+                btn.getAttribute('aria-checked') === 'true' ||
+                /selected|active/i.test(btn.className || '') ||
+                !!btn.querySelector('svg, [class*="tick"]');
+              if (!alreadySel && primary.btns.length <= 40) {
+                try { btn.click(); } catch (e) {}
+                await sleep(130);
+              }
+              const vPrice = readPrice(doc) || basePrice;
+              const vStock = readStock(doc);
+              const activeImg = readMainImg(doc);
+              variants.push({
+                id: 'var_' + (k + 1),
+                label,
+                image: btnImg || activeImg || baseMainImg,
+                price: vPrice,
+                stock: vStock > 0 ? vStock : 1
+              });
+            }
+          }
+
+          tiers.forEach((t, idx) => {
+            if (idx === primaryIdx) return;
+            t.btns.forEach((b) => {
+              const s = (b.innerText || '').trim();
+              if (s && s.length <= 20 && sizes.indexOf(s) === -1) sizes.push(s);
+            });
+          });
+        }
+
+        /* Scroll down slightly to ensure gallery & description are rendered */
+        try { doc.defaultView.scrollTo(0, 750); } catch (e) {}
+        await sleep(220);
+
+        const gallery = [];
+        const addG = (u) => {
+          const cu = cleanImg(u);
+          if (cu && cu.indexOf('http') === 0 && gallery.indexOf(cu) === -1) gallery.push(cu);
+        };
+        if (baseMainImg) addG(baseMainImg);
+        const allImgs = doc.querySelectorAll('img');
+        for (let i = 0; i < allImgs.length && gallery.length < 25; i++) {
+          const im = allImgs[i];
+          const src = im.currentSrc || im.src || '';
+          if (!/susercontent\.com\/file\/|tiktokcdn|ibyteimg/i.test(src)) continue;
+          if (/avatar|icon|logo|badge|emoji/i.test(src)) continue;
+          const r = im.getBoundingClientRect();
+          if (r.width >= 38 && r.height >= 38 && r.top < 1100) addG(src);
+        }
+        variants.forEach((v) => { if (v.image) addG(v.image); });
+
+        let desc = '';
+        const fullTxt = doc.body ? doc.body.innerText : '';
+        const dm = fullTxt.match(
+          /(?:Product Description|Mô tả sản phẩm)\s*\n([\s\S]{15,1600}?)(?:Product Ratings|Đánh giá sản phẩm|From The Same Shop|Sản phẩm khác của Shop|$)/i
+        );
+        if (dm) desc = dm[1].trim();
+
+        const soldM = fullTxt.match(/(\d+)\s*Sold|Đã bán\s*(\d+)/i);
+        const sold = soldM ? parseInt(soldM[1] || soldM[2] || '0', 10) : 0;
+
+        return {
+          name: title,
+          price: basePrice,
+          images: gallery,
+          sizes: sizes.length > 0 ? sizes : undefined,
+          variantGroupName,
+          variants,
+          sold,
+          description: desc,
+          sourcePlatform: plat,
+          sourceUrl: cleanUrl(pageUrl)
+        };
+      };
+
+      const pushToServer = async (prod) => {
+        const endpoint = serverUrl + '/api/shop/import?syncKey=' + encodeURIComponent(syncKey);
+        const r = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+          body: JSON.stringify({ product: prod })
+        });
+        return r.json();
+      };
+
+      const isSingleProductPage = /-i\.\d+\.\d+|\/product\/\d+\/\d+|\/view\/product\//i.test(location.href);
+
+      if (isSingleProductPage) {
+        statusEl.textContent = 'Đang quét toàn bộ các phân hệ của sản phẩm hiện tại...';
+        barEl.style.width = '45%';
+        const prod = await extractProductDeep(document, location.href);
+        barEl.style.width = '85%';
+        await pushToServer(prod);
+        barEl.style.width = '100%';
+        statusEl.innerHTML =
+          '🎉 <span style="color:#15803d;">Đã kéo xong sản phẩm kèm <strong>' +
+          prod.variants.length +
+          ' phân hệ con</strong> về Shop NA 2HAND!</span>';
+        return;
+      }
+
+      /* Shop Listing Mode: Auto-scroll to collect all product URLs, then visit each one deeply */
+      statusEl.textContent = 'Đang cuộn trang Shop để gom toàn bộ danh sách sản phẩm...';
+      for (let y = 500; y <= 2500; y += 650) {
+        window.scrollTo(0, y);
+        await sleep(280);
+      }
+      window.scrollTo(0, 0);
+
+      const urlSet = [];
+      document.querySelectorAll('a[href]').forEach((a) => {
+        const raw = a.getAttribute('href') || '';
+        if (!/-i\.\d+\.\d+|\/product\/\d+\/\d+|\/view\/product\//i.test(raw)) return;
+        try {
+          const abs = cleanUrl(new URL(raw, location.origin).toString());
+          if (urlSet.indexOf(abs) === -1) urlSet.push(abs);
+        } catch (e) {}
+      });
+
+      if (urlSet.length === 0) {
+        statusEl.innerHTML =
+          '<span style="color:#be123c;">Không tìm thấy danh sách sản phẩm trên trang này. Hãy cuộn xuống mục Tất cả sản phẩm của Shop rồi bấm lại nhé!</span>';
+        return;
+      }
+
+      stageEl.style.display = 'block';
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText =
+        'width:1180px;height:760px;border:0;transform:scale(0.27);transform-origin:top left;pointer-events:none;';
+      stageEl.appendChild(iframe);
+
+      let usePopup = false;
+      let okCount = 0;
+      let totalVars = 0;
+
+      for (let i = 0; i < urlSet.length; i++) {
+        if (stopped) break;
+        const itemUrl = urlSet[i];
+        statusEl.textContent =
+          '⏳ Đang mở & quét phân hệ SP (' + (i + 1) + '/' + urlSet.length + ')...';
+        barEl.style.width = Math.round(((i + 0.3) / urlSet.length) * 100) + '%';
+
+        let targetDoc = null;
+        if (!usePopup) {
+          iframe.src = itemUrl;
+          for (let w = 0; w < 18; w++) {
+            await sleep(380);
+            try {
+              const d = iframe.contentDocument;
+              if (
+                d &&
+                d.body &&
+                /add to cart|buy now|thêm vào giỏ|mua ngay|pieces?\s*available|sản phẩm có sẵn/i.test(
+                  d.body.innerText || ''
+                )
+              ) {
+                targetDoc = d;
+                break;
+              }
+            } catch (e) {
+              break;
+            }
+          }
+          if (!targetDoc && i === 0) {
+            usePopup = true;
+            stageEl.style.display = 'none';
+          }
+        }
+
+        if (usePopup) {
+          if (!workerWin || workerWin.closed) {
+            workerWin = window.open(itemUrl, 'na2hand_worker', 'width=1080,height=780,left=40,top=40');
+          } else {
+            workerWin.location.href = itemUrl;
+          }
+          if (!workerWin) {
+            statusEl.innerHTML =
+              '<span style="color:#be123c;">Trình duyệt chặn cửa sổ phụ — hãy cho phép Pop-up trên Shopee rồi bấm lại nhé!</span>';
+            break;
+          }
+          for (let w = 0; w < 22; w++) {
+            await sleep(400);
+            try {
+              const d = workerWin.document;
+              if (
+                d &&
+                d.location.href.indexOf('-i.') > -1 &&
+                d.body &&
+                /add to cart|buy now|thêm vào giỏ|mua ngay|pieces?\s*available|sản phẩm có sẵn/i.test(
+                  d.body.innerText || ''
+                )
+              ) {
+                targetDoc = d;
+                break;
+              }
+            } catch (e) {}
+          }
+        }
+
+        if (targetDoc) {
+          await sleep(420);
+          try {
+            const prod = await extractProductDeep(targetDoc, itemUrl);
+            if (prod && prod.name) {
+              await pushToServer(prod);
+              okCount++;
+              totalVars += (prod.variants || []).length;
+              statusEl.textContent =
+                '✅ (' +
+                (i + 1) +
+                '/' +
+                urlSet.length +
+                ') ' +
+                prod.name.slice(0, 28) +
+                '... (' +
+                (prod.variants || []).length +
+                ' phân hệ)';
+            }
+          } catch (e) {}
+        }
+
+        barEl.style.width = Math.round(((i + 1) / urlSet.length) * 100) + '%';
+        await sleep(300);
+      }
+
+      if (workerWin && !workerWin.closed) {
+        try { workerWin.close(); } catch (e) {}
+      }
+      stageEl.style.display = 'none';
+      if (!stopped) {
+        statusEl.innerHTML =
+          '🎉 <span style="color:#15803d;">HOÀN TẤT! Đã kéo sâu <strong>' +
+          okCount +
+          '/' +
+          urlSet.length +
+          ' sản phẩm</strong> kèm <strong>' +
+          totalVars +
+          ' phân hệ con</strong> về Shop NA 2HAND!</span>';
+      }
+    })();
+  }
+
+  function buildDeepHarvesterScript(serverUrl, syncKey) {
+    return `(${deepHarvesterRuntime.toString()})(${JSON.stringify(serverUrl)},${JSON.stringify(syncKey)});`;
+  }
+
   function setupSyncTools() {
     if (!shopData) return;
     const urlInput = document.getElementById('sync-target-url');
@@ -656,12 +1179,15 @@
     const cardsHtml = items
       .map((p) => {
         const img = (p.images && p.images[0]) || '/media/bio-link/girlfriend-1.jpg';
+        const vCnt = Array.isArray(p.variants) ? p.variants.length : 0;
         return `
           <div style="display:flex; align-items:center; gap:9px; padding:8px 10px; border:1px solid var(--border); border-radius:12px; background:#fff9fb; min-width:0;">
             <img src="${escapeHtml(img)}" style="width:42px; height:42px; border-radius:9px; object-fit:cover; flex-shrink:0; border:1px solid var(--border);" />
             <div style="min-width:0; flex:1;">
               <div style="font-weight:700; font-size:0.78rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(p.name)}</div>
-              <div style="font-weight:800; font-size:0.76rem; color:var(--pri);">${formatVnd(p.price)}</div>
+              <div style="font-weight:800; font-size:0.75rem; color:var(--pri);">
+                ${formatVnd(p.price)} ${vCnt > 0 ? `<span style="color:#15803d;">• 🧩 ${vCnt} phân hệ</span>` : ''}
+              </div>
             </div>
           </div>
         `;
@@ -692,7 +1218,7 @@
   }
 
   async function importCopiedShopContent(targetUrl, pastedHtml, pastedText, logBox) {
-    logBox.innerHTML = '⏳ Đang tự động bóc tách ảnh HD, tên &amp; giá của toàn bộ sản phẩm...';
+    logBox.innerHTML = '⏳ Đang tự động bóc tách ảnh HD, tên, giá &amp; các phân hệ con...';
     try {
       const res = await apiFetch('/api/shop/auto-sync', {
         method: 'POST',
@@ -700,7 +1226,7 @@
       });
       logBox.innerHTML = renderSyncedPreviewHtml(res);
       bindJumpToProductsBtn(logBox);
-      showToast(`Đã kéo về ${res.addedCount || 0} sản phẩm mới! 🎉`);
+      showToast(res.message || 'Đồng bộ thành công! 🎉');
       await loadOverview();
     } catch (err) {
       logBox.innerHTML = `<div style="color:#be123c; font-weight:700;">⚠️ ${escapeHtml(err.message)}</div>`;
@@ -725,6 +1251,23 @@
       el.focus();
     }
   });
+
+  let syncPollTimer = null;
+  function startLiveSyncPolling() {
+    if (syncPollTimer) clearInterval(syncPollTimer);
+    let ticks = 0;
+    syncPollTimer = setInterval(async () => {
+      ticks++;
+      if (ticks > 35) {
+        clearInterval(syncPollTimer);
+        syncPollTimer = null;
+        return;
+      }
+      try {
+        await loadOverview();
+      } catch {}
+    }, 4500);
+  }
 
   document.getElementById('auto-sync-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -761,60 +1304,72 @@
         return;
       }
 
-      // Optional silent check if local browser helper happens to be running (no setup prompt if absent)
-      try {
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 1100);
-        const localRes = await fetch(`${PLAYWRIGHT_AGENT_URL}/extract`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: ctrl.signal,
-          body: JSON.stringify({
-            targetUrl: res.resolvedUrl || targetUrl,
-            serverUrl: window.location.origin,
-            syncKey: shopData?.settings?.syncApiKey || ''
-          })
-        });
-        clearTimeout(t);
-        if (localRes.ok) {
-          const localJson = await localRes.json();
-          if (localJson.success) {
-            logBox.innerHTML = renderSyncedPreviewHtml(localJson);
-            bindJumpToProductsBtn(logBox);
-            showToast('Tự động kéo sản phẩm thành công! 🎉');
-            await loadOverview();
-            return;
-          }
-        }
-      } catch {}
-
       const finalShopUrl = res.resolvedUrl || targetUrl;
       if (urlInput && res.resolvedUrl) urlInput.value = res.resolvedUrl;
+      const syncKey = res.syncKey || shopData?.settings?.syncApiKey || '';
+      const harvesterCode = buildDeepHarvesterScript(window.location.origin, syncKey);
+      const bookmarkletHref = 'javascript:' + encodeURIComponent(harvesterCode);
 
       logBox.innerHTML = `
         <div style="margin-bottom:10px;">
-          <strong style="color:#9d174d;">✨ Đã nhận diện đúng địa chỉ Shop:</strong>
+          <strong style="color:#9d174d;">✨ Đã nhận diện đúng địa chỉ:</strong>
           <a href="${escapeHtml(finalShopUrl)}" target="_blank" rel="noopener" style="color:var(--pri); font-weight:800; word-break:break-all;">${escapeHtml(finalShopUrl)} ↗</a>
         </div>
-        <div style="font-size:0.81rem; color:var(--text); margin-bottom:12px; background:#fff9fb; padding:10px 12px; border-radius:12px; border:1px dashed #f0abc6;">
-          Sàn đang ẩn danh sách sản phẩm với máy chủ đám mây (yêu cầu tab trình duyệt của bạn). Không cần cài bất kỳ phần mềm nào — bạn chỉ cần:
-          <strong>1)</strong> Bấm mở trang Shop bên dưới &rarr; nhấn <strong>Ctrl + A</strong> rồi <strong>Ctrl + C</strong> trên trang Shop &rarr;
-          <strong>2)</strong> Quay lại đây bấm <strong>Hút Ngay Từ Bộ Nhớ Tạm</strong> (hoặc nhấn <strong>Ctrl + V</strong> vào ô dưới) là toàn bộ ảnh gốc, tên &amp; giá tự động bay hết vào cửa hàng!
+
+        <!-- DEEP VARIANT SYNC (Kéo cả sản phẩm ngoài + toàn bộ phân hệ con LS1..LS15 ở trong!) -->
+        <div style="background:linear-gradient(135deg,#fff0f6,#fdf4ff); border:1.5px solid #f0abc6; border-radius:14px; padding:13px 15px; margin-bottom:12px;">
+          <div style="font-weight:800; color:#be185d; font-size:0.88rem; margin-bottom:5px;">
+            🧩 Cách Kéo Đầy Đủ Cả Sản Phẩm Lẫn Toàn Bộ Phân Hệ Ở Trong (Mẫu LS1..LS15, Ảnh Riêng &amp; Kho Từng Mẫu):
+          </div>
+          <div style="font-size:0.79rem; color:var(--text); margin-bottom:10px; line-height:1.55;">
+            • <strong>Cách tự động quét hết cả Shop (Khuyên dùng):</strong> Kéo nút hồng <strong>🪄 Hút Sâu Cả Shop &amp; Phân Hệ</strong> bên dưới thả lên <strong>Thanh Dấu Trang (Bookmarks Bar)</strong> trình duyệt (chỉ làm 1 lần duy nhất). Sau đó mở trang <a href="${escapeHtml(finalShopUrl)}" target="_blank" rel="noopener" style="color:var(--pri);font-weight:700;">Shop Shopee ↗</a> rồi bấm vào dấu trang đó — trình duyệt sẽ <strong>tự mở lần lượt từng sản phẩm trong Shop, tự click lấy đủ mọi phân hệ LS1..LS15, ảnh HD từng mẫu &amp; tồn kho</strong> đẩy thẳng về đây!<br/>
+            • <em>(Hoặc nếu không bật thanh Dấu trang: bấm <strong>Copy Lệnh Quét Sâu</strong> &rarr; sang tab Shopee nhấn <strong>F12 &rarr; Console &rarr; Ctrl+V &rarr; Enter</strong> là chạy tự động y hệt!)</em>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <a href="${escapeHtml(finalShopUrl)}" target="_blank" rel="noopener" class="btn btn-sm">
+              🔗 1. Mở Trang Shop / Sản Phẩm
+            </a>
+            <a id="deep-bookmarklet-btn" href="${bookmarkletHref}" class="btn btn-sm btn-primary" title="Kéo nút này thả lên thanh Dấu Trang (Bookmarks Bar) của trình duyệt">
+              🪄 Hút Sâu Cả Shop &amp; Phân Hệ (Kéo lên Dấu Trang)
+            </a>
+            <button type="button" class="btn btn-sm" id="btn-copy-deep-script" style="border-color:#e14b85; color:#be185d;">
+              ⚡ Copy Lệnh Quét Sâu Hết Phân Hệ (F12 Console)
+            </button>
+          </div>
         </div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-          <a href="${escapeHtml(finalShopUrl)}" target="_blank" rel="noopener" class="btn btn-sm">
-            🔗 1. Mở Trang Shop Trong Tab Mới
-          </a>
-          <button type="button" class="btn btn-sm btn-primary" id="btn-read-clipboard-sync">
-            📋 2. Hút Ngay Toàn Bộ Sản Phẩm Vừa Copy (1 Chạm)
+
+        <!-- QUICK CLIPBOARD PASTE (Works for both Shop listing AND single Product Detail page with LS1..LS15!) -->
+        <div style="font-size:0.79rem; color:var(--muted); margin-bottom:8px;">
+          💡 <strong>Hoặc Copy-Dán nhanh (Ctrl+A &rarr; Ctrl+C):</strong> Nếu bạn nhấn <code>Ctrl+A</code> rồi <code>Ctrl+C</code> ngay trên <strong>trang Chi tiết 1 sản phẩm Shopee</strong> (trang có hiện các nút <code>LS1..LS15</code>), rồi bấm nút dưới đây — hệ thống cũng tự bóc tách luôn cả 15 phân hệ <code>LS1..LS15</code> kèm ảnh HD từng mẫu!
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+          <button type="button" class="btn btn-sm" id="btn-read-clipboard-sync">
+            📋 Hút Ngay Nội Dung Vừa Copy (Ctrl+A, Ctrl+C)
           </button>
         </div>
         <div
           id="paste-drop-zone"
           contenteditable="true"
-          style="min-height:46px; max-height:90px; overflow:hidden; padding:10px 12px; border-radius:12px; border:1.5px dashed #e5b8cc; background:#fdf7fa; color:var(--muted); font-size:0.79rem; outline:none;"
-        >Hoặc click vào ô này rồi nhấn <strong>Ctrl + V</strong> để tự động kéo sản phẩm ngay lập tức...</div>
+          style="min-height:42px; max-height:84px; overflow:hidden; padding:9px 12px; border-radius:12px; border:1.5px dashed #e5b8cc; background:#fdf7fa; color:var(--muted); font-size:0.78rem; outline:none;"
+        >Hoặc click vào ô này rồi nhấn <strong>Ctrl + V</strong> sau khi Ctrl+A, Ctrl+C ở trang Sản phẩm / trang Shop...</div>
       `;
+
+      logBox.querySelector('#deep-bookmarklet-btn')?.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        alert(
+          'Hãy giữ chuột KÉO nút hồng "🪄 Hút Sâu Cả Shop & Phân Hệ" này thả lên Thanh Dấu Trang (Bookmarks Bar - bấm Ctrl+Shift+B để hiện thanh dấu trang) phía trên trình duyệt nhé!\n\nSau đó khi đang mở trang Shop Shopee (shopee.vn/na2hand3) hoặc trang sản phẩm lẻ, bạn chỉ cần bấm 1 click vào dấu trang đó là toàn bộ sản phẩm + các phân hệ LS1..LS15 tự động kéo hết về Shop!'
+        );
+      });
+
+      logBox.querySelector('#btn-copy-deep-script')?.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(harvesterCode);
+          startLiveSyncPolling();
+          showToast('Đã copy lệnh Quét Sâu! Hãy sang tab Shopee nhấn F12 -> Console -> Ctrl+V -> Enter nhé! 🚀');
+        } catch {
+          showToast('Không thể copy tự động, hãy thử kéo nút Dấu Trang bên cạnh nhé!', true);
+        }
+      });
 
       logBox.querySelector('#btn-read-clipboard-sync')?.addEventListener('click', async () => {
         try {
@@ -836,7 +1391,7 @@
             textStr = await navigator.clipboard.readText();
           }
           if (!htmlStr && !textStr) {
-            showToast('Bộ nhớ tạm đang trống — hãy nhấn Ctrl+A rồi Ctrl+C ở trang Shop trước nhé!', true);
+            showToast('Bộ nhớ tạm đang trống — hãy nhấn Ctrl+A rồi Ctrl+C ở trang Shopee trước nhé!', true);
             return;
           }
           await importCopiedShopContent(finalShopUrl, htmlStr, textStr, logBox);
@@ -854,6 +1409,8 @@
         const textStr = ev.clipboardData?.getData('text/plain') || '';
         await importCopiedShopContent(finalShopUrl, htmlStr, textStr, logBox);
       });
+
+      startLiveSyncPolling();
     } catch (err) {
       logBox.innerHTML = `<div style="color:#be123c; font-weight:700;">⚠️ ${escapeHtml(err.message)}</div>`;
       showToast(err.message, true);

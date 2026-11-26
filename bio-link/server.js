@@ -32,6 +32,7 @@ if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 app.use(compression());
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+app.use(express.text({ type: 'text/plain', limit: '25mb' }));
 
 // Stream media files directly from dedicated ultra-lightweight `file-storage` container
 app.get('/media/*', (req, res) => {

@@ -534,6 +534,8 @@
         const img1 = imgs[0];
         const img2 = imgs[1] || '';
         const sizes = Array.isArray(p.sizes) && p.sizes.length > 0 ? p.sizes : ['Freesize'];
+        const pVariants = Array.isArray(p.variants) ? p.variants : [];
+        const inStockVars = pVariants.filter((v) => Number(v.stock ?? 1) > 0);
         const disc =
           p.originalPrice && p.originalPrice > p.price
             ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)
@@ -545,6 +547,39 @@
             : p.sourcePlatform === 'tiktok'
             ? 'TikTok Shop'
             : 'Atelier';
+
+        const quickChipsHtml =
+          inStockVars.length > 0
+            ? inStockVars
+                .slice(0, 4)
+                .map(
+                  (v) =>
+                    `<button type="button" class="quick-size-chip" data-var="${escapeAttr(v.label)}">+ ${escapeHtml(v.label)}</button>`
+                )
+                .join('')
+            : sizes
+                .slice(0, 4)
+                .map(
+                  (sz) =>
+                    `<button type="button" class="quick-size-chip" data-size="${escapeAttr(sz)}">+ ${escapeHtml(sz)}</button>`
+                )
+                .join('');
+
+        const varStripHtml =
+          pVariants.length > 0
+            ? `
+            <div class="card-variant-strip" title="Chạm xem nhanh các phân hệ mẫu">
+              ${pVariants
+                .slice(0, 5)
+                .map(
+                  (v) =>
+                    `<img src="${escapeAttr(v.image || img1)}" alt="${escapeAttr(v.label)}" title="${escapeAttr(v.label)}${Number(v.stock ?? 1) <= 0 ? ' (Hết)' : ''}" class="card-var-swatch" data-preview="${escapeAttr(v.image || img1)}" style="${Number(v.stock ?? 1) <= 0 ? 'opacity:0.4;' : ''}" />`
+                )
+                .join('')}
+              ${pVariants.length > 5 ? `<span class="card-var-more">+${pVariants.length - 5} mẫu</span>` : `<span class="card-var-more">${pVariants.length} mẫu</span>`}
+            </div>
+          `
+            : '';
 
         return `
         <article class="product-card" data-id="${escapeAttr(p.id)}">
@@ -562,15 +597,9 @@
             </button>
 
             <div class="quick-add-overlay">
-              <div class="quick-size-label">Chạm thêm nhanh vào Túi Đồ:</div>
+              <div class="quick-size-label">${inStockVars.length > 0 ? 'Chạm chọn nhanh phân hệ:' : 'Chạm thêm nhanh vào Túi Đồ:'}</div>
               <div class="quick-size-row">
-                ${sizes
-                  .slice(0, 4)
-                  .map(
-                    (sz) =>
-                      `<button type="button" class="quick-size-chip" data-size="${escapeAttr(sz)}">+ ${escapeHtml(sz)}</button>`
-                  )
-                  .join('')}
+                ${quickChipsHtml}
               </div>
             </div>
           </div>
@@ -578,6 +607,7 @@
           <div class="prod-body">
             <div class="prod-cat-kicker">${escapeHtml(getCategoryLabel(p.category))}</div>
             <h3 class="prod-title open-detail">${escapeHtml(p.name)}</h3>
+            ${varStripHtml}
             <div class="prod-meta-row">
               <span>★ ${Number(p.rating || 5).toFixed(1)} (${p.reviewCount || 1})</span>
               <span>Đã bán ${Number(p.sold || 0)}</span>
@@ -587,7 +617,7 @@
                 <span class="prod-price">${vnd(p.price)}</span>
                 ${p.originalPrice > p.price ? `<span class="prod-orig-price">${vnd(p.originalPrice)}</span>` : ''}
               </div>
-              <button type="button" class="prod-detail-btn open-detail">Chọn mẫu</button>
+              <button type="button" class="prod-detail-btn open-detail">${pVariants.length > 0 ? `Chọn mẫu (${pVariants.length})` : 'Chọn mẫu'}</button>
             </div>
           </div>
         </article>
@@ -603,6 +633,22 @@
         el.addEventListener('click', () => openProductModal(id));
       });
 
+      card.querySelectorAll('.card-var-swatch').forEach((sw) => {
+        const swapPreview = (e) => {
+          e.stopPropagation();
+          const pImg = card.querySelector('.prod-img-primary');
+          const src = sw.getAttribute('data-preview');
+          if (pImg && src) pImg.src = src;
+          card.querySelectorAll('.card-var-swatch').forEach((x) => x.classList.remove('active'));
+          sw.classList.add('active');
+        };
+        sw.addEventListener('mouseenter', swapPreview);
+        sw.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openProductModal(id);
+        });
+      });
+
       card.querySelector('.wishlist-heart-btn')?.addEventListener('click', (e) => {
         e.stopPropagation();
         toggleWishlist(id);
@@ -612,6 +658,16 @@
         chip.addEventListener('click', (e) => {
           e.stopPropagation();
           if (!prod) return;
+          const varLbl = chip.getAttribute('data-var');
+          if (varLbl && Array.isArray(prod.variants)) {
+            const vObj = prod.variants.find((v) => v.label === varLbl);
+            const sz = (prod.sizes && prod.sizes[0]) || 'Freesize';
+            const col = `${prod.variantGroupName || 'Mẫu'}: ${varLbl}`;
+            addToCart(prod, sz, col, 1, vObj);
+            animateFlyToBag(vObj?.image || (prod.images && prod.images[0]) || '', card.querySelector('.prod-img-wrap'));
+            showToast(`Đã thêm "${prod.name.slice(0, 22)}..." (${varLbl}) vào Túi Đồ!`);
+            return;
+          }
           const sz = chip.getAttribute('data-size') || 'Freesize';
           const col = (prod.colors && prod.colors[0]) || 'Theo hình';
           addToCart(prod, sz, col, 1);
@@ -736,29 +792,48 @@
     const imgs = Array.isArray(p.images) && p.images.length > 0 ? p.images : ['/media/bio-link/girlfriend-1.jpg'];
     const sizes = Array.isArray(p.sizes) && p.sizes.length > 0 ? p.sizes : ['Freesize'];
     const colors = Array.isArray(p.colors) && p.colors.length > 0 ? p.colors : ['Theo hình'];
+    const pVariants = Array.isArray(p.variants) ? p.variants : [];
+    const hasRichVariants = pVariants.length > 0;
+    const varGroupTitle = p.variantGroupName || 'Mẫu';
+    const firstAvailableVar =
+      pVariants.find((v) => Number(v.stock ?? 1) > 0) || pVariants[0] || null;
+
     const prodReviews = reviews.filter((r) => r.productId === p.id);
     const related = products.filter((x) => x.id !== p.id).slice(0, 3);
 
+    let chosenVariant = firstAvailableVar;
     let chosenSize = sizes[0];
-    let chosenColor = colors[0];
+    let chosenColor = chosenVariant ? `${varGroupTitle}: ${chosenVariant.label}` : colors[0];
     let qty = 1;
     let chosenStars = 5;
     let pendingRevPhotoDataUrl = '';
+
+    const initialMainImg = (chosenVariant && chosenVariant.image) || imgs[0];
+    const initialPrice = (chosenVariant && Number(chosenVariant.price) > 0) ? chosenVariant.price : p.price;
+    const initialStock = chosenVariant ? Number(chosenVariant.stock ?? 1) : Number(p.stock ?? 10);
+
+    // Build clean direct Shopee product/store URL so user can always click to order directly on Shopee
+    const rawSrcUrl = String(p.sourceUrl || '').replace(/&amp;/g, '&').trim();
+    const shopeeDirectUrl =
+      rawSrcUrl && rawSrcUrl.includes('shopee')
+        ? rawSrcUrl
+        : settings.shopeeShopUrl || 'https://s.shopee.vn/8VAfrswNOG';
+    const isExactShopeeItem = Boolean(rawSrcUrl && rawSrcUrl.includes('shopee'));
 
     content.innerHTML = `
       <button type="button" class="modal-close-btn" id="close-prod-modal" aria-label="Đóng">✕</button>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 26px;">
         <div>
           <div style="position:relative; border-radius:20px; overflow:hidden; border:1px solid var(--line); cursor:zoom-in;" id="detail-zoom-trigger">
-            <img id="detail-main-img" src="${escapeAttr(imgs[0])}" alt="${escapeAttr(p.name)}" style="width:100%; aspect-ratio:3/3.7; object-fit:cover; object-position:center 20%; display:block;" />
+            <img id="detail-main-img" src="${escapeAttr(initialMainImg)}" alt="${escapeAttr(p.name)}" style="width:100%; aspect-ratio:3/3.7; object-fit:cover; object-position:center 20%; display:block;" />
             <span style="position:absolute; right:10px; bottom:10px; background:rgba(255,255,255,0.9); font-size:0.68rem; font-weight:700; padding:4px 10px; border-radius:999px;">Chạm phóng to ảnh</span>
           </div>
 
-          <div style="display:flex; gap:8px; margin-top:10px; overflow-x:auto;">
+          <div style="display:flex; gap:8px; margin-top:10px; overflow-x:auto; padding-bottom:4px;">
             ${imgs
               .map(
                 (u, i) => `
-              <img src="${escapeAttr(u)}" class="detail-thumb" data-src="${escapeAttr(u)}" style="width:60px; height:68px; object-fit:cover; border-radius:12px; cursor:pointer; border:2px solid ${i === 0 ? 'var(--cherry)' : 'var(--line)'};" />
+              <img src="${escapeAttr(u)}" class="detail-thumb" data-src="${escapeAttr(u)}" style="width:60px; height:68px; object-fit:cover; border-radius:12px; cursor:pointer; flex-shrink:0; border:2px solid ${u === initialMainImg || (i === 0 && !chosenVariant?.image) ? 'var(--cherry)' : 'var(--line)'};" />
             `
               )
               .join('')}
@@ -770,20 +845,52 @@
           <h2 style="font-family:var(--font-serif); font-size:1.7rem; font-weight:700; line-height:1.2; margin-bottom:8px;">${escapeHtml(p.name)}</h2>
 
           <div style="font-size:0.8rem; color:var(--ink-muted); margin-bottom:14px;">
-            ★ ${Number(p.rating || 5).toFixed(1)} (${p.reviewCount || 1} đánh giá) &nbsp;·&nbsp; Đã bán ${p.sold || 0} &nbsp;·&nbsp; Còn <strong>${p.stock ?? 10}</strong> chiếc
+            ★ ${Number(p.rating || 5).toFixed(1)} (${p.reviewCount || 1} đánh giá) &nbsp;·&nbsp; Đã bán ${p.sold || 0} &nbsp;·&nbsp; Kho: <strong id="detail-stock-val">${initialStock}</strong> chiếc
           </div>
 
           <div style="background:var(--rose-50); border:1px solid var(--rose-200); padding:13px 16px; border-radius:16px; margin-bottom:16px; display:flex; align-items:baseline; gap:10px;">
-            <span class="prod-price" style="font-size:1.5rem;">${vnd(p.price)}</span>
-            ${p.originalPrice > p.price ? `<span class="prod-orig-price" style="font-size:0.9rem;">${vnd(p.originalPrice)}</span>` : ''}
+            <span class="prod-price" id="detail-price-val" style="font-size:1.5rem;">${vnd(initialPrice)}</span>
+            ${p.originalPrice > initialPrice ? `<span class="prod-orig-price" style="font-size:0.9rem;">${vnd(p.originalPrice)}</span>` : ''}
           </div>
 
-          <div style="margin-bottom:13px;">
-            <div class="field-lbl">Màu sắc:</div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;" id="detail-colors">
-              ${colors.map((c, i) => `<button type="button" class="variant-pill ${i === 0 ? 'selected' : ''}" data-val="${escapeAttr(c)}">${escapeHtml(c)}</button>`).join('')}
+          ${
+            hasRichVariants
+              ? `
+            <div style="margin-bottom:15px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:7px;">
+                <span class="field-lbl" style="margin-bottom:0;">${escapeHtml(varGroupTitle)} (${pVariants.length} phân hệ):</span>
+                <span id="selected-var-hint" style="font-size:0.75rem; font-weight:700; color:var(--cherry);">${chosenVariant ? `Đang chọn: ${escapeHtml(chosenVariant.label)}` : ''}</span>
+              </div>
+              <div class="variant-grid-rich" id="detail-rich-variants">
+                ${pVariants
+                  .map((v, idx) => {
+                    const soldOut = Number(v.stock ?? 1) <= 0;
+                    const isSel = chosenVariant && chosenVariant.label === v.label && !soldOut;
+                    return `
+                      <button
+                        type="button"
+                        class="variant-chip-rich ${isSel ? 'selected' : ''} ${soldOut ? 'is-soldout' : ''}"
+                        data-vidx="${idx}"
+                        ${soldOut ? 'disabled title="Mẫu này đã hết hàng"' : ''}
+                      >
+                        ${v.image ? `<img src="${escapeAttr(v.image)}" alt="${escapeAttr(v.label)}" loading="lazy" />` : ''}
+                        <span>${escapeHtml(v.label)}${soldOut ? ' (Hết)' : ''}</span>
+                      </button>
+                    `;
+                  })
+                  .join('')}
+              </div>
             </div>
-          </div>
+          `
+              : `
+            <div style="margin-bottom:13px;">
+              <div class="field-lbl">Màu sắc:</div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;" id="detail-colors">
+                ${colors.map((c, i) => `<button type="button" class="variant-pill ${i === 0 ? 'selected' : ''}" data-val="${escapeAttr(c)}">${escapeHtml(c)}</button>`).join('')}
+              </div>
+            </div>
+          `
+          }
 
           <div style="margin-bottom:15px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
@@ -804,26 +911,42 @@
             </div>
           </div>
 
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:14px;">
-            <button type="button" id="btn-detail-add" class="cta-outline" style="justify-content:center;">
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+            <button type="button" id="btn-detail-add" class="cta-outline" style="justify-content:center;" ${initialStock <= 0 ? 'disabled style="opacity:0.5;cursor:not-allowed;justify-content:center;"' : ''}>
               Thêm vào Túi Đồ
             </button>
-            <button type="button" id="btn-detail-buy-now" class="cta-ribbon shimmer-sheen" style="justify-content:center;">
+            <button type="button" id="btn-detail-buy-now" class="cta-ribbon shimmer-sheen" style="justify-content:center;" ${initialStock <= 0 ? 'disabled style="opacity:0.5;cursor:not-allowed;justify-content:center;"' : ''}>
               Đặt mua ngay
             </button>
           </div>
 
+          <!-- DIRECT SHOPEE ORDER BUTTON -->
+          <a
+            href="${escapeAttr(shopeeDirectUrl)}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn-shopee-direct shimmer-sheen"
+            id="btn-open-shopee-direct"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 7h12l-1 13H7L6 7z"></path>
+              <path d="M9 7V5a3 3 0 0 1 6 0v2"></path>
+              <path d="M10 12.5c0-.7.9-1.2 2-1.2s2 .5 2 1.2-.9 1-2 1.3-2 .6-2 1.3.9 1.2 2 1.2 2-.5 2-1.2"></path>
+            </svg>
+            <span>${isExactShopeeItem ? 'Mở Trực Tiếp Sản Phẩm & Đặt Hàng Trên Shopee' : 'Mở Gian Hàng Shopee Để Đặt Mua'}</span>
+            <span style="font-size:0.86rem;">↗</span>
+          </a>
+
           ${
-            p.sourceUrl
-              ? `<a href="${escapeAttr(p.sourceUrl)}" target="_blank" rel="noopener noreferrer" style="display:block; text-align:center; font-size:0.76rem; color:var(--ink-muted); text-decoration:underline; margin-bottom:14px;">
-                  Xem đồng thời trên ${p.sourcePlatform === 'tiktok' ? 'TikTok Shop' : 'Shopee'} chính thức của tiệm &rarr;
+            rawSrcUrl && rawSrcUrl.includes('tiktok')
+              ? `<a href="${escapeAttr(rawSrcUrl)}" target="_blank" rel="noopener noreferrer" style="display:block; text-align:center; font-size:0.77rem; color:var(--ink-muted); text-decoration:underline; margin-bottom:14px;">
+                  Hoặc mở xem trên TikTok Shop chính thức &rarr;
                 </a>`
               : ''
           }
 
-          <div style="font-size:0.84rem; line-height:1.6; color:var(--ink-soft); background:var(--paper); padding:13px 15px; border-radius:14px; border:1px solid var(--line);">
-            <strong style="color:var(--ink);">Chi tiết chất liệu &amp; phom dáng:</strong><br/>
-            ${escapeHtml(p.description || '')}
+          <div style="font-size:0.84rem; line-height:1.6; color:var(--ink-soft); background:var(--paper); padding:13px 15px; border-radius:14px; border:1px solid var(--line); white-space:pre-line;">
+            <strong style="color:var(--ink);">Chi tiết chất liệu &amp; phom dáng:</strong><br/>${escapeHtml(p.description || '')}
           </div>
         </div>
       </div>
@@ -930,6 +1053,46 @@
       document.getElementById('size-modal')?.classList.add('open');
     });
 
+    content.querySelectorAll('#detail-rich-variants .variant-chip-rich').forEach((btn) => {
+      btn.onclick = () => {
+        const idx = Number(btn.getAttribute('data-vidx'));
+        const v = pVariants[idx];
+        if (!v || Number(v.stock ?? 1) <= 0) return;
+
+        chosenVariant = v;
+        chosenColor = `${varGroupTitle}: ${v.label}`;
+        content.querySelectorAll('#detail-rich-variants .variant-chip-rich').forEach((x) => x.classList.remove('selected'));
+        btn.classList.add('selected');
+
+        const hintEl = content.querySelector('#selected-var-hint');
+        if (hintEl) hintEl.textContent = `Đang chọn: ${v.label}`;
+
+        if (v.image) {
+          content.querySelector('#detail-main-img').src = v.image;
+          content.querySelectorAll('.detail-thumb').forEach((th) => {
+            th.style.borderColor = th.getAttribute('data-src') === v.image ? 'var(--cherry)' : 'var(--line)';
+          });
+        }
+        const priceEl = content.querySelector('#detail-price-val');
+        if (priceEl && Number(v.price) > 0) priceEl.textContent = vnd(v.price);
+
+        const stockEl = content.querySelector('#detail-stock-val');
+        if (stockEl) stockEl.textContent = Number(v.stock ?? 1);
+      };
+    });
+
+    content.querySelector('#btn-open-shopee-direct')?.addEventListener('click', () => {
+      fetch('/api/click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: `shopee_${p.id}`,
+          title: `Mở Shopee: ${p.name.slice(0, 45)}`,
+          url: shopeeDirectUrl
+        })
+      }).catch(() => {});
+    });
+
     content.querySelectorAll('#detail-colors .variant-pill').forEach((b) => {
       b.onclick = () => {
         content.querySelectorAll('#detail-colors .variant-pill').forEach((x) => x.classList.remove('selected'));
@@ -951,19 +1114,26 @@
       content.querySelector('#qty-val').textContent = qty;
     };
     content.querySelector('#qty-plus').onclick = () => {
-      qty = Math.min(20, qty + 1);
+      const maxStock = chosenVariant ? Math.max(1, Number(chosenVariant.stock ?? 1)) : 20;
+      qty = Math.min(maxStock, qty + 1);
       content.querySelector('#qty-val').textContent = qty;
     };
 
     content.querySelector('#btn-detail-add').onclick = (e) => {
-      addToCart(p, chosenSize, chosenColor, qty);
-      animateFlyToBag(imgs[0], e.currentTarget);
+      if (chosenVariant && Number(chosenVariant.stock ?? 1) <= 0) {
+        return showToast('Mẫu này đã hết hàng, nàng chọn mẫu khác nhé!');
+      }
+      addToCart(p, chosenSize, chosenColor, qty, chosenVariant);
+      animateFlyToBag((chosenVariant && chosenVariant.image) || imgs[0], e.currentTarget);
       modal.classList.remove('open');
       openCartDrawer();
     };
 
     content.querySelector('#btn-detail-buy-now').onclick = () => {
-      addToCart(p, chosenSize, chosenColor, qty);
+      if (chosenVariant && Number(chosenVariant.stock ?? 1) <= 0) {
+        return showToast('Mẫu này đã hết hàng, nàng chọn mẫu khác nhé!');
+      }
+      addToCart(p, chosenSize, chosenColor, qty, chosenVariant);
       modal.classList.remove('open');
       openCheckoutModal();
     };
@@ -1105,20 +1275,28 @@
   });
 
   // --- 11. SHOPPING BAG, SCENTED TISSUE & COUPON ---
-  function addToCart(prod, size, color, qty) {
+  function addToCart(prod, size, color, qty, variantObj = null) {
     const key = `${prod.id}__${size}__${color}`;
+    const unitPrice = variantObj && Number(variantObj.price) > 0 ? Number(variantObj.price) : Number(prod.price);
+    const unitImg =
+      (variantObj && variantObj.image) ||
+      (prod.images && prod.images[0]) ||
+      '/media/bio-link/girlfriend-1.jpg';
     const found = cart.find((it) => it.key === key);
     if (found) {
       found.qty += qty;
+      found.price = unitPrice;
+      found.image = unitImg;
     } else {
       cart.push({
         key,
         productId: prod.id,
         name: prod.name,
-        price: Number(prod.price),
-        image: (prod.images && prod.images[0]) || '/media/bio-link/girlfriend-1.jpg',
+        price: unitPrice,
+        image: unitImg,
         size,
         color,
+        variantLabel: variantObj ? variantObj.label : '',
         qty
       });
     }

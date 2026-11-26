@@ -877,7 +877,7 @@
           <h2 style="font-family:var(--font-serif); font-size:1.7rem; font-weight:700; line-height:1.2; margin-bottom:8px;">${escapeHtml(p.name)}</h2>
 
           <div style="font-size:0.8rem; color:var(--ink-muted); margin-bottom:14px;">
-            ★ ${Number(p.rating || 5).toFixed(1)} (${p.reviewCount || 1} đánh giá) &nbsp;·&nbsp; Đã bán ${p.sold || 0} &nbsp;·&nbsp; Kho: <strong id="detail-stock-val">${initialStock}</strong> chiếc
+            ★ ${Number(p.rating || 5).toFixed(1)} (${p.reviewCount || 1} đánh giá) &nbsp;·&nbsp; Đã bán ${p.sold || 0} &nbsp;·&nbsp; Tổng kho: <strong id="detail-total-stock-val">${Number(p.stock ?? 0)}</strong> chiếc
           </div>
 
           <div style="background:var(--rose-50); border:1px solid var(--rose-200); padding:13px 16px; border-radius:16px; margin-bottom:16px; display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:8px;">
@@ -898,7 +898,7 @@
             <div style="margin-bottom:15px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:7px; flex-wrap:wrap; gap:4px;">
                 <span class="field-lbl" style="margin-bottom:0;">${escapeHtml(varGroupTitle)} (${pVariants.length} phân hệ):</span>
-                <span id="selected-var-hint" style="font-size:0.75rem; font-weight:700; color:var(--cherry);">${chosenVariant ? `Đang chọn: ${escapeHtml(chosenVariant.label)} • ${vnd(chosenVariant.price || initialPrice)}` : ''}</span>
+                <span id="selected-var-hint" style="font-size:0.75rem; font-weight:700; color:var(--cherry);">${chosenVariant ? `Đang chọn: ${escapeHtml(chosenVariant.label)} • ${vnd(chosenVariant.price || initialPrice)} • Kho: ${Number(chosenVariant.stock ?? 0)}` : ''}</span>
               </div>
               <div class="variant-grid-rich" id="detail-rich-variants">
                 ${pVariants
@@ -950,13 +950,14 @@
               : ''
           }
 
-          <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px;">
             <span class="field-lbl" style="margin-bottom:0;">Số lượng:</span>
             <div style="display:inline-flex; align-items:center; border:1px solid var(--line-strong); border-radius:10px; overflow:hidden;">
               <button type="button" id="qty-minus" style="padding:6px 13px; border:none; background:var(--paper); font-weight:800; cursor:pointer;">−</button>
               <span id="qty-val" style="padding:0 14px; font-weight:700;">1</span>
               <button type="button" id="qty-plus" style="padding:6px 13px; border:none; background:var(--paper); font-weight:800; cursor:pointer;">+</button>
             </div>
+            <span id="detail-stock-val" style="font-size:0.78rem; color:var(--ink-muted); font-weight:600;">${initialStock > 0 ? `${initialStock} sản phẩm có sẵn` : 'Hết hàng'}</span>
           </div>
 
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
@@ -1118,7 +1119,8 @@
 
         const hintEl = content.querySelector('#selected-var-hint');
         const activePrice = Number(v.price) > 0 ? Number(v.price) : Number(p.price);
-        if (hintEl) hintEl.textContent = `Đang chọn: ${v.label} • ${vnd(activePrice)}`;
+        const vStockNum = Math.max(0, Number(v.stock ?? 0));
+        if (hintEl) hintEl.textContent = `Đang chọn: ${v.label} • ${vnd(activePrice)} • Kho: ${vStockNum}`;
 
         if (v.image) {
           content.querySelector('#detail-main-img').src = v.image;
@@ -1130,7 +1132,13 @@
         if (priceEl) priceEl.textContent = vnd(activePrice);
 
         const stockEl = content.querySelector('#detail-stock-val');
-        if (stockEl) stockEl.textContent = Number(v.stock ?? 1);
+        if (stockEl) stockEl.textContent = vStockNum > 0 ? `${vStockNum} sản phẩm có sẵn` : 'Hết hàng';
+
+        if (vStockNum > 0 && qty > vStockNum) {
+          qty = vStockNum;
+          const qEl = content.querySelector('#qty-val');
+          if (qEl) qEl.textContent = qty;
+        }
       };
     });
 
@@ -1167,7 +1175,9 @@
       content.querySelector('#qty-val').textContent = qty;
     };
     content.querySelector('#qty-plus').onclick = () => {
-      const maxStock = chosenVariant ? Math.max(1, Number(chosenVariant.stock ?? 1)) : 20;
+      const maxStock = chosenVariant
+        ? Math.max(1, Number(chosenVariant.stock ?? 1))
+        : Math.max(1, Number(p.stock ?? 1));
       qty = Math.min(maxStock, qty + 1);
       content.querySelector('#qty-val').textContent = qty;
     };

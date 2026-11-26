@@ -776,11 +776,11 @@
                 ${sizesInfo}
                 ${
                   Array.isArray(p.variants) && p.variants.length > 0
-                    ? ` • <span style="color:#15803d; font-weight:700;">🧩 ${p.variants.length} phân hệ (${p.variants.filter((v) => Number(v.stock ?? 1) > 0).length} còn)</span>`
+                    ? ` • <span style="color:#15803d; font-weight:700;">🧩 ${p.variants.length} phân hệ (${p.variants.filter((v) => Number(v.stock ?? 0) > 0).length} mẫu còn • tổng kho ${p.stock ?? 0})</span>`
                     : cloned && p.deepSynced && hasRealImg
-                    ? ` • <span style="color:#0f766e; font-weight:700;">✅ 1 mẫu đơn (Sàn không chia phân hệ)</span>`
+                    ? ` • <span style="color:#0f766e; font-weight:700;">✅ 1 mẫu đơn (Kho: ${p.stock ?? 0})</span>`
                     : cloned
-                    ? ` • <span style="color:#b45309; font-weight:700;">⚠️ Chưa quét phân hệ (Dấu trang cũ)</span>`
+                    ? ` • <span style="color:#b45309; font-weight:700;">⚠️ Chưa quét đủ tồn kho &amp; phân hệ</span>`
                     : ''
                 }
               </div>
@@ -952,7 +952,7 @@
           <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:14px; padding:10px 12px;">
             <div style="font-size:0.73rem; color:#9a3412; font-weight:700;">🧡 2. Hàng Shopee</div>
             <div style="font-size:1.25rem; font-weight:800; color:#c2410c;">${c.shopee || 0} SP</div>
-            <div style="font-size:0.7rem; color:#9a3412;">✅ Đạt chuẩn V3: ${sh.deepSyncedComplete || 0}/${c.shopee || 0} SP</div>
+            <div style="font-size:0.7rem; color:#9a3412;">✅ Chuẩn V5 (Đủ kho thật): ${sh.deepSyncedComplete || 0}/${c.shopee || 0} SP</div>
           </div>
           <div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:14px; padding:10px 12px;">
             <div style="font-size:0.73rem; color:#6b21a8; font-weight:700;">🎵 3. Hàng TikTok</div>
@@ -970,8 +970,8 @@
           <div style="font-weight:800; color:${needResyncCount > 0 ? '#be123c' : '#15803d'}; margin-bottom:6px;">
             ${
               needResyncCount > 0
-                ? `⚠️ Có ${needResyncCount}/${c.shopee || 0} SP Shopee đang lưu từ Dấu trang cũ (chưa có cơ chế Tự quét lại V3 nên thiếu ảnh/phân hệ).`
-                : `✅ Tuyệt vời! Toàn bộ ${c.shopee || 0}/${c.shopee || 0} sản phẩm Shopee trên Web đã quét đủ 100% ảnh gốc, phân hệ &amp; khớp chuẩn 1-1!`
+                ? `⚠️ Có ${needResyncCount}/${c.shopee || 0} SP Shopee cần bấm chạy lại 1 lượt Đồng Bộ 1-1 (V5) để cập nhật chính xác 100% số lượng tồn kho thật của từng phân hệ (thay vì kho ảo 10 của Shopee).`
+                : `✅ Tuyệt vời! Toàn bộ ${c.shopee || 0}/${c.shopee || 0} sản phẩm Shopee trên Web đã đồng bộ chuẩn 1-1 cả ảnh gốc, phân hệ lẫn số lượng tồn kho thật!`
             }
           </div>
           <div style="font-size:0.78rem; color:var(--text); line-height:1.55; margin-bottom:10px;">

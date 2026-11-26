@@ -986,6 +986,9 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       const hasRealImg = Array.isArray(p.images) && p.images.some((u) => /^https?:\/\//i.test(u));
       const slugInfo = extractSlugFromShopeeUrl(p.sourceUrl || '');
       const slugOk = !slugInfo || titleMatchesSlugWords(p.name, slugInfo.prettyTitle);
+      const hasMaskedStock10 =
+        (Array.isArray(p.variants) && p.variants.length >= 3 && p.variants.every((v) => Number(v.stock) === 10)) ||
+        (!p.deepSynced && Number(p.stock) === 150);
       byTag[bucket].push({
         id: p.id,
         name: p.name,
@@ -995,8 +998,9 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         price: p.price,
         maxPrice: p.maxPrice || p.price,
         sizes: p.sizes || [],
+        stock: p.stock ?? 0,
         variantCount: Array.isArray(p.variants) ? p.variants.length : 0,
-        deepSynced: Boolean(p.deepSynced),
+        deepSynced: Boolean(p.deepSynced) && !hasMaskedStock10,
         isLocked: Boolean(p.isLocked),
         enabled: p.enabled !== false,
         hasRealImg,
@@ -1649,12 +1653,14 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
                       return String(md.name || '').split(',')[0].trim() === String(optName).trim();
                     })
                   : [];
-                const inStockModels = matchingModels.filter((md) => Number(md.stock ?? 0) > 0);
+                /* Shopee masks positive md.stock to 10 in client JSON; only trust <= 0 as sold-out! */
+                const isOptSoldOut =
+                  matchingModels.length > 0 &&
+                  matchingModels.every((md) => md.stock !== undefined && Number(md.stock) <= 0);
+                const inStockModels = matchingModels.filter((md) => Number(md.stock ?? 1) > 0);
                 const chosenPool = inStockModels.length > 0 ? inStockModels : matchingModels;
                 const modelPrices = chosenPool.map((md) => parsePriceVnd(md.price)).filter((p) => p > 0);
-                const totalOptStock = matchingModels.length > 0
-                  ? matchingModels.reduce((acc, md) => acc + Math.max(0, Number(md.stock ?? 0)), 0)
-                  : 1;
+                const totalOptStock = isOptSoldOut ? 0 : 1;
                 ssrVariants.push({
                   id: `var_${idx + 1}`,
                   label: optName,
@@ -2000,12 +2006,12 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
           ? JSON.parse(req.body)
           : req.body || {};
 
-      // Block stale legacy bookmarklets (< V4) when called via browser syncKey so old static bookmarks NEVER corrupt data!
+      // Block stale legacy bookmarklets (< V5) when called via browser syncKey so old static bookmarks NEVER corrupt stock/data!
       const isExternalSyncKey = Boolean(req.query?.syncKey || req.headers['x-sync-key']);
-      if (isExternalSyncKey && Number(bodyObj.harvesterVersion || 0) < 4) {
+      if (isExternalSyncKey && Number(bodyObj.harvesterVersion || 0) < 5) {
         return res.status(409).json({
           success: false,
-          message: 'Dấu trang cũ! Vui lòng xóa dấu trang cũ trên trình duyệt và dùng nút Đồng bộ 1-1 mới trên /shop-admin.'
+          message: 'Dấu trang cũ! Vui lòng xóa dấu trang cũ trên trình duyệt và dùng nút Đồng bộ 1-1 (V5) mới trên /shop-admin.'
         });
       }
 

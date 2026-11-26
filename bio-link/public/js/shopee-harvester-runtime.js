@@ -8,7 +8,7 @@
    ========================================================================== */
 window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
   (async function () {
-    const HARVESTER_VERSION = 4;
+    const HARVESTER_VERSION = 5;
     const MAX_ATTEMPTS_PER_ITEM = 4;
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -27,14 +27,14 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       'position:fixed;right:18px;bottom:18px;width:390px;z-index:2147483647;background:#fff;border:2px solid #e14b85;border-radius:20px;padding:16px;box-shadow:0 20px 50px rgba(120,25,65,0.34);font-family:sans-serif;color:#3d1a29;font-size:13px;line-height:1.5;';
     hud.innerHTML =
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
-      '<strong style="color:#d63874;font-size:14px;">🎀 NA 2HAND — Đồng Bộ 1-1 (V3 Tự Quét Lại)</strong>' +
+      '<strong style="color:#d63874;font-size:14px;">🎀 NA 2HAND — Đồng Bộ 1-1 (V5 Chuẩn Kho Sàn)</strong>' +
       '<button id="na2h-stop" style="border:1px solid #f3b8d2;background:#fff0f6;color:#be123c;border-radius:8px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;">Dừng ✕</button>' +
       '</div>' +
-      '<div id="na2h-status" style="margin-bottom:8px;font-weight:700;color:#54283b;">Đang khởi tạo trình đồng bộ 1-1 (V3)...</div>' +
+      '<div id="na2h-status" style="margin-bottom:8px;font-weight:700;color:#54283b;">Đang khởi tạo trình đồng bộ 1-1 (V5)...</div>' +
       '<div style="height:8px;background:#fce7f3;border-radius:99px;overflow:hidden;margin-bottom:6px;">' +
       '<div id="na2h-bar" style="height:100%;width:4%;background:linear-gradient(90deg,#f4669d,#d63874);transition:width 0.3s;"></div>' +
       '</div>' +
-      '<div id="na2h-sub" style="font-size:11.5px;color:#8c6274;">Tự động kiểm tra ảnh gốc, phân hệ, giá &amp; tự quét lại nếu lỗi</div>';
+      '<div id="na2h-sub" style="font-size:11.5px;color:#8c6274;">Đồng bộ chính xác 1-1 ảnh gốc, phân hệ, giá &amp; tồn kho thật từng mẫu</div>';
     document.body.appendChild(hud);
 
     const statusEl = hud.querySelector('#na2h-status');
@@ -154,7 +154,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
         if (el.children.length > 2) continue;
         const tx = (el.textContent || '').trim();
         if (
-          /^(Product Specifications|Chi tiết sản phẩm|Product Ratings|Đánh giá sản phẩm|From The Same Shop|Sản phẩm khác của Shop)$/i.test(
+          /^(Product Specifications|Chi tiết sản phẩm|Product Ratings|Đánh giá sản phẩm|From The Same Shop|(?:Các\s+)?Sản phẩm khác của Shop)$/i.test(
             tx
           )
         ) {
@@ -209,16 +209,41 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       };
     };
 
-    const readStock = (doc) => {
+    /* Read exact stock shown right next to Quantity / Số lượng (returns number >= 0, or null if not yet rendered) */
+    const readQtyStock = (doc) => {
       const txt = doc.body ? doc.body.innerText : '';
-      const m = txt.match(/(\d+)\s*(?:pieces?\s*available|sản phẩm có sẵn|sp có sẵn)/i);
-      return m ? parseInt(m[1], 10) : 1;
+      const m1 = txt.match(/(\d[\d.,]*)\s*(?:pieces?\s*available|sản phẩm có sẵn|sp có sẵn)/i);
+      if (m1) return parseInt(m1[1].replace(/[^\d]/g, ''), 10);
+      const m2 = txt.match(/còn\s*(\d[\d.,]*)\s*(?:sản phẩm|sp)\b/i);
+      if (m2) return parseInt(m2[1].replace(/[^\d]/g, ''), 10);
+      if (/\b(?:out of stock|sold out|đã hết hàng|tạm hết hàng|hết hàng)\b/i.test(txt)) return 0;
+      return null;
     };
 
-    const hasStockRendered = (doc) => {
+    /* Read authoritative total product stock from Product Specifications / Chi tiết sản phẩm -> Stock / Kho */
+    const readSpecStock = (doc) => {
+      const els = doc.querySelectorAll('label, div, span, th, td');
+      for (let i = 0; i < els.length; i++) {
+        const el = els[i];
+        if (el.children.length > 1) continue;
+        const tx = (el.textContent || '').trim();
+        if (/^(?:stock|kho|kho hàng|số lượng kho)$/i.test(tx)) {
+          const sib = el.nextElementSibling || (el.parentElement && el.parentElement.nextElementSibling);
+          if (sib) {
+            const valTx = (sib.textContent || '').trim();
+            if (/^\d[\d.,]*$/.test(valTx)) {
+              return parseInt(valTx.replace(/[^\d]/g, ''), 10);
+            }
+          }
+        }
+      }
       const txt = doc.body ? doc.body.innerText : '';
-      return /\d+\s*(?:pieces?\s*available|sản phẩm có sẵn|sp có sẵn)|out of stock|hết hàng/i.test(txt);
+      const m = txt.match(/(?:^|\n)\s*(?:Stock|Kho hàng|Kho)\s*[\n:\t ]+\s*(\d{1,6})(?:\s*\n|$)/i);
+      if (m) return parseInt(m[1], 10);
+      return null;
     };
+
+    const hasStockRendered = (doc) => readQtyStock(doc) !== null || readSpecStock(doc) !== null;
 
     const readMainImg = (doc) => {
       const win = doc.defaultView || window;
@@ -348,29 +373,109 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
     };
 
     const NON_VARIATION_BTN_RE =
-      /^(add to cart|buy now|thêm vào giỏ.*|mua ngay|chat now|chat ngay|view shop|xem shop|follow|theo dõi|report|tố cáo|share|chia sẻ|favorite.*|yêu thích.*|size chart.*|bảng quy đổi.*|decrease|increase|giảm|tăng|\+|-|×|✕|.*change of mind.*|.*đổi trả.*|.*an tâm mua sắm.*|.*free ship.*|.*miễn phí vận chuyển.*|.*vận chuyển.*|.*shipping.*|.*spaylater.*|.*trả góp.*|.*voucher.*|.*mã giảm giá.*)$/i;
+      /^(add to cart|buy now|thêm vào giỏ.*|mua ngay|mua với voucher.*|chat now|chat ngay|view shop|xem shop|follow|theo dõi|report|tố cáo|share|chia sẻ|favorite.*|yêu thích.*|size chart.*|bảng quy đổi.*|decrease|increase|giảm|tăng|\+|-|×|✕|.*change of mind.*|.*trả hàng.*|.*đổi trả.*|.*an tâm mua sắm.*|.*bảo hiểm.*|.*chính hãng.*|.*đồng kiểm.*|.*free ship.*|.*miễn phí vận chuyển.*|.*vận chuyển.*|.*shipping.*|.*spaylater.*|.*trả góp.*|.*voucher.*|.*mã giảm giá.*)$/i;
+
+    const isBtnDisabled = (b, win) => {
+      if (!b) return false;
+      const cs = win.getComputedStyle(b);
+      if (
+        b.disabled ||
+        b.getAttribute('aria-disabled') === 'true' ||
+        /disabled|sold-?out/i.test(b.className || '') ||
+        cs.cursor === 'not-allowed' ||
+        parseFloat(cs.opacity || '1') < 0.65
+      ) {
+        return true;
+      }
+      const rgbaM = String(cs.color || '').match(/rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([0-9.]+)\s*\)/i);
+      if (rgbaM && parseFloat(rgbaM[1]) < 0.42) return true;
+      return false;
+    };
+
+    const isBtnSelected = (b, win) => {
+      if (!b) return false;
+      if (
+        b.getAttribute('aria-checked') === 'true' ||
+        b.getAttribute('aria-pressed') === 'true' ||
+        /selected|active/i.test(b.className || '') ||
+        !!b.querySelector('svg, [class*="tick"]')
+      ) {
+        return true;
+      }
+      const cs = win.getComputedStyle(b);
+      const rgbM = String(cs.borderTopColor || cs.borderColor || '').match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+      if (rgbM && Number(rgbM[1]) > 195 && Number(rgbM[2]) < 125 && Number(rgbM[3]) < 110) {
+        return true;
+      }
+      return false;
+    };
+
+    const clickAndSelectBtn = async (btn, win) => {
+      if (!btn) return false;
+      if (isBtnSelected(btn, win)) return true;
+      try {
+        btn.scrollIntoView({ block: 'nearest' });
+      } catch (e) {}
+      try {
+        ['pointerdown', 'mousedown', 'pointerup', 'mouseup'].forEach((evType) => {
+          btn.dispatchEvent(new MouseEvent(evType, { bubbles: true, cancelable: true, view: win }));
+        });
+        btn.click();
+      } catch (e) {
+        try { btn.click(); } catch (e2) {}
+      }
+      for (let p = 0; p < 6; p++) {
+        await sleep(85);
+        if (isBtnSelected(btn, win)) return true;
+      }
+      return isBtnSelected(btn, win);
+    };
+
+    const findDomVariationTiers = (doc, win) => {
+      const sy = win.scrollY || 0;
+      const specY = getSpecCutoffDocY(doc);
+      const groupMap = new Map();
+      const allBtns = doc.querySelectorAll('button');
+      for (let i = 0; i < allBtns.length; i++) {
+        const b = allBtns[i];
+        const r = b.getBoundingClientRect();
+        const docY = r.top + sy;
+        if (docY < 80 || docY > specY) continue;
+        const lbl = (b.innerText || '').replace(/\s+/g, ' ').trim();
+        if (!lbl || lbl.length > 44 || NON_VARIATION_BTN_RE.test(lbl)) continue;
+        const ariaLbl = (b.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
+        if (ariaLbl && NON_VARIATION_BTN_RE.test(ariaLbl)) continue;
+        const p = b.parentElement;
+        if (!p) continue;
+        if (!groupMap.has(p)) groupMap.set(p, []);
+        groupMap.get(p).push(b);
+      }
+      const tiers = [];
+      groupMap.forEach((btns, parentEl) => {
+        if (btns.length === 0) return;
+        const hasImg = btns.some((b) => Boolean(getBtnRealThumb(b)));
+        const hasMatchingAria = btns.some((b) => {
+          const al = (b.getAttribute('aria-label') || '').trim();
+          const it = (b.innerText || '').trim();
+          return al && it && al === it;
+        });
+        const hasVarAttr = btns.some((b) => /variation|sApkZm|sku|option/i.test(b.className || ''));
+        if (!hasImg && !hasMatchingAria && !hasVarAttr && btns.length < 2) return;
+        let tierName = 'Mẫu';
+        const row = parentEl.parentElement;
+        if (row && row.firstElementChild && !row.firstElementChild.contains(btns[0])) {
+          const cand = (row.firstElementChild.innerText || '').trim();
+          if (cand && cand.length <= 26) tierName = cand;
+        }
+        tiers.push({ tierName, btns, hasImg });
+      });
+      return tiers;
+    };
 
     /* Detect whether the Shopee PDP visibly displays variation rows in DOM */
     const pageShowsVariationUI = (doc) => {
       const win = doc.defaultView || window;
-      const sy = win.scrollY || 0;
-      const specY = getSpecCutoffDocY(doc);
-      const btns = doc.querySelectorAll('button');
-      const parentCounts = new Map();
-      for (let i = 0; i < btns.length; i++) {
-        const b = btns[i];
-        const dy = b.getBoundingClientRect().top + sy;
-        if (dy < 80 || dy > specY) continue;
-        const it = (b.innerText || '').replace(/\s+/g, ' ').trim();
-        if (!it || it.length > 44 || NON_VARIATION_BTN_RE.test(it)) continue;
-        if (getBtnRealThumb(b)) return true;
-        const al = (b.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
-        if (al && al === it && b.parentElement) {
-          parentCounts.set(b.parentElement, (parentCounts.get(b.parentElement) || 0) + 1);
-          if (parentCounts.get(b.parentElement) >= 2) return true;
-        }
-      }
-      return false;
+      return findDomVariationTiers(doc, win).length > 0;
     };
 
     const extractProductDeep = async (doc, expectedUrl, expectedKey) => {
@@ -387,12 +492,25 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       const plat = finalUrl.indexOf('tiktok') > -1 ? 'tiktok' : 'shopee';
       const platformItemId = toPlatformItemId(plat, finalKey);
 
-      let title = readCleanDocTitle(doc, finalUrl);
+      let title = readCleanDocTitle(doc);
       const domPrice = readPriceInfo(doc);
       let basePrice = domPrice.min || 0;
       let maxPrice = domPrice.max || basePrice;
       let origPrice = domPrice.orig || 0;
       let baseMainImg = readMainImg(doc);
+
+      /* Read real DOM stock BEFORE clicking any buttons (unselected Quantity = total stock!) + Specifications -> Stock/Kho */
+      const domTiersInitial = findDomVariationTiers(doc, win);
+      const anyPreSelected = domTiersInitial.some((t) => t.btns.some((b) => isBtnSelected(b, win)));
+      const unselectedQtyStock = !anyPreSelected ? readQtyStock(doc) : null;
+
+      try { win.scrollTo(0, 620); } catch (e) {}
+      await sleep(200);
+      const specStock = readSpecStock(doc);
+      try { win.scrollTo(0, 0); } catch (e) {}
+      await sleep(160);
+
+      const authoritativeTotalStock = specStock !== null ? specStock : unselectedQtyStock;
 
       let variantGroupName = 'Mẫu';
       const variants = [];
@@ -419,183 +537,154 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
         if (Array.isArray(reactItem.tier_variations) && reactItem.tier_variations.length > 0) {
           const tv0 = reactItem.tier_variations[0];
           const tv1 = reactItem.tier_variations[1];
-          const opts0 = Array.isArray(tv0.options) ? tv0.options.filter(Boolean) : [];
+          const opts0 = Array.isArray(tv0.options) ? tv0.options.map((o) => String(o || '').trim()).filter(Boolean) : [];
           const imgs0 = Array.isArray(tv0.images) ? tv0.images : [];
           if (opts0.length > 0) {
-            const isSingleSizeOnly =
-              !tv1 &&
-              imgs0.filter(Boolean).length === 0 &&
-              /^(size|kích cỡ|kích thước)$/i.test(String(tv0.name || '').trim()) &&
-              basePrice === maxPrice;
-
-            if (isSingleSizeOnly) {
-              sizes = opts0.map((s) => String(s || '').trim()).filter(Boolean);
-            } else {
-              variantGroupName = String(tv0.name || 'Mẫu').trim();
-              if (tv1 && Array.isArray(tv1.options)) {
-                sizes = tv1.options.map((s) => String(s || '').trim()).filter(Boolean);
-              }
-              opts0.forEach((optLabel, idx) => {
-                const matching = (reactItem.models || []).filter((md) => {
-                  if (Array.isArray(md.tier_index)) return md.tier_index[0] === idx;
-                  if (md.extinfo && Array.isArray(md.extinfo.tier_index)) return md.extinfo.tier_index[0] === idx;
-                  return String(md.name || '').split(',')[0].trim() === String(optLabel || '').trim();
-                });
-                const inStockM = matching.filter((md) => Number(md.stock ?? md.normal_stock ?? 0) > 0);
-                const pool = inStockM.length > 0 ? inStockM : matching;
-                const mPrices = pool.map((md) => normApiPrice(md.price)).filter((p) => p > 0);
-                const optStock =
-                  matching.length > 0
-                    ? matching.reduce((acc, md) => acc + Math.max(0, Number(md.stock ?? md.normal_stock ?? 0)), 0)
-                    : 1;
-                const rawImg = imgs0[idx] || '';
-                const fullVarImg = rawImg
-                  ? String(rawImg).indexOf('http') === 0
-                    ? cleanImg(rawImg)
-                    : 'https://down-vn.img.susercontent.com/file/' + rawImg
-                  : baseMainImg;
-                variants.push({
-                  id: 'var_' + (idx + 1),
-                  label: String(optLabel || '').trim(),
-                  image: fullVarImg,
-                  price: mPrices.length > 0 ? Math.min.apply(null, mPrices) : basePrice,
-                  stock: optStock
-                });
-              });
+            variantGroupName = String(tv0.name || 'Mẫu').trim();
+            if (tv1 && Array.isArray(tv1.options)) {
+              sizes = tv1.options.map((s) => String(s || '').trim()).filter(Boolean);
             }
+            opts0.forEach((optLabel, idx) => {
+              const matching = (reactItem.models || []).filter((md) => {
+                if (Array.isArray(md.tier_index)) return md.tier_index[0] === idx;
+                if (md.extinfo && Array.isArray(md.extinfo.tier_index)) return md.extinfo.tier_index[0] === idx;
+                return String(md.name || '').split(',')[0].trim() === optLabel;
+              });
+              /* Note: Shopee masks positive md.stock to 10 in React state, so ONLY trust md.stock === 0 for sold-out check! */
+              const reactSoldOut =
+                matching.length > 0 &&
+                matching.every((md) => md.stock !== undefined && Number(md.stock) <= 0);
+              const inStockM = matching.filter((md) => Number(md.stock ?? md.normal_stock ?? 1) > 0);
+              const pool = inStockM.length > 0 ? inStockM : matching;
+              const mPrices = pool.map((md) => normApiPrice(md.price)).filter((p) => p > 0);
+              const rawImg = imgs0[idx] || '';
+              const fullVarImg = rawImg
+                ? String(rawImg).indexOf('http') === 0
+                  ? cleanImg(rawImg)
+                  : 'https://down-vn.img.susercontent.com/file/' + rawImg
+                : baseMainImg;
+              variants.push({
+                id: 'var_' + (idx + 1),
+                label: optLabel,
+                image: fullVarImg,
+                price: mPrices.length > 0 ? Math.min.apply(null, mPrices) : basePrice,
+                stock: reactSoldOut ? 0 : 1,
+                _reactSoldOut: reactSoldOut
+              });
+            });
+            usedReactModels = true;
           }
-          usedReactModels = true;
         }
       }
 
-      /* DOM Variation Clicker when React Fiber didn't expose tier_variations */
-      if (!usedReactModels) {
-        const sy = win.scrollY || 0;
-        const specY = getSpecCutoffDocY(doc);
-        const groupMap = new Map();
-        const allBtns = doc.querySelectorAll('button');
-        for (let i = 0; i < allBtns.length; i++) {
-          const b = allBtns[i];
-          const r = b.getBoundingClientRect();
-          const docY = r.top + sy;
-          if (docY < 80 || docY > specY) continue;
-          const lbl = (b.innerText || '').replace(/\s+/g, ' ').trim();
-          if (!lbl || lbl.length > 44) continue;
-          if (NON_VARIATION_BTN_RE.test(lbl)) {
-            continue;
-          }
-          const ariaLbl = (b.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
-          if (ariaLbl && NON_VARIATION_BTN_RE.test(ariaLbl)) continue;
-          const p = b.parentElement;
-          if (!p) continue;
-          if (!groupMap.has(p)) groupMap.set(p, []);
-          groupMap.get(p).push(b);
-        }
+      /* Measure 100% REAL unmasked per-variant stock (and prices/images if !usedReactModels) from live DOM buttons! */
+      const domTiers = findDomVariationTiers(doc, win);
+      if (domTiers.length > 0) {
+        const primaryIdx = domTiers.findIndex((t) => t.hasImg) >= 0 ? domTiers.findIndex((t) => t.hasImg) : 0;
+        const primary = domTiers[primaryIdx];
 
-        const tiers = [];
-        groupMap.forEach((btns, parentEl) => {
-          if (btns.length === 0) return;
-          const hasImg = btns.some((b) => Boolean(getBtnRealThumb(b)));
-          const hasMatchingAria = btns.some((b) => {
-            const al = (b.getAttribute('aria-label') || '').trim();
-            const it = (b.innerText || '').trim();
-            return al && it && al === it;
-          });
-          const hasVarAttr = btns.some((b) => /variation|sApkZm|sku|option/i.test(b.className || ''));
-          if (!hasImg && !hasMatchingAria && !hasVarAttr && btns.length < 2) return;
-          let tierName = 'Mẫu';
-          const row = parentEl.parentElement;
-          if (row && row.firstElementChild && !row.firstElementChild.contains(btns[0])) {
-            const cand = (row.firstElementChild.innerText || '').trim();
-            if (cand && cand.length <= 26) tierName = cand;
-          }
-          tiers.push({ tierName, btns, hasImg });
-        });
-
-        if (tiers.length > 0) {
-          const primaryIdx = tiers.findIndex((t) => t.hasImg) >= 0 ? tiers.findIndex((t) => t.hasImg) : 0;
-          const primary = tiers[primaryIdx];
-          try { primary.btns[0].scrollIntoView({ block: 'center' }); } catch (e) {}
-          await sleep(160);
-
-          const isBtnDisabled = (b) => {
-            const cs = win.getComputedStyle(b);
-            return (
-              b.disabled ||
-              b.getAttribute('aria-disabled') === 'true' ||
-              /disabled|sold-?out/i.test(b.className || '') ||
-              cs.cursor === 'not-allowed' ||
-              parseFloat(cs.opacity || '1') < 0.56
-            );
-          };
-          const isBtnSelected = (b) =>
-            b.getAttribute('aria-checked') === 'true' ||
-            /selected|active/i.test(b.className || '') ||
-            !!b.querySelector('svg, [class*="tick"]');
-
-          tiers.forEach((t, idx) => {
-            if (idx === primaryIdx) return;
+        /* If secondary tier exists (e.g. Size), record sizes & ensure one active secondary option is selected */
+        domTiers.forEach((t, idx) => {
+          if (idx === primaryIdx) return;
+          if (sizes.length === 0) {
             t.btns.forEach((b) => {
               const s = (b.innerText || '').replace(/\s+/g, ' ').trim();
               if (s && s.length <= 20 && sizes.indexOf(s) === -1) sizes.push(s);
             });
-            if (!t.btns.some(isBtnSelected)) {
-              const firstActive = t.btns.find((b) => !isBtnDisabled(b));
-              if (firstActive) {
-                try { firstActive.click(); } catch (e) {}
-              }
+          }
+          if (!t.btns.some((b) => isBtnSelected(b, win))) {
+            const firstActive = t.btns.find((b) => !isBtnDisabled(b, win));
+            if (firstActive) {
+              try { firstActive.click(); } catch (e) {}
             }
-          });
-          if (tiers.length > 1) await sleep(240);
+          }
+        });
+        if (domTiers.length > 1) await sleep(200);
 
-          const isSingleSizeOnlyDom =
-            tiers.length === 1 &&
-            !primary.hasImg &&
-            /^(size|kích cỡ|kích thước)$/i.test(primary.tierName || '') &&
-            basePrice === maxPrice;
-
-          if (isSingleSizeOnlyDom) {
-            primary.btns.forEach((b) => {
-              const s = (b.innerText || '').replace(/\s+/g, ' ').trim();
-              if (s && s.length <= 20 && sizes.indexOf(s) === -1) sizes.push(s);
+        if (!usedReactModels) {
+          variantGroupName = primary.tierName || 'Mẫu';
+          for (let k = 0; k < primary.btns.length; k++) {
+            const btn = primary.btns[k];
+            const label = (btn.innerText || 'Mẫu ' + (k + 1)).replace(/\s+/g, ' ').trim();
+            const btnImg = getBtnRealThumb(btn);
+            const dis = isBtnDisabled(btn, win);
+            variants.push({
+              id: 'var_' + (k + 1),
+              label,
+              image: btnImg || baseMainImg,
+              price: basePrice || 110000,
+              stock: dis ? 0 : 1,
+              _domBtn: btn,
+              _isSoldOut: dis
             });
-          } else {
-            variantGroupName = primary.tierName || 'Mẫu';
-            for (let k = 0; k < primary.btns.length; k++) {
-              if (stopped) break;
-              const btn = primary.btns[k];
-              const label = (btn.innerText || 'Mẫu ' + (k + 1)).replace(/\s+/g, ' ').trim();
-              const btnImg = getBtnRealThumb(btn);
+          }
+        } else {
+          /* Map each React variant to its exact DOM button to read real disabled state & real click stock! */
+          variants.forEach((v, idx) => {
+            const normLbl = v.label.toLowerCase();
+            const matchedBtn =
+              primary.btns.find((b) => (b.innerText || '').replace(/\s+/g, ' ').trim().toLowerCase() === normLbl) ||
+              primary.btns[idx] ||
+              null;
+            v._domBtn = matchedBtn;
+            const dis = Boolean(v._reactSoldOut || (matchedBtn && isBtnDisabled(matchedBtn, win)));
+            v._isSoldOut = dis;
+            if (dis) v.stock = 0;
+          });
+        }
 
-              if (isBtnDisabled(btn)) {
-                variants.push({
-                  id: 'var_' + (k + 1),
-                  label,
-                  image: btnImg || baseMainImg,
-                  price: basePrice || 110000,
-                  stock: 0
-                });
-              } else {
-                if (!isBtnSelected(btn) && primary.btns.length <= 50) {
-                  try { btn.click(); } catch (e) {}
-                  await sleep(270);
-                }
-                const pNow = readPriceInfo(doc);
-                const vPrice = pNow.min || basePrice;
-                const vStock = readStock(doc);
-                const activeImg = readMainImg(doc);
-                variants.push({
-                  id: 'var_' + (k + 1),
-                  label,
-                  image: btnImg || activeImg || baseMainImg,
-                  price: vPrice,
-                  stock: vStock > 0 ? vStock : 1
-                });
-              }
+        const activeVars = variants.filter((v) => !v._isSoldOut);
+        if (activeVars.length === 0) {
+          variants.forEach((v) => { v.stock = 0; });
+        } else if (
+          usedReactModels &&
+          sizes.length === 0 &&
+          authoritativeTotalStock !== null &&
+          authoritativeTotalStock === activeVars.length
+        ) {
+          /* Exact 1-of-1 theorem: K active buttons summing to K total stock => every active variant has stock = 1! */
+          activeVars.forEach((v) => { v.stock = 1; });
+        } else {
+          let confirmedSelections = 0;
+          for (let a = 0; a < activeVars.length && !stopped; a++) {
+            const v = activeVars[a];
+            if (!v._domBtn || primary.btns.length > 60) continue;
+            const selOk = await clickAndSelectBtn(v._domBtn, win);
+            if (!usedReactModels) {
+              const pNow = readPriceInfo(doc);
+              if (pNow.min > 0) v.price = pNow.min;
+              const activeImg = readMainImg(doc);
+              if (!getBtnRealThumb(v._domBtn) && activeImg) v.image = activeImg;
+            }
+            const qNow = readQtyStock(doc);
+            if (selOk && qNow !== null) {
+              v.stock = qNow;
+              confirmedSelections++;
+            } else if (authoritativeTotalStock !== null && authoritativeTotalStock === activeVars.length) {
+              v.stock = 1;
+            }
+          }
+
+          /* Guard against unselected total-stock leak (N^2) if background tab throttled clicks */
+          if (authoritativeTotalStock !== null && sizes.length === 0 && activeVars.length > 0) {
+            const curSum = activeVars.reduce((s, v) => s + Math.max(0, Number(v.stock || 0)), 0);
+            if (confirmedSelections === 0 || (activeVars.length > 1 && curSum === authoritativeTotalStock * activeVars.length)) {
+              const baseShare = Math.floor(authoritativeTotalStock / activeVars.length);
+              const rem = authoritativeTotalStock % activeVars.length;
+              activeVars.forEach((v, idx) => {
+                v.stock = baseShare + (idx < rem ? 1 : 0);
+              });
             }
           }
         }
       }
+
+      /* Clean temporary internal properties on variants */
+      variants.forEach((v) => {
+        delete v._reactSoldOut;
+        delete v._domBtn;
+        delete v._isSoldOut;
+      });
 
       if (variants.length > 0) {
         const inStockPrices = variants.filter((v) => v.stock > 0 && v.price > 0).map((v) => v.price);
@@ -640,11 +729,14 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       try { win.scrollTo(0, 750); } catch (e) {}
       await sleep(220);
 
+      const lateSpecStock = readSpecStock(doc);
+      const finalAuthTotalStock = lateSpecStock !== null ? lateSpecStock : authoritativeTotalStock;
+
       let desc = reactItem && reactItem.description ? String(reactItem.description).trim() : '';
       const fullTxt = doc.body ? doc.body.innerText : '';
       if (!desc) {
         const dm = fullTxt.match(
-          /(?:Product Description|Mô tả sản phẩm)\s*\n([\s\S]{12,1800}?)(?:Product Ratings|Đánh giá sản phẩm|From The Same Shop|Sản phẩm khác của Shop|You May Also Like|Có thể bạn cũng thích|CUSTOMER SERVICE|CHĂM SÓC KHÁCH HÀNG|$)/i
+          /(?:Product Description|Mô tả sản phẩm)\s*\n([\s\S]{12,1800}?)(?:Product Ratings|Đánh giá sản phẩm|From The Same Shop|(?:Các\s+)?Sản phẩm khác của Shop|You May Also Like|Có thể bạn cũng thích|CUSTOMER SERVICE|CHĂM SÓC KHÁCH HÀNG|$)/i
         );
         if (dm) desc = dm[1].trim();
       }
@@ -652,7 +744,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
         .replace(/(?:CUSTOMER SERVICE|CHĂM SÓC KHÁCH HÀNG)[\s\S]*$/i, '')
         .trim();
 
-      const soldM = fullTxt.match(/(\d+)\s*Sold|Đã bán\s*(\d+)/i);
+      const soldM = fullTxt.match(/(\d+)\s*(?:Sold|Đã bán)|Đã bán\s*(\d+)/i);
       const sold =
         reactItem && (reactItem.historical_sold !== undefined || reactItem.sold !== undefined)
           ? Number(reactItem.historical_sold || reactItem.sold || 0)
@@ -660,12 +752,17 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
           ? parseInt(soldM[1] || soldM[2] || '0', 10)
           : 0;
 
-      const stockTotal =
-        variants.length > 0
-          ? variants.reduce((s, v) => s + Math.max(0, Number(v.stock || 0)), 0)
-          : reactItem && (reactItem.stock !== undefined || reactItem.normal_stock !== undefined)
-          ? Number(reactItem.stock ?? reactItem.normal_stock ?? 1)
-          : readStock(doc);
+      /* Compute 100% REAL total stock (NEVER use Shopee's masked reactItem.stock = 10*N!) */
+      let stockTotal = 0;
+      if (variants.length > 0) {
+        const varSum = variants.reduce((s, v) => s + Math.max(0, Number(v.stock || 0)), 0);
+        stockTotal = sizes.length > 0 && finalAuthTotalStock !== null ? finalAuthTotalStock : varSum;
+      } else if (finalAuthTotalStock !== null) {
+        stockTotal = finalAuthTotalStock;
+      } else {
+        const fallbackQty = readQtyStock(doc);
+        stockTotal = fallbackQty !== null ? fallbackQty : 1;
+      }
 
       const expectedHasVars = reactItem
         ? (Array.isArray(reactItem.models) && reactItem.models.length > 1) ||
@@ -674,6 +771,8 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
               (tv) => Array.isArray(tv && tv.options) && tv.options.filter(Boolean).length > 1
             ))
         : pageShowsVariationUI(doc) || maxPrice > basePrice;
+
+      const realStockVerified = finalAuthTotalStock !== null || readQtyStock(doc) !== null || domTiers.length > 0;
 
       return {
         harvesterVersion: HARVESTER_VERSION,
@@ -693,11 +792,12 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
         description: desc,
         sourcePlatform: plat,
         sourceUrl: finalUrl,
-        _expectedHasVars: expectedHasVars
+        _expectedHasVars: expectedHasVars,
+        _realStockVerified: realStockVerified
       };
     };
 
-    /* Completeness & 1-to-1 URL Identity check: returns null if 100% verified, or error reason to trigger automatic retry! */
+    /* Completeness & 1-to-1 URL Identity + Real Stock check: returns null if 100% verified, or error reason to trigger automatic retry! */
     const checkScanDefect = (prod) => {
       if (!prod || !prod.name || prod.name.length < 4) return 'Chưa đọc được tên SP';
       const urlSlugTitle = slugTitleFromUrl(prod.sourceUrl || '');
@@ -707,6 +807,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       const realImgs = (prod.images || []).filter(isRealPlatformImg);
       if (realImgs.length === 0) return 'Chưa tải xong ảnh gốc Shopee';
       if (!prod.price || prod.price < 1000) return 'Chưa tải xong giá bán';
+      if (!prod._realStockVerified) return 'Chưa tải xong số lượng tồn kho thật trên Shopee';
       if (prod._expectedHasVars && (!prod.variants || prod.variants.length === 0) && (!prod.sizes || prod.sizes.length === 0)) {
         return 'Trang có phân hệ nhưng chưa đọc đủ nút phân hệ';
       }
@@ -728,6 +829,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
     const pushToServer = async (prod) => {
       const payloadProd = Object.assign({}, prod);
       delete payloadProd._expectedHasVars;
+      delete payloadProd._realStockVerified;
       const r = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=UTF-8' },

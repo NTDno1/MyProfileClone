@@ -156,16 +156,40 @@
       });
 
       const sizes = [];
-      const colors = [];
+      const variants = [];
       document.querySelectorAll('button, [role="radio"]').forEach((b) => {
         const txt = (b.innerText || '').trim();
-        if (!txt || txt.length > 24 || b.children.length > 2) return;
-        if (/^(XS|S|M|L|XL|XXL|Freesize|Free\s*size|\d{2}kg)$/i.test(txt)) {
+        if (!txt || txt.length > 36 || b.children.length > 3) return;
+        if (/\b(scrape|1688|sourcing|aliprice|thêm vào giỏ|mua ngay|chat ngay|xem shop|theo dõi|chia sẻ|yêu thích)\b/i.test(txt)) return;
+        const thumbImg = b.querySelector('img');
+        const thumbSrc = thumbImg ? (thumbImg.currentSrc || thumbImg.src || '').replace(/_tn$/, '') : '';
+        const hasVarAttr = /product-variation|variation|sApkZm/i.test(b.className || '') || Boolean(thumbSrc && thumbSrc.includes('susercontent.com/file/'));
+        if (!hasVarAttr) return;
+        const dis = b.disabled || b.getAttribute('aria-disabled') === 'true' || /disabled|sold-?out/i.test(b.className || '');
+        if (!thumbSrc && /^(XXS|XS|S|M|L|XL|XXL|2XL|3XL|Freesize)$/i.test(txt)) {
           if (!sizes.includes(txt)) sizes.push(txt);
-        } else if (/^(Trắng|Đen|Hồng|Kem|Be|Đỏ|Xanh|Nâu|Xám|Vàng|Tím)/i.test(txt)) {
-          if (!colors.includes(txt)) colors.push(txt);
+        } else {
+          variants.push({
+            id: `var_${variants.length + 1}`,
+            label: txt,
+            image: thumbSrc || images[0] || '',
+            price: price || 110000,
+            stock: dis ? 0 : 1
+          });
         }
       });
+
+      const bodyTxt = document.body ? document.body.innerText : '';
+      const stockMatch = bodyTxt.match(/(\d[\d.,]*)\s*(?:pieces?\s*available|sản phẩm có sẵn|sp có sẵn)/i);
+      const authTotalStock = stockMatch ? parseInt(stockMatch[1].replace(/[^\d]/g, ''), 10) : null;
+      const activeVars = variants.filter((v) => v.stock > 0);
+      if (authTotalStock !== null && activeVars.length > 0 && authTotalStock !== activeVars.length) {
+        const bShare = Math.floor(authTotalStock / activeVars.length);
+        const bRem = authTotalStock % activeVars.length;
+        activeVars.forEach((v, idx) => {
+          v.stock = bShare + (idx < bRem ? 1 : 0);
+        });
+      }
 
       const description =
         ldProduct?.description ||
@@ -174,13 +198,17 @@
 
       if (name) {
         products.push({
+          harvesterVersion: 6,
+          stockVerifiedV6: true,
           name,
-          price: price || 199000,
+          price: price || 110000,
           originalPrice: originalPrice || 0,
-          images: images.slice(0, 8),
-          sizes: sizes.length ? sizes : ['S', 'M', 'L'],
-          colors: colors.length ? colors : ['Theo hình'],
-          description: String(description).slice(0, 900),
+          images: images.filter((u) => !/vn-11134226-|vn-11134233-/i.test(u)).slice(0, 20),
+          sizes,
+          variants,
+          stock: variants.length > 0 ? variants.reduce((s, v) => s + v.stock, 0) : authTotalStock ?? 1,
+          authoritativeTotalStock: authTotalStock,
+          description: String(description).slice(0, 1200),
           sourcePlatform: platform,
           sourceUrl: url,
           isFlashSale: true
@@ -207,11 +235,12 @@
         if (titleLine) {
           seen.add(href);
           products.push({
+            harvesterVersion: 6,
             name: titleLine.slice(0, 140),
-            price: priceMatch ? priceMatch[1] : 189000,
+            price: priceMatch ? priceMatch[1] : 110000,
             images: imgSrc && imgSrc.startsWith('http') ? [imgSrc] : [],
-            sizes: ['S', 'M', 'L'],
-            colors: ['Theo hình'],
+            sizes: [],
+            colors: [],
             sourcePlatform: platform,
             sourceUrl: href,
             isFlashSale: true

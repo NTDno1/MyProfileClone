@@ -8,7 +8,7 @@
    ========================================================================== */
 window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
   (async function () {
-    const HARVESTER_VERSION = 5;
+    const HARVESTER_VERSION = 6;
     const MAX_ATTEMPTS_PER_ITEM = 4;
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -27,10 +27,10 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       'position:fixed;right:18px;bottom:18px;width:390px;z-index:2147483647;background:#fff;border:2px solid #e14b85;border-radius:20px;padding:16px;box-shadow:0 20px 50px rgba(120,25,65,0.34);font-family:sans-serif;color:#3d1a29;font-size:13px;line-height:1.5;';
     hud.innerHTML =
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
-      '<strong style="color:#d63874;font-size:14px;">🎀 NA 2HAND — Đồng Bộ 1-1 (V5 Chuẩn Kho Sàn)</strong>' +
+      '<strong style="color:#d63874;font-size:14px;">🎀 NA 2HAND — Đồng Bộ 1-1 (V6 Chuẩn Kho Từng Phân Hệ)</strong>' +
       '<button id="na2h-stop" style="border:1px solid #f3b8d2;background:#fff0f6;color:#be123c;border-radius:8px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;">Dừng ✕</button>' +
       '</div>' +
-      '<div id="na2h-status" style="margin-bottom:8px;font-weight:700;color:#54283b;">Đang khởi tạo trình đồng bộ 1-1 (V5)...</div>' +
+      '<div id="na2h-status" style="margin-bottom:8px;font-weight:700;color:#54283b;">Đang khởi tạo trình đồng bộ 1-1 (V6)...</div>' +
       '<div style="height:8px;background:#fce7f3;border-radius:99px;overflow:hidden;margin-bottom:6px;">' +
       '<div id="na2h-bar" style="height:100%;width:4%;background:linear-gradient(90deg,#f4669d,#d63874);transition:width 0.3s;"></div>' +
       '</div>' +
@@ -57,8 +57,14 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
         .replace(/@resize[^"'\s?]*/gi, '')
         .replace(/_tn(?=$|\?)/i, '');
 
+    const isAvatarOrBadgeImg = (u) =>
+      /(?:^|\/|-)(?:[a-z]{2}-)?(?:11134216|11134226|11134233)-|avatar|icon|logo|badge|emoji|sprite/i.test(
+        String(u || '')
+      );
+
     const isRealPlatformImg = (u) =>
-      /^https?:\/\/[^"'\s]*(?:susercontent\.com\/file\/|tiktokcdn|ibyteimg)/i.test(String(u || ''));
+      /^https?:\/\/[^"'\s]*(?:susercontent\.com\/file\/|tiktokcdn|ibyteimg)/i.test(String(u || '')) &&
+      !isAvatarOrBadgeImg(u);
 
     const cleanUrl = (u) => {
       const s = String(u || '').trim().replace(/&amp;/g, '&');
@@ -209,14 +215,35 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       };
     };
 
-    /* Read exact stock shown right next to Quantity / Số lượng (returns number >= 0, or null if not yet rendered) */
+    /* Read exact stock shown right next to Quantity / Số lượng inside the PDP buy-box (returns number >= 0, or null if not yet rendered) */
     const readQtyStock = (doc) => {
+      const win = doc.defaultView || window;
+      const sy = win.scrollY || 0;
+      const specY = getSpecCutoffDocY(doc);
+      const nodes = doc.querySelectorAll('div, span, p');
+      let buyBoxSoldOut = false;
+      for (let i = 0; i < nodes.length; i++) {
+        const el = nodes[i];
+        if (el.children.length > 3) continue;
+        const r = el.getBoundingClientRect();
+        const docY = r.top + sy;
+        if (docY < 75 || docY > specY || r.width === 0 || r.height === 0) continue;
+        const tx = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        if (!tx || tx.length > 80) continue;
+        const m1 = tx.match(/(\d[\d.,]*)\s*(?:pieces?\s*available|sản phẩm có sẵn|sp có sẵn)/i);
+        if (m1) return parseInt(m1[1].replace(/[^\d]/g, ''), 10);
+        const m2 = tx.match(/(?:còn lại|còn)\s*(\d[\d.,]*)\s*(?:sản phẩm|sp|chiếc)\b/i);
+        if (m2) return parseInt(m2[1].replace(/[^\d]/g, ''), 10);
+        if (/^(?:out of stock|sold out|đã hết hàng|tạm hết hàng|sản phẩm đã hết hàng)$/i.test(tx)) {
+          buyBoxSoldOut = true;
+        }
+      }
       const txt = doc.body ? doc.body.innerText : '';
-      const m1 = txt.match(/(\d[\d.,]*)\s*(?:pieces?\s*available|sản phẩm có sẵn|sp có sẵn)/i);
-      if (m1) return parseInt(m1[1].replace(/[^\d]/g, ''), 10);
-      const m2 = txt.match(/còn\s*(\d[\d.,]*)\s*(?:sản phẩm|sp)\b/i);
-      if (m2) return parseInt(m2[1].replace(/[^\d]/g, ''), 10);
-      if (/\b(?:out of stock|sold out|đã hết hàng|tạm hết hàng|hết hàng)\b/i.test(txt)) return 0;
+      const fm1 = txt.match(/(\d[\d.,]*)\s*(?:pieces?\s*available|sản phẩm có sẵn|sp có sẵn)/i);
+      if (fm1) return parseInt(fm1[1].replace(/[^\d]/g, ''), 10);
+      const fm2 = txt.match(/(?:còn lại|còn)\s*(\d[\d.,]*)\s*(?:sản phẩm|sp)\b/i);
+      if (fm2) return parseInt(fm2[1].replace(/[^\d]/g, ''), 10);
+      if (buyBoxSoldOut) return 0;
       return null;
     };
 
@@ -375,13 +402,25 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
     const NON_VARIATION_BTN_RE =
       /^(add to cart|buy now|thêm vào giỏ.*|mua ngay|mua với voucher.*|chat now|chat ngay|view shop|xem shop|follow|theo dõi|report|tố cáo|share|chia sẻ|favorite.*|yêu thích.*|size chart.*|bảng quy đổi.*|decrease|increase|giảm|tăng|\+|-|×|✕|.*change of mind.*|.*trả hàng.*|.*đổi trả.*|.*an tâm mua sắm.*|.*bảo hiểm.*|.*chính hãng.*|.*đồng kiểm.*|.*free ship.*|.*miễn phí vận chuyển.*|.*vận chuyển.*|.*shipping.*|.*spaylater.*|.*trả góp.*|.*voucher.*|.*mã giảm giá.*)$/i;
 
+    const EXTENSION_OR_JUNK_BTN_RE =
+      /\b(scrape|1688\s*sourcing|1688|sourcing|aliprice|taobao|tmall|aliexpress|search\s*by\s*image|search\s*similar|tìm\s*nguồn.*|tìm\s*hàng.*|lịch\s*sử\s*giá.*|biến\s*động\s*giá.*|tải\s*ảnh.*|download.*|copy\s*link.*|phân\s*tích.*)$/i;
+
+    const isExtensionOrChromeNode = (el) => {
+      if (!el || !el.closest) return false;
+      return Boolean(
+        el.closest(
+          'header, nav, footer, [id*="aliprice" i], [class*="aliprice" i], [id*="1688" i], [class*="1688" i], [id*="extension" i], [class*="extension" i], [id*="sourcing" i], [class*="sourcing" i]'
+        )
+      );
+    };
+
     const isBtnDisabled = (b, win) => {
       if (!b) return false;
       const cs = win.getComputedStyle(b);
       if (
         b.disabled ||
         b.getAttribute('aria-disabled') === 'true' ||
-        /disabled|sold-?out/i.test(b.className || '') ||
+        /(?:^|\s|--)(?:disabled|sold-?out|product-variation--disabled)(?:\s|$)/i.test(b.className || '') ||
         cs.cursor === 'not-allowed' ||
         parseFloat(cs.opacity || '1') < 0.65
       ) {
@@ -392,43 +431,195 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       return false;
     };
 
-    const isBtnSelected = (b, win) => {
-      if (!b) return false;
-      if (
-        b.getAttribute('aria-checked') === 'true' ||
-        b.getAttribute('aria-pressed') === 'true' ||
-        /selected|active/i.test(b.className || '') ||
-        !!b.querySelector('svg, [class*="tick"]')
-      ) {
-        return true;
+    const getBtnSelectionSignals = (b, win) => {
+      if (!b || isBtnDisabled(b, win)) {
+        return { ariaChecked: false, selectedClass: false, visibleTick: false, orangeBorder: false };
       }
+      const ariaChecked = b.getAttribute('aria-checked') === 'true';
+      /* Avoid matching atomic CSS pseudo-classes like active:scale-95 or selected:border-red! */
+      const cls = String(b.className || '');
+      const selectedClass = /(?:^|\s)(?:product-variation--selected|is-selected)(?:\s|$)|(?:^|\s)[a-z0-9_-]+--selected(?:\s|$)/i.test(
+        cls
+      );
+      let visibleTick = false;
+      const tickNodes = b.querySelectorAll('[class*="tick"], svg');
+      for (let i = 0; i < tickNodes.length; i++) {
+        const tn = tickNodes[i];
+        const tr = tn.getBoundingClientRect();
+        if (tr.width < 2 || tr.height < 2) continue;
+        const tcs = win.getComputedStyle(tn);
+        const pcs = tn.parentElement && tn.parentElement !== b ? win.getComputedStyle(tn.parentElement) : null;
+        if (
+          tcs.display !== 'none' &&
+          tcs.visibility !== 'hidden' &&
+          parseFloat(tcs.opacity || '1') > 0.2 &&
+          (!pcs || (pcs.display !== 'none' && pcs.visibility !== 'hidden' && parseFloat(pcs.opacity || '1') > 0.2))
+        ) {
+          visibleTick = true;
+          break;
+        }
+      }
+      let orangeBorder = false;
       const cs = win.getComputedStyle(b);
-      const rgbM = String(cs.borderTopColor || cs.borderColor || '').match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
-      if (rgbM && Number(rgbM[1]) > 195 && Number(rgbM[2]) < 125 && Number(rgbM[3]) < 110) {
-        return true;
+      const borderStr = String(cs.borderTopColor || cs.borderColor || '');
+      const rgbM = borderStr.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([0-9.]+))?\s*\)/i);
+      if (rgbM) {
+        const alpha = rgbM[4] !== undefined ? parseFloat(rgbM[4]) : 1;
+        if (alpha > 0.5 && Number(rgbM[1]) > 195 && Number(rgbM[2]) < 125 && Number(rgbM[3]) < 110) {
+          orangeBorder = true;
+        }
+      }
+      return { ariaChecked, selectedClass, visibleTick, orangeBorder };
+    };
+
+    /* Differential radio-group check: in any tier with >= 2 options, at most ONE button can be selected! */
+    const isBtnSelectedInGroup = (btn, groupBtns, win) => {
+      if (!btn) return false;
+      const peers = Array.isArray(groupBtns) && groupBtns.length > 0 ? groupBtns : [btn];
+      if (peers.length === 1) {
+        if (btn.hasAttribute('aria-checked')) return btn.getAttribute('aria-checked') === 'true';
+        const s = getBtnSelectionSignals(btn, win);
+        return s.selectedClass || s.visibleTick || s.orangeBorder;
+      }
+      const sigList = peers.map((p) => ({ el: p, sig: getBtnSelectionSignals(p, win) }));
+      const target = sigList.find((x) => x.el === btn);
+      if (!target) return false;
+      const keys = ['ariaChecked', 'selectedClass', 'visibleTick', 'orangeBorder'];
+      for (let k = 0; k < keys.length; k++) {
+        const key = keys[k];
+        if (!target.sig[key]) continue;
+        const trueCount = sigList.filter((x) => x.sig[key]).length;
+        if (trueCount === 1) return true;
       }
       return false;
     };
 
-    const clickAndSelectBtn = async (btn, win) => {
-      if (!btn) return false;
-      if (isBtnSelected(btn, win)) return true;
+    const selectBtnInGroup = async (btn, groupBtns, win) => {
+      if (!btn || isBtnDisabled(btn, win)) return false;
+      if (isBtnSelectedInGroup(btn, groupBtns, win)) return true;
       try {
         btn.scrollIntoView({ block: 'nearest' });
       } catch (e) {}
+      try {
+        btn.click();
+      } catch (e) {}
+      for (let p = 0; p < 4; p++) {
+        await sleep(75);
+        if (isBtnSelectedInGroup(btn, groupBtns, win)) return true;
+      }
+      /* Fallback synthetic pointer/mouse sequence if plain .click() was ignored */
       try {
         ['pointerdown', 'mousedown', 'pointerup', 'mouseup'].forEach((evType) => {
           btn.dispatchEvent(new MouseEvent(evType, { bubbles: true, cancelable: true, view: win }));
         });
         btn.click();
-      } catch (e) {
-        try { btn.click(); } catch (e2) {}
-      }
-      for (let p = 0; p < 6; p++) {
+      } catch (e) {}
+      for (let p = 0; p < 4; p++) {
         await sleep(85);
-        if (isBtnSelected(btn, win)) return true;
+        if (isBtnSelectedInGroup(btn, groupBtns, win)) return true;
       }
-      return isBtnSelected(btn, win);
+      return isBtnSelectedInGroup(btn, groupBtns, win);
+    };
+
+    /* Deselect any selected button in a tier group (critical between Mẫu iterations on 2-tier products so Shopee re-enables all Mẫu buttons!) */
+    const deselectGroup = async (groupBtns, win) => {
+      if (!Array.isArray(groupBtns) || groupBtns.length === 0) return;
+      const selBtn = groupBtns.find((b) => !isBtnDisabled(b, win) && isBtnSelectedInGroup(b, groupBtns, win));
+      if (!selBtn) return;
+      try {
+        selBtn.click();
+      } catch (e) {}
+      for (let p = 0; p < 4; p++) {
+        await sleep(75);
+        if (!isBtnSelectedInGroup(selBtn, groupBtns, win)) return;
+      }
+    };
+
+    const getModelRawStock = (md) => {
+      if (!md || typeof md !== 'object') return 0;
+      if (md.sold_out === true || md.status === 0) return 0;
+      if (md.stock !== undefined && md.stock !== null) return Math.max(0, Number(md.stock));
+      if (md.normal_stock !== undefined && md.normal_stock !== null) return Math.max(0, Number(md.normal_stock));
+      return 0;
+    };
+
+    const isModelSoldOut = (md) => !md || md.sold_out === true || md.status === 0 || getModelRawStock(md) <= 0;
+
+    /* Find the DOM button group matching an exact React tier's option labels (100% immune to Shopee CSS class changes & extension buttons!) */
+    const findTierGroupByOptions = (doc, win, optionsList, excludeParent) => {
+      if (!Array.isArray(optionsList) || optionsList.length === 0) return null;
+      const wantSet = new Set(optionsList.map((o) => String(o || '').trim().toLowerCase()).filter(Boolean));
+      if (wantSet.size === 0) return null;
+      const sy = win.scrollY || 0;
+      const specY = getSpecCutoffDocY(doc);
+      const groupMap = new Map();
+      const allBtns = doc.querySelectorAll('button');
+      for (let i = 0; i < allBtns.length; i++) {
+        const b = allBtns[i];
+        if (isExtensionOrChromeNode(b)) continue;
+        const r = b.getBoundingClientRect();
+        const docY = r.top + sy;
+        if (docY < 80 || docY > specY || r.width === 0 || r.height === 0) continue;
+        const lbl = (b.innerText || '').replace(/\s+/g, ' ').trim();
+        if (!lbl || !wantSet.has(lbl.toLowerCase())) continue;
+        const p = b.parentElement;
+        if (!p || p === excludeParent) continue;
+        if (!groupMap.has(p)) groupMap.set(p, []);
+        groupMap.get(p).push(b);
+      }
+      let best = null;
+      let bestHits = 0;
+      groupMap.forEach((btns, parentEl) => {
+        const uniqHits = new Set(btns.map((b) => (b.innerText || '').replace(/\s+/g, ' ').trim().toLowerCase())).size;
+        if (uniqHits > bestHits) {
+          bestHits = uniqHits;
+          best = {
+            tierName: '',
+            btns,
+            parentEl,
+            hasImg: btns.some((b) => Boolean(getBtnRealThumb(b)))
+          };
+        }
+      });
+      return best;
+    };
+
+    /* Find Shop Info Card Y coordinate (sits between buy-box and Product Specifications, contains the shop avatar!) */
+    const getShopCardCutoffDocY = (doc) => {
+      const win = doc.defaultView || window;
+      const sy = win.scrollY || 0;
+      const specY = getSpecCutoffDocY(doc);
+      let cutoff = specY;
+      const btns = doc.querySelectorAll('a, button');
+      for (let i = 0; i < btns.length; i++) {
+        const el = btns[i];
+        const tx = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        if (/^(?:view shop|xem shop|chat now|chat ngay)$/i.test(tx)) {
+          const r = el.getBoundingClientRect();
+          const dy = r.top + sy;
+          if (dy > 260 && dy < cutoff) {
+            cutoff = Math.max(260, dy - 90);
+          }
+        }
+      }
+      return cutoff;
+    };
+
+    const isCircularAvatarImg = (im, win) => {
+      if (!im) return false;
+      if (im.closest && im.closest('[class*="avatar" i], [class*="shop-info" i], [class*="page-product__shop" i], header, nav')) {
+        return true;
+      }
+      try {
+        const cs = win.getComputedStyle(im);
+        const br = String(cs.borderRadius || '');
+        if (/50%|999/.test(br)) return true;
+        if (im.parentElement) {
+          const pcs = win.getComputedStyle(im.parentElement);
+          if (/50%|999/.test(String(pcs.borderRadius || ''))) return true;
+        }
+      } catch (e) {}
+      return false;
     };
 
     const findDomVariationTiers = (doc, win) => {
@@ -438,13 +629,14 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       const allBtns = doc.querySelectorAll('button');
       for (let i = 0; i < allBtns.length; i++) {
         const b = allBtns[i];
+        if (isExtensionOrChromeNode(b)) continue;
         const r = b.getBoundingClientRect();
         const docY = r.top + sy;
-        if (docY < 80 || docY > specY) continue;
+        if (docY < 80 || docY > specY || r.width === 0 || r.height === 0) continue;
         const lbl = (b.innerText || '').replace(/\s+/g, ' ').trim();
-        if (!lbl || lbl.length > 44 || NON_VARIATION_BTN_RE.test(lbl)) continue;
+        if (!lbl || lbl.length > 44 || NON_VARIATION_BTN_RE.test(lbl) || EXTENSION_OR_JUNK_BTN_RE.test(lbl)) continue;
         const ariaLbl = (b.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
-        if (ariaLbl && NON_VARIATION_BTN_RE.test(ariaLbl)) continue;
+        if (ariaLbl && (NON_VARIATION_BTN_RE.test(ariaLbl) || EXTENSION_OR_JUNK_BTN_RE.test(ariaLbl))) continue;
         const p = b.parentElement;
         if (!p) continue;
         if (!groupMap.has(p)) groupMap.set(p, []);
@@ -459,15 +651,20 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
           const it = (b.innerText || '').trim();
           return al && it && al === it;
         });
-        const hasVarAttr = btns.some((b) => /variation|sApkZm|sku|option/i.test(b.className || ''));
-        if (!hasImg && !hasMatchingAria && !hasVarAttr && btns.length < 2) return;
+        const hasVarAttr = btns.some(
+          (b) =>
+            /product-variation|variation|sApkZm/i.test(b.className || '') ||
+            b.getAttribute('role') === 'radio' ||
+            b.hasAttribute('aria-checked')
+        );
+        if (!hasImg && !hasMatchingAria && !hasVarAttr) return;
         let tierName = 'Mẫu';
         const row = parentEl.parentElement;
         if (row && row.firstElementChild && !row.firstElementChild.contains(btns[0])) {
           const cand = (row.firstElementChild.innerText || '').trim();
-          if (cand && cand.length <= 26) tierName = cand;
+          if (cand && cand.length <= 26 && !EXTENSION_OR_JUNK_BTN_RE.test(cand)) tierName = cand;
         }
-        tiers.push({ tierName, btns, hasImg });
+        tiers.push({ tierName, btns, parentEl, hasImg });
       });
       return tiers;
     };
@@ -476,6 +673,116 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
     const pageShowsVariationUI = (doc) => {
       const win = doc.defaultView || window;
       return findDomVariationTiers(doc, win).length > 0;
+    };
+
+    /* Guarantee sum(variants.stock) NEVER inflates to N * TotalStock and preserves sold-out (0) variants & (Mẫu, Size) cells! */
+    const reconcileVariantsStock = (variants, authTotal, sizes) => {
+      if (!Array.isArray(variants) || variants.length === 0) return;
+      variants.forEach((v) => {
+        if (v._isSoldOut) {
+          v.stock = 0;
+          if (v.sizeStocks && typeof v.sizeStocks === 'object') {
+            Object.keys(v.sizeStocks).forEach((k) => {
+              v.sizeStocks[k] = 0;
+            });
+          }
+        } else if (v.sizeStocks && typeof v.sizeStocks === 'object') {
+          const szSum = Object.values(v.sizeStocks).reduce((s, n) => s + Math.max(0, Number(n || 0)), 0);
+          v.stock = szSum;
+          if (szSum === 0) v._isSoldOut = true;
+        }
+      });
+
+      const activeVars = variants.filter((v) => !v._isSoldOut && Number(v.stock ?? 0) > 0);
+      if (authTotal === null || authTotal === undefined || isNaN(authTotal)) return;
+      const safeTotal = Math.max(0, Math.round(Number(authTotal)));
+      if (safeTotal === 0 || activeVars.length === 0) {
+        variants.forEach((v) => {
+          v.stock = 0;
+          if (v.sizeStocks && typeof v.sizeStocks === 'object') {
+            Object.keys(v.sizeStocks).forEach((k) => {
+              v.sizeStocks[k] = 0;
+            });
+          }
+        });
+        return;
+      }
+
+      /* 2-Tier Matrix Reconciliation: preserve EVERY sold-out (0) (Mẫu, Size) cell! */
+      const hasSizeMatrix = sizes && sizes.length > 0 && activeVars.some((v) => v.sizeStocks && typeof v.sizeStocks === 'object');
+      if (hasSizeMatrix) {
+        const activeCells = [];
+        activeVars.forEach((v) => {
+          if (!v.sizeStocks || typeof v.sizeStocks !== 'object') return;
+          Object.keys(v.sizeStocks).forEach((sz) => {
+            const val = Math.max(0, Number(v.sizeStocks[sz] || 0));
+            if (val > 0) activeCells.push({ v, sz, val, confirmed: Boolean(v._confirmedClick) });
+          });
+        });
+        const curMatrixSum = activeCells.reduce((s, c) => s + c.val, 0);
+        if (activeCells.length > 0 && safeTotal === activeCells.length) {
+          activeCells.forEach((c) => {
+            c.v.sizeStocks[c.sz] = 1;
+          });
+        } else if (activeCells.length > 0 && (curMatrixSum > safeTotal || (curMatrixSum !== safeTotal && !activeCells.some((c) => c.confirmed)))) {
+          const validConf = activeCells.filter((c) => c.confirmed && c.val < safeTotal);
+          const unconf = activeCells.filter((c) => validConf.indexOf(c) === -1);
+          const confSum = validConf.reduce((s, c) => s + c.val, 0);
+          if (validConf.length > 0 && unconf.length > 0 && confSum + unconf.length <= safeTotal) {
+            const remPool = safeTotal - confSum;
+            const bShare = Math.floor(remPool / unconf.length);
+            const bRem = remPool % unconf.length;
+            unconf.forEach((c, idx) => {
+              c.v.sizeStocks[c.sz] = bShare + (idx < bRem ? 1 : 0);
+            });
+          } else {
+            const bShare = Math.floor(safeTotal / activeCells.length);
+            const bRem = safeTotal % activeCells.length;
+            activeCells.forEach((c, idx) => {
+              c.v.sizeStocks[c.sz] = bShare + (idx < bRem ? 1 : 0);
+            });
+          }
+        }
+        variants.forEach((v) => {
+          if (v.sizeStocks && typeof v.sizeStocks === 'object') {
+            v.stock = Object.values(v.sizeStocks).reduce((s, n) => s + Math.max(0, Number(n || 0)), 0);
+          }
+        });
+        return;
+      }
+
+      if (activeVars.length === 1 && (!sizes || sizes.length === 0)) {
+        activeVars[0].stock = safeTotal;
+        return;
+      }
+      /* Exact 1-of-1 mathematical theorem: K active variants with integer stock >= 1 summing to K => every active = 1! */
+      if ((!sizes || sizes.length === 0) && safeTotal === activeVars.length) {
+        activeVars.forEach((v) => {
+          v.stock = 1;
+        });
+        return;
+      }
+      const curSum = activeVars.reduce((s, v) => s + Math.max(0, Number(v.stock || 0)), 0);
+      const anyConfirmed = activeVars.some((v) => Boolean(v._confirmedClick));
+      if (curSum > safeTotal || (curSum !== safeTotal && !anyConfirmed)) {
+        const validConfirmed = activeVars.filter((v) => v._confirmedClick && v.stock > 0 && v.stock < safeTotal);
+        const unconfirmed = activeVars.filter((v) => validConfirmed.indexOf(v) === -1);
+        const confSum = validConfirmed.reduce((s, v) => s + v.stock, 0);
+        if (validConfirmed.length > 0 && unconfirmed.length > 0 && confSum + unconfirmed.length <= safeTotal) {
+          const remPool = safeTotal - confSum;
+          const bShare = Math.floor(remPool / unconfirmed.length);
+          const bRem = remPool % unconfirmed.length;
+          unconfirmed.forEach((v, idx) => {
+            v.stock = bShare + (idx < bRem ? 1 : 0);
+          });
+        } else {
+          const baseShare = Math.floor(safeTotal / activeVars.length);
+          const rem = safeTotal % activeVars.length;
+          activeVars.forEach((v, idx) => {
+            v.stock = baseShare + (idx < rem ? 1 : 0);
+          });
+        }
+      }
     };
 
     const extractProductDeep = async (doc, expectedUrl, expectedKey) => {
@@ -501,8 +808,12 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
 
       /* Read real DOM stock BEFORE clicking any buttons (unselected Quantity = total stock!) + Specifications -> Stock/Kho */
       const domTiersInitial = findDomVariationTiers(doc, win);
-      const anyPreSelected = domTiersInitial.some((t) => t.btns.some((b) => isBtnSelected(b, win)));
-      const unselectedQtyStock = !anyPreSelected ? readQtyStock(doc) : null;
+      const allTiersPreSelected =
+        domTiersInitial.length > 0 &&
+        domTiersInitial.every((t) => t.btns.some((b) => isBtnSelectedInGroup(b, t.btns, win)));
+      const unselectedQtyStock = !allTiersPreSelected || (domTiersInitial.length === 1 && domTiersInitial[0].btns.length === 1)
+        ? readQtyStock(doc)
+        : null;
 
       try { win.scrollTo(0, 620); } catch (e) {}
       await sleep(200);
@@ -516,6 +827,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       const variants = [];
       let sizes = [];
       let usedReactModels = false;
+      let reactStockExactResolved = false;
 
       const reactItem = plat === 'shopee' ? findShopeeReactItem(doc, finalKey) : null;
       if (reactItem) {
@@ -541,20 +853,35 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
           const imgs0 = Array.isArray(tv0.images) ? tv0.images : [];
           if (opts0.length > 0) {
             variantGroupName = String(tv0.name || 'Mẫu').trim();
+            /* STRICT 1-to-1 Size tier: ONLY populate sizes if Shopee's tier_variations[1] actually exists! */
             if (tv1 && Array.isArray(tv1.options)) {
-              sizes = tv1.options.map((s) => String(s || '').trim()).filter(Boolean);
+              sizes = tv1.options
+                .map((s) => String(s || '').trim())
+                .filter((s) => Boolean(s) && !EXTENSION_OR_JUNK_BTN_RE.test(s));
             }
+
+            const allModels = Array.isArray(reactItem.models) ? reactItem.models : [];
+            const posModels = allModels.filter((md) => !isModelSoldOut(md));
+            const reactModelSum = posModels.reduce((s, md) => s + getModelRawStock(md), 0);
+            const looksMasked10 = posModels.length >= 2 && posModels.every((md) => getModelRawStock(md) === 10);
+            const canTrustExactModelStock =
+              authoritativeTotalStock !== null &&
+              authoritativeTotalStock > 0 &&
+              ((reactModelSum === authoritativeTotalStock && !looksMasked10) ||
+                posModels.length === authoritativeTotalStock);
+
+            if (canTrustExactModelStock) {
+              reactStockExactResolved = true;
+            }
+
             opts0.forEach((optLabel, idx) => {
-              const matching = (reactItem.models || []).filter((md) => {
+              const matching = allModels.filter((md) => {
                 if (Array.isArray(md.tier_index)) return md.tier_index[0] === idx;
                 if (md.extinfo && Array.isArray(md.extinfo.tier_index)) return md.extinfo.tier_index[0] === idx;
                 return String(md.name || '').split(',')[0].trim() === optLabel;
               });
-              /* Note: Shopee masks positive md.stock to 10 in React state, so ONLY trust md.stock === 0 for sold-out check! */
-              const reactSoldOut =
-                matching.length > 0 &&
-                matching.every((md) => md.stock !== undefined && Number(md.stock) <= 0);
-              const inStockM = matching.filter((md) => Number(md.stock ?? md.normal_stock ?? 1) > 0);
+              const reactSoldOut = matching.length > 0 && matching.every((md) => isModelSoldOut(md));
+              const inStockM = matching.filter((md) => !isModelSoldOut(md));
               const pool = inStockM.length > 0 ? inStockM : matching;
               const mPrices = pool.map((md) => normApiPrice(md.price)).filter((p) => p > 0);
               const rawImg = imgs0[idx] || '';
@@ -563,43 +890,99 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
                   ? cleanImg(rawImg)
                   : 'https://down-vn.img.susercontent.com/file/' + rawImg
                 : baseMainImg;
-              variants.push({
+
+              let initVarStock = reactSoldOut ? 0 : 1;
+              let sizeStocks = undefined;
+              let sizePrices = undefined;
+              const reactSizeSoldOut = {};
+
+              if (sizes.length > 0) {
+                sizeStocks = {};
+                sizePrices = {};
+                sizes.forEach((szLbl, sIdx) => {
+                  const sm = matching.find((md) => {
+                    const ti = md.tier_index || (md.extinfo && md.extinfo.tier_index);
+                    if (Array.isArray(ti)) return ti[1] === sIdx;
+                    return String(md.name || '').split(',')[1]?.trim() === szLbl;
+                  });
+                  const smSoldOut = !sm || isModelSoldOut(sm);
+                  reactSizeSoldOut[szLbl] = smSoldOut;
+                  const smPrice = sm ? normApiPrice(sm.price) : 0;
+                  if (smPrice > 0) sizePrices[szLbl] = smPrice;
+
+                  if (smSoldOut) {
+                    sizeStocks[szLbl] = 0;
+                  } else if (canTrustExactModelStock) {
+                    sizeStocks[szLbl] =
+                      posModels.length === authoritativeTotalStock ? 1 : getModelRawStock(sm);
+                  } else {
+                    sizeStocks[szLbl] = 1;
+                  }
+                });
+                initVarStock = Object.values(sizeStocks).reduce((s, n) => s + Math.max(0, Number(n || 0)), 0);
+              } else if (!reactSoldOut && canTrustExactModelStock) {
+                if (posModels.length === authoritativeTotalStock) {
+                  initVarStock = inStockM.length;
+                } else {
+                  initVarStock = inStockM.reduce((s, md) => s + getModelRawStock(md), 0);
+                }
+              }
+
+              const varEntry = {
                 id: 'var_' + (idx + 1),
                 label: optLabel,
                 image: fullVarImg,
                 price: mPrices.length > 0 ? Math.min.apply(null, mPrices) : basePrice,
-                stock: reactSoldOut ? 0 : 1,
-                _reactSoldOut: reactSoldOut
-              });
+                stock: initVarStock,
+                _reactSoldOut: reactSoldOut || (sizes.length > 0 && initVarStock === 0),
+                _reactSizeSoldOut: reactSizeSoldOut,
+                _confirmedClick: Boolean(canTrustExactModelStock)
+              };
+              if (sizeStocks) varEntry.sizeStocks = sizeStocks;
+              if (sizePrices && Object.keys(sizePrices).length > 0) varEntry.sizePrices = sizePrices;
+              variants.push(varEntry);
             });
             usedReactModels = true;
           }
         }
       }
 
-      /* Measure 100% REAL unmasked per-variant stock (and prices/images if !usedReactModels) from live DOM buttons! */
+      /* Measure 100% REAL unmasked per-variant & per-(Mẫu, Size) stock from live DOM buttons! */
       const domTiers = findDomVariationTiers(doc, win);
-      if (domTiers.length > 0) {
-        const primaryIdx = domTiers.findIndex((t) => t.hasImg) >= 0 ? domTiers.findIndex((t) => t.hasImg) : 0;
-        const primary = domTiers[primaryIdx];
+      let primary = null;
+      let secondary = null;
 
-        /* If secondary tier exists (e.g. Size), record sizes & ensure one active secondary option is selected */
-        domTiers.forEach((t, idx) => {
-          if (idx === primaryIdx) return;
-          if (sizes.length === 0) {
-            t.btns.forEach((b) => {
-              const s = (b.innerText || '').replace(/\s+/g, ' ').trim();
-              if (s && s.length <= 20 && sizes.indexOf(s) === -1) sizes.push(s);
-            });
-          }
-          if (!t.btns.some((b) => isBtnSelected(b, win))) {
-            const firstActive = t.btns.find((b) => !isBtnDisabled(b, win));
-            if (firstActive) {
-              try { firstActive.click(); } catch (e) {}
+      if (usedReactModels && variants.length > 0) {
+        primary =
+          findTierGroupByOptions(doc, win, variants.map((v) => v.label), null) ||
+          (domTiers.length > 0 ? domTiers[domTiers.findIndex((t) => t.hasImg) >= 0 ? domTiers.findIndex((t) => t.hasImg) : 0] : null);
+        if (sizes.length > 0) {
+          secondary =
+            findTierGroupByOptions(doc, win, sizes, primary ? primary.parentEl : null) ||
+            domTiers.find((t) => t !== primary && (!primary || t.parentEl !== primary.parentEl)) ||
+            null;
+        }
+      } else if (domTiers.length > 0) {
+        const imgTierIdx = domTiers.findIndex((t) => t.hasImg);
+        const primaryIdx = imgTierIdx >= 0 ? imgTierIdx : 0;
+        primary = domTiers[primaryIdx];
+        secondary = domTiers.find((t, idx) => idx !== primaryIdx) || null;
+        if (secondary && sizes.length === 0) {
+          secondary.btns.forEach((b) => {
+            const s = (b.innerText || '').replace(/\s+/g, ' ').trim();
+            if (s && s.length <= 20 && !EXTENSION_OR_JUNK_BTN_RE.test(s) && sizes.indexOf(s) === -1) {
+              sizes.push(s);
             }
-          }
-        });
-        if (domTiers.length > 1) await sleep(200);
+          });
+        }
+      }
+
+      if (primary && primary.btns.length > 0) {
+        /* Clear any pre-selected secondary button BEFORE reading initial disabled state of primary buttons! */
+        if (secondary && secondary.btns.length > 0) {
+          await deselectGroup(secondary.btns, win);
+          await sleep(80);
+        }
 
         if (!usedReactModels) {
           variantGroupName = primary.tierName || 'Mẫu';
@@ -615,76 +998,187 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
               price: basePrice || 110000,
               stock: dis ? 0 : 1,
               _domBtn: btn,
-              _isSoldOut: dis
+              _isSoldOut: dis,
+              _reactSizeSoldOut: {},
+              _confirmedClick: false
             });
           }
         } else {
-          /* Map each React variant to its exact DOM button to read real disabled state & real click stock! */
+          /* Map each React variant strictly to its matching DOM button */
           variants.forEach((v, idx) => {
             const normLbl = v.label.toLowerCase();
             const matchedBtn =
               primary.btns.find((b) => (b.innerText || '').replace(/\s+/g, ' ').trim().toLowerCase() === normLbl) ||
-              primary.btns[idx] ||
-              null;
+              (primary.btns.length === variants.length ? primary.btns[idx] : null);
             v._domBtn = matchedBtn;
             const dis = Boolean(v._reactSoldOut || (matchedBtn && isBtnDisabled(matchedBtn, win)));
             v._isSoldOut = dis;
-            if (dis) v.stock = 0;
+            if (dis) {
+              v.stock = 0;
+              if (v.sizeStocks) {
+                Object.keys(v.sizeStocks).forEach((k) => {
+                  v.sizeStocks[k] = 0;
+                });
+              }
+            }
           });
         }
 
         const activeVars = variants.filter((v) => !v._isSoldOut);
         if (activeVars.length === 0) {
-          variants.forEach((v) => { v.stock = 0; });
+          variants.forEach((v) => {
+            v.stock = 0;
+            if (v.sizeStocks) {
+              Object.keys(v.sizeStocks).forEach((k) => {
+                v.sizeStocks[k] = 0;
+              });
+            }
+          });
         } else if (
-          usedReactModels &&
           sizes.length === 0 &&
           authoritativeTotalStock !== null &&
-          authoritativeTotalStock === activeVars.length
+          authoritativeTotalStock === activeVars.length &&
+          usedReactModels
         ) {
-          /* Exact 1-of-1 theorem: K active buttons summing to K total stock => every active variant has stock = 1! */
-          activeVars.forEach((v) => { v.stock = 1; });
-        } else {
-          let confirmedSelections = 0;
+          /* Exact 1-of-1 theorem: K active variants summing to K total stock => every active variant = 1! */
+          activeVars.forEach((v) => {
+            v.stock = 1;
+            v._confirmedClick = true;
+          });
+        } else if (reactStockExactResolved && usedReactModels) {
+          /* Exact per-SKU stocks already verified against authoritativeTotalStock */
+        } else if (sizes.length > 0 && secondary && secondary.btns.length > 0 && activeVars.length * secondary.btns.length <= 75) {
+          /* 2-Tier Product (e.g. Mẫu + Size): measure exact stock & sold-out matrix for EVERY (Mẫu, Size) pair! */
+          const totalPairs = activeVars.length * secondary.btns.length;
           for (let a = 0; a < activeVars.length && !stopped; a++) {
             const v = activeVars[a];
-            if (!v._domBtn || primary.btns.length > 60) continue;
-            const selOk = await clickAndSelectBtn(v._domBtn, win);
+            if (!v._domBtn) continue;
+
+            /* CRITICAL: Deselect any active Size button BEFORE switching Mẫu so Shopee does not disable Mẫu buttons! */
+            await deselectGroup(secondary.btns, win);
+            await sleep(60);
+
+            if (isBtnDisabled(v._domBtn, win)) {
+              v._isSoldOut = true;
+              v.stock = 0;
+              const zeroMap = {};
+              sizes.forEach((sz) => {
+                zeroMap[sz] = 0;
+              });
+              v.sizeStocks = zeroMap;
+              v._confirmedClick = true;
+              continue;
+            }
+
+            const pOk = await selectBtnInGroup(v._domBtn, primary.btns, win);
+            if (!pOk) continue;
+            await sleep(100);
+
             if (!usedReactModels) {
               const pNow = readPriceInfo(doc);
               if (pNow.min > 0) v.price = pNow.min;
               const activeImg = readMainImg(doc);
               if (!getBtnRealThumb(v._domBtn) && activeImg) v.image = activeImg;
             }
-            const qNow = readQtyStock(doc);
-            if (selOk && qNow !== null) {
-              v.stock = qNow;
-              confirmedSelections++;
-            } else if (authoritativeTotalStock !== null && authoritativeTotalStock === activeVars.length) {
-              v.stock = 1;
+
+            let vSum = 0;
+            let gotPair = false;
+            const szMap = {};
+            const szPriceMap = Object.assign({}, v.sizePrices || {});
+
+            for (let s = 0; s < secondary.btns.length && !stopped; s++) {
+              const sBtn = secondary.btns[s];
+              const sLbl = (sBtn.innerText || '').replace(/\s+/g, ' ').trim();
+              if (!sLbl) continue;
+
+              const knownReactZero = Boolean(v._reactSizeSoldOut && v._reactSizeSoldOut[sLbl]);
+              if (knownReactZero || isBtnDisabled(sBtn, win)) {
+                szMap[sLbl] = 0;
+                gotPair = true;
+                continue;
+              }
+
+              const sOk = await selectBtnInGroup(sBtn, secondary.btns, win);
+              if (!sOk) {
+                if (isBtnDisabled(sBtn, win)) {
+                  szMap[sLbl] = 0;
+                  gotPair = true;
+                }
+                continue;
+              }
+
+              await sleep(100);
+              let qPair = readQtyStock(doc);
+              if (totalPairs > 1 && authoritativeTotalStock !== null && qPair === authoritativeTotalStock) {
+                await sleep(180);
+                qPair = readQtyStock(doc);
+              }
+              const pPair = readPriceInfo(doc);
+              if (pPair.min > 0) {
+                szPriceMap[sLbl] = pPair.min;
+              }
+              if (qPair !== null) {
+                szMap[sLbl] = qPair;
+                vSum += qPair;
+                gotPair = true;
+              }
+            }
+
+            /* Ensure every size label in `sizes` has an explicit numeric entry in szMap */
+            sizes.forEach((sz) => {
+              if (szMap[sz] === undefined) {
+                szMap[sz] = v._reactSizeSoldOut && v._reactSizeSoldOut[sz] ? 0 : 0;
+              }
+            });
+
+            if (gotPair) {
+              v.stock = vSum;
+              v.sizeStocks = szMap;
+              if (Object.keys(szPriceMap).length > 0) {
+                v.sizePrices = szPriceMap;
+                const availPrices = Object.keys(szPriceMap)
+                  .filter((k) => Number(szMap[k] || 0) > 0 && Number(szPriceMap[k]) > 0)
+                  .map((k) => Number(szPriceMap[k]));
+                if (availPrices.length > 0) v.price = Math.min.apply(null, availPrices);
+              }
+              if (vSum === 0) v._isSoldOut = true;
+              v._confirmedClick = true;
             }
           }
-
-          /* Guard against unselected total-stock leak (N^2) if background tab throttled clicks */
-          if (authoritativeTotalStock !== null && sizes.length === 0 && activeVars.length > 0) {
-            const curSum = activeVars.reduce((s, v) => s + Math.max(0, Number(v.stock || 0)), 0);
-            if (confirmedSelections === 0 || (activeVars.length > 1 && curSum === authoritativeTotalStock * activeVars.length)) {
-              const baseShare = Math.floor(authoritativeTotalStock / activeVars.length);
-              const rem = authoritativeTotalStock % activeVars.length;
-              activeVars.forEach((v, idx) => {
-                v.stock = baseShare + (idx < rem ? 1 : 0);
-              });
+          await deselectGroup(secondary.btns, win);
+        } else {
+          /* 1-Tier Product: click each active variant button with strict radio-group verification */
+          for (let a = 0; a < activeVars.length && !stopped; a++) {
+            const v = activeVars[a];
+            if (!v._domBtn || primary.btns.length > 60) continue;
+            const selOk = await selectBtnInGroup(v._domBtn, primary.btns, win);
+            if (!usedReactModels) {
+              const pNow = readPriceInfo(doc);
+              if (pNow.min > 0) v.price = pNow.min;
+              const activeImg = readMainImg(doc);
+              if (!getBtnRealThumb(v._domBtn) && activeImg) v.image = activeImg;
+            }
+            if (selOk) {
+              await sleep(90);
+              let qNow = readQtyStock(doc);
+              /* If multiple active variants exist and first read still shows total stock, allow React 160ms to flush */
+              if (activeVars.length > 1 && authoritativeTotalStock !== null && qNow === authoritativeTotalStock) {
+                await sleep(160);
+                qNow = readQtyStock(doc);
+              }
+              if (qNow !== null) {
+                v.stock = qNow;
+                if (qNow === 0) v._isSoldOut = true;
+                v._confirmedClick = true;
+              }
             }
           }
         }
-      }
 
-      /* Clean temporary internal properties on variants */
-      variants.forEach((v) => {
-        delete v._reactSoldOut;
-        delete v._domBtn;
-        delete v._isSoldOut;
-      });
+        reconcileVariantsStock(variants, authoritativeTotalStock, sizes);
+      } else if (variants.length > 0) {
+        reconcileVariantsStock(variants, authoritativeTotalStock, sizes);
+      }
 
       if (variants.length > 0) {
         const inStockPrices = variants.filter((v) => v.stock > 0 && v.price > 0).map((v) => v.price);
@@ -704,23 +1198,24 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
         const cu = cleanImg(u);
         if (cu && isRealPlatformImg(cu) && gallery.indexOf(cu) === -1) gallery.push(cu);
       };
-      if (reactItem && Array.isArray(reactItem.images)) {
+      if (reactItem && Array.isArray(reactItem.images) && reactItem.images.length > 0) {
         reactItem.images.forEach((h) => {
           addG(String(h).indexOf('http') === 0 ? h : 'https://down-vn.img.susercontent.com/file/' + h);
         });
-      }
-      if (baseMainImg) addG(baseMainImg);
-      const specLimit = getSpecCutoffDocY(doc) + 220;
-      const allImgs = doc.querySelectorAll('img');
-      for (let i = 0; i < allImgs.length && gallery.length < 25; i++) {
-        const im = allImgs[i];
-        const src = im.currentSrc || im.src || im.getAttribute('src') || '';
-        if (!isRealPlatformImg(src)) continue;
-        if (/avatar|icon|logo|badge|emoji|sprite/i.test(src)) continue;
-        const r = im.getBoundingClientRect();
-        const docY = r.top + (win.scrollY || 0);
-        const w = Math.max(r.width || 0, im.naturalWidth || 0);
-        if (w >= 36 && docY < specLimit) addG(src);
+      } else {
+        if (baseMainImg) addG(baseMainImg);
+        const shopLimit = getShopCardCutoffDocY(doc);
+        const allImgs = doc.querySelectorAll('img');
+        for (let i = 0; i < allImgs.length && gallery.length < 25; i++) {
+          const im = allImgs[i];
+          if (isExtensionOrChromeNode(im) || isCircularAvatarImg(im, win)) continue;
+          const src = im.currentSrc || im.src || im.getAttribute('src') || '';
+          if (!isRealPlatformImg(src)) continue;
+          const r = im.getBoundingClientRect();
+          const docY = r.top + (win.scrollY || 0);
+          const w = Math.max(r.width || 0, im.naturalWidth || 0);
+          if (w >= 45 && docY >= 95 && docY < shopLimit) addG(src);
+        }
       }
       variants.forEach((v) => {
         if (v.image) addG(v.image);
@@ -731,6 +1226,20 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
 
       const lateSpecStock = readSpecStock(doc);
       const finalAuthTotalStock = lateSpecStock !== null ? lateSpecStock : authoritativeTotalStock;
+
+      /* Re-run stock reconciliation if Specifications -> Stock/Kho became visible after scrolling */
+      if (variants.length > 0 && finalAuthTotalStock !== null) {
+        reconcileVariantsStock(variants, finalAuthTotalStock, sizes);
+      }
+
+      /* Clean temporary internal properties on variants */
+      variants.forEach((v) => {
+        delete v._reactSoldOut;
+        delete v._reactSizeSoldOut;
+        delete v._domBtn;
+        delete v._isSoldOut;
+        delete v._confirmedClick;
+      });
 
       let desc = reactItem && reactItem.description ? String(reactItem.description).trim() : '';
       const fullTxt = doc.body ? doc.body.innerText : '';
@@ -752,11 +1261,10 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
           ? parseInt(soldM[1] || soldM[2] || '0', 10)
           : 0;
 
-      /* Compute 100% REAL total stock (NEVER use Shopee's masked reactItem.stock = 10*N!) */
+      /* Compute 100% REAL total stock = sum of remaining stocks across variants (or authoritative single-item stock) */
       let stockTotal = 0;
       if (variants.length > 0) {
-        const varSum = variants.reduce((s, v) => s + Math.max(0, Number(v.stock || 0)), 0);
-        stockTotal = sizes.length > 0 && finalAuthTotalStock !== null ? finalAuthTotalStock : varSum;
+        stockTotal = variants.reduce((s, v) => s + Math.max(0, Number(v.stock || 0)), 0);
       } else if (finalAuthTotalStock !== null) {
         stockTotal = finalAuthTotalStock;
       } else {
@@ -776,6 +1284,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
 
       return {
         harvesterVersion: HARVESTER_VERSION,
+        stockVerifiedV6: true,
         deepSynced: true,
         productTag: plat,
         platformItemId,
@@ -788,6 +1297,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
         variantGroupName,
         variants,
         stock: stockTotal,
+        authoritativeTotalStock: finalAuthTotalStock,
         sold,
         description: desc,
         sourcePlatform: plat,

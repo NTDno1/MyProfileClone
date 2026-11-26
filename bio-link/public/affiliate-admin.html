@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Quản Trị Affiliate ✨ NA 2HAND Creator Hub</title>
+  <link rel="icon" type="image/png" sizes="128x128" href="/images/favicon-girlfriend-2.png?v=2" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2" />
+  <link rel="shortcut icon" href="/favicon.ico?v=2" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -49,6 +53,20 @@
     .login-card {
       width: 100%; max-width: 400px; background: #fff; border-radius: 26px; padding: 32px 26px;
       text-align: center; box-shadow: 0 24px 60px rgba(140, 45, 80, 0.2);
+    }
+    .login-logo {
+      width: 68px; height: 68px; border-radius: 50%; padding: 3px;
+      background: linear-gradient(135deg, #fff0f6, #f05d95); border: 1.5px solid #eaa3bb;
+      display: inline-flex; align-items: center; justify-content: center; overflow: hidden;
+      margin-bottom: 12px; box-shadow: 0 10px 24px rgba(209, 52, 112, 0.24);
+    }
+    .login-logo img {
+      width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: center 20%; display: block;
+    }
+    .brand-logo-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 2px solid #f4cad8; object-fit: cover; object-position: center 20%;
+      box-shadow: 0 0 0 1px rgba(200, 55, 103, 0.22), 0 4px 12px rgba(200, 55, 103, 0.16); flex-shrink: 0; display: block;
     }
     .top-bar {
       position: sticky; top: 0; z-index: 40;
@@ -137,7 +155,7 @@
   <!-- LOGIN OVERLAY (Unified SSO with /admin & /shop-admin) -->
   <div class="login-overlay" id="login-overlay">
     <div class="login-card">
-      <div style="font-size: 2.3rem; margin-bottom: 8px;">✨</div>
+      <div class="login-logo"><img src="/images/brand-logo.jpg?v=2" alt="NA 2HAND Logo" /></div>
       <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 1.9rem; margin-bottom: 6px;">Quản Trị Affiliate</h2>
       <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 20px;">Dùng chung tài khoản Quản trị Bio &amp; Shop của bạn</p>
       <form id="login-form">
@@ -152,7 +170,7 @@
   <header class="top-bar">
     <div class="top-bar-inner">
       <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-        <span style="font-size: 1.35rem;">✨</span>
+        <img src="/images/brand-logo.jpg?v=2" alt="NA 2HAND Logo" class="brand-logo-avatar" />
         <strong style="font-size: 1.05rem;">Quản Trị Affiliate Showcase</strong>
         <span class="badge" id="db-badge" style="background: #e6f9ed; color: #157f3d;">🟢 MongoDB: na2hand_shop</span>
       </div>

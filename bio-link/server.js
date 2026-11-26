@@ -58,6 +58,16 @@ app.get('/uploads/:filename', (req, res) => {
   });
 });
 
+// Unified site favicon (girlfriend-2.jpg circular brand icon)
+app.get('/favicon.ico', (req, res) => {
+  const icoPath = path.join(__dirname, 'public', 'favicon.ico');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  if (fs.existsSync(icoPath)) return res.sendFile(icoPath);
+  const fallbackImg = path.join(UPLOADS_DIR, 'girlfriend-2.jpg');
+  if (fs.existsSync(fallbackImg)) return res.sendFile(fallbackImg);
+  res.status(404).end();
+});
+
 // Static assets
 app.use(express.static(path.join(__dirname, 'public')));
 

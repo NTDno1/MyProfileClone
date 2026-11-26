@@ -597,9 +597,43 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
 
         if (prod) {
           if (matchedVar && matchedVar.stock !== undefined) {
-            matchedVar.stock = Math.max(0, Number(matchedVar.stock || 0) - qty);
+            const szKey = String(cartItem.size || '').trim();
+            if (
+              szKey &&
+              matchedVar.sizeStocks &&
+              typeof matchedVar.sizeStocks === 'object' &&
+              matchedVar.sizeStocks[szKey] !== undefined
+            ) {
+              const szAvail = Math.max(0, Number(matchedVar.sizeStocks[szKey] || 0));
+              if (szAvail < qty) {
+                return res.status(400).json({
+                  success: false,
+                  message: `Phân hệ "${matchedVar.label}" (Size ${szKey}) của "${prod.name}" hiện chỉ còn ${szAvail} sản phẩm có sẵn!`
+                });
+              }
+              matchedVar.sizeStocks[szKey] = Math.max(0, szAvail - qty);
+              matchedVar.stock = Object.values(matchedVar.sizeStocks).reduce((s, n) => s + Math.max(0, Number(n || 0)), 0);
+            } else {
+              const avail = Math.max(0, Number(matchedVar.stock || 0));
+              if (avail < qty) {
+                return res.status(400).json({
+                  success: false,
+                  message: `Phân hệ "${matchedVar.label}" của "${prod.name}" hiện chỉ còn ${avail} sản phẩm có sẵn!`
+                });
+              }
+              matchedVar.stock = Math.max(0, avail - qty);
+            }
+          } else if (prod.stock !== undefined && Number(prod.stock || 0) < qty) {
+            return res.status(400).json({
+              success: false,
+              message: `Sản phẩm "${prod.name}" hiện chỉ còn ${Math.max(0, Number(prod.stock || 0))} chiếc trong kho!`
+            });
           }
-          prod.stock = Math.max(0, Number(prod.stock || 0) - qty);
+          if (Array.isArray(prod.variants) && prod.variants.length > 0) {
+            prod.stock = prod.variants.reduce((s, v) => s + Math.max(0, Number(v.stock ?? 0)), 0);
+          } else {
+            prod.stock = Math.max(0, Number(prod.stock || 0) - qty);
+          }
           prod.sold = Number(prod.sold || 0) + qty;
         }
       }
@@ -763,8 +797,27 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
     for (const it of order.items || []) {
       const prod = (store.products || []).find((p) => p.id === it.productId);
       if (prod) {
-        prod.stock = Number(prod.stock || 0) + Number(it.qty || 1);
-        prod.sold = Math.max(0, Number(prod.sold || 0) - Number(it.qty || 1));
+        const retQty = Math.max(1, Number(it.qty || 1));
+        if (Array.isArray(prod.variants) && prod.variants.length > 0) {
+          const mv = prod.variants.find(
+            (v) =>
+              it.variantLabel &&
+              String(v.label || '').trim().toLowerCase() === String(it.variantLabel || '').trim().toLowerCase()
+          );
+          if (mv) {
+            const szKey = String(it.size || '').trim();
+            if (szKey && mv.sizeStocks && typeof mv.sizeStocks === 'object' && mv.sizeStocks[szKey] !== undefined) {
+              mv.sizeStocks[szKey] = Math.max(0, Number(mv.sizeStocks[szKey] || 0)) + retQty;
+              mv.stock = Object.values(mv.sizeStocks).reduce((s, n) => s + Math.max(0, Number(n || 0)), 0);
+            } else {
+              mv.stock = Math.max(0, Number(mv.stock || 0)) + retQty;
+            }
+          }
+          prod.stock = prod.variants.reduce((s, v) => s + Math.max(0, Number(v.stock ?? 0)), 0);
+        } else {
+          prod.stock = Number(prod.stock || 0) + retQty;
+        }
+        prod.sold = Math.max(0, Number(prod.sold || 0) - retQty);
       }
     }
     await saveShopStore(store);
@@ -876,6 +929,11 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       b.productTag === 'manual' ? 'local' : platItemId ? 'cloned' : 'local',
       b.id
     );
+    const normVarsCreate = normalizeVariantsList(b.variants, b.price);
+    const computedAdminStock =
+      normVarsCreate.length > 0
+        ? normVarsCreate.reduce((s, v) => s + Math.max(0, Number(v.stock ?? 0)), 0)
+        : Math.max(0, Number(b.stock ?? 10));
     const newProd = {
       id: b.id || `prod_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
       name: String(b.name || 'Sản phẩm mới').trim(),
@@ -884,11 +942,12 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       maxPrice: Math.max(0, Number(b.maxPrice || b.price || 0)),
       originalPrice: Math.max(0, Number(b.originalPrice || b.price || 0)),
       images: Array.isArray(b.images) && b.images.length > 0 ? b.images.map(cleanCdnImageUrl) : ['/media/bio-link/girlfriend-1.jpg'],
-      sizes: Array.isArray(b.sizes) ? b.sizes.filter(Boolean) : [],
+      sizes: Array.isArray(b.sizes) ? b.sizes.filter((s) => Boolean(s) && !isExtensionJunkLabel(s)) : [],
       colors: Array.isArray(b.colors) ? b.colors.filter(Boolean) : [],
       variantGroupName: String(b.variantGroupName || 'Mẫu').trim(),
-      variants: normalizeVariantsList(b.variants, b.price),
-      stock: Math.max(0, Number(b.stock ?? 10)),
+      variants: normVarsCreate,
+      stock: computedAdminStock,
+      stockVerifiedV6: true,
       sold: Math.max(0, Number(b.sold ?? 0)),
       rating: Number(b.rating || 5.0),
       reviewCount: Number(b.reviewCount || 1),
@@ -926,6 +985,19 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         ? normalizeProductTag(b.productTag, nextUrl, b.productTag === 'manual' ? 'local' : 'cloned', prev.id)
         : getProductTag(prev);
 
+    const updatedVariants = Array.isArray(b.variants)
+      ? normalizeVariantsList(b.variants, b.price ?? prev.price)
+      : prev.variants;
+    const updatedSizes = Array.isArray(b.sizes)
+      ? b.sizes.filter((s) => Boolean(s) && !isExtensionJunkLabel(s))
+      : prev.sizes;
+    const updatedStock =
+      Array.isArray(updatedVariants) && updatedVariants.length > 0
+        ? updatedVariants.reduce((s, v) => s + Math.max(0, Number(v.stock ?? 0)), 0)
+        : b.stock !== undefined
+        ? Number(b.stock)
+        : prev.stock;
+
     store.products[idx] = {
       ...prev,
       ...b,
@@ -935,12 +1007,12 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       platformItemId: nextPid,
       sourceUrl: nextUrl,
       images: Array.isArray(b.images) ? b.images.map(cleanCdnImageUrl) : prev.images,
-      variants: Array.isArray(b.variants)
-        ? normalizeVariantsList(b.variants, b.price ?? prev.price)
-        : prev.variants,
+      sizes: updatedSizes,
+      variants: updatedVariants,
       price: b.price !== undefined ? Number(b.price) : prev.price,
       originalPrice: b.originalPrice !== undefined ? Number(b.originalPrice) : prev.originalPrice,
-      stock: b.stock !== undefined ? Number(b.stock) : prev.stock,
+      stock: updatedStock,
+      stockVerifiedV6: true,
       description: b.description !== undefined ? cleanProductDescription(b.description) : prev.description,
       updatedAt: new Date().toISOString()
     };
@@ -989,6 +1061,14 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       const hasMaskedStock10 =
         (Array.isArray(p.variants) && p.variants.length >= 3 && p.variants.every((v) => Number(v.stock) === 10)) ||
         (!p.deepSynced && Number(p.stock) === 150);
+      const hasAvatarInGallery = Array.isArray(p.images) && p.images.some((u) => isShopeeAvatarImgUrl(u));
+      const missing2TierMatrix =
+        t === 'shopee' &&
+        Array.isArray(p.sizes) &&
+        p.sizes.length > 0 &&
+        Array.isArray(p.variants) &&
+        p.variants.length > 0 &&
+        !p.variants.some((v) => v && v.sizeStocks && Object.keys(v.sizeStocks).length > 0);
       byTag[bucket].push({
         id: p.id,
         name: p.name,
@@ -1000,7 +1080,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         sizes: p.sizes || [],
         stock: p.stock ?? 0,
         variantCount: Array.isArray(p.variants) ? p.variants.length : 0,
-        deepSynced: Boolean(p.deepSynced) && !hasMaskedStock10,
+        deepSynced: Boolean(p.deepSynced) && !hasMaskedStock10 && !hasAvatarInGallery && !missing2TierMatrix,
         isLocked: Boolean(p.isLocked),
         enabled: p.enabled !== false,
         hasRealImg,
@@ -1285,7 +1365,8 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       const imgSet = [];
       const addImg = (u) => {
         const cu = cleanCdnImageUrl(u);
-        if (cu && (cu.startsWith('http') || cu.startsWith('/media/')) && !imgSet.includes(cu)) {
+        if (!cu || isShopeeAvatarImgUrl(cu)) return;
+        if ((cu.startsWith('http') || cu.startsWith('/media/')) && !imgSet.includes(cu)) {
           imgSet.push(cu);
         }
       };
@@ -1302,9 +1383,98 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         finalSourceUrl = cleanSourceUrl(prev.sourceUrl);
       }
 
+      // STRICT 1-TO-1 SIZE SYNC: If Shopee has NO Size tier, sizes MUST be [] (NEVER invent S/M/L or browser extension buttons!)
+      const derivedSizes = Array.isArray(item.sizes)
+        ? item.sizes
+            .map((s) => String(s || '').trim())
+            .filter((s) => Boolean(s) && !isExtensionJunkLabel(s))
+        : [];
+
+      const isV6Verified = Boolean(item.stockVerifiedV6 || Number(item.harvesterVersion || 0) >= 6);
+      const authTotal =
+        item.authoritativeTotalStock !== undefined && item.authoritativeTotalStock !== null && !isNaN(Number(item.authoritativeTotalStock))
+          ? Math.max(0, Math.round(Number(item.authoritativeTotalStock)))
+          : null;
+
+      // Server-side per-variant & per-(Mẫu, Size) stock reconciliation: prevent N * TotalStock inflation & preserve sold-out (0) cells!
+      if (finalVariants.length > 0) {
+        finalVariants.forEach((v) => {
+          if (v.sizeStocks && typeof v.sizeStocks === 'object') {
+            v.stock = Object.values(v.sizeStocks).reduce((s, n) => s + Math.max(0, Number(n || 0)), 0);
+          }
+        });
+        const activeVars = finalVariants.filter((v) => Number(v.stock ?? 0) > 0);
+        const hasSizeMatrix =
+          derivedSizes.length > 0 && activeVars.some((v) => v.sizeStocks && typeof v.sizeStocks === 'object');
+
+        if (authTotal !== null) {
+          if (authTotal === 0) {
+            finalVariants.forEach((v) => {
+              v.stock = 0;
+              if (v.sizeStocks) {
+                Object.keys(v.sizeStocks).forEach((k) => {
+                  v.sizeStocks[k] = 0;
+                });
+              }
+            });
+          } else if (hasSizeMatrix) {
+            const activeCells = [];
+            activeVars.forEach((v) => {
+              if (!v.sizeStocks) return;
+              Object.keys(v.sizeStocks).forEach((sz) => {
+                const n = Math.max(0, Number(v.sizeStocks[sz] || 0));
+                if (n > 0) activeCells.push({ v, sz, n });
+              });
+            });
+            const cellSum = activeCells.reduce((s, c) => s + c.n, 0);
+            if (activeCells.length > 0 && cellSum > authTotal) {
+              const bShare = Math.floor(authTotal / activeCells.length);
+              const bRem = authTotal % activeCells.length;
+              activeCells.forEach((c, idx) => {
+                c.v.sizeStocks[c.sz] = bShare + (idx < bRem ? 1 : 0);
+              });
+              finalVariants.forEach((v) => {
+                if (v.sizeStocks) {
+                  v.stock = Object.values(v.sizeStocks).reduce((s, n) => s + Math.max(0, Number(n || 0)), 0);
+                }
+              });
+            }
+          } else if (derivedSizes.length === 0 && authTotal === activeVars.length) {
+            activeVars.forEach((v) => {
+              v.stock = 1;
+            });
+          } else {
+            const curSum = activeVars.reduce((s, v) => s + Math.max(0, Number(v.stock || 0)), 0);
+            if (curSum > authTotal && activeVars.length > 0) {
+              const baseShare = Math.floor(authTotal / activeVars.length);
+              const rem = authTotal % activeVars.length;
+              activeVars.forEach((v, idx) => {
+                v.stock = baseShare + (idx < rem ? 1 : 0);
+              });
+            }
+          }
+        } else if (!isV6Verified && activeVars.length >= 2) {
+          const firstS = Number(activeVars[0].stock || 0);
+          const curSum = activeVars.reduce((s, v) => s + Number(v.stock || 0), 0);
+          if (
+            firstS >= activeVars.length &&
+            activeVars.every((v) => Number(v.stock || 0) === firstS) &&
+            (item.stock === undefined || Number(item.stock) === curSum)
+          ) {
+            const baseShare = Math.floor(firstS / activeVars.length);
+            const rem = firstS % activeVars.length;
+            activeVars.forEach((v, idx) => {
+              v.stock = baseShare + (idx < rem ? 1 : 0);
+            });
+          }
+        }
+      }
+
       const computedStock =
         finalVariants.length > 0
           ? finalVariants.reduce((sum, v) => sum + Math.max(0, Number(v.stock ?? 0)), 0)
+          : authTotal !== null
+          ? authTotal
           : Number(item.stock ?? prev?.stock ?? 1);
 
       const derivedColors =
@@ -1313,11 +1483,6 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
           : Array.isArray(item.colors)
           ? item.colors.filter(Boolean)
           : [];
-
-      // STRICT 1-TO-1 SIZE SYNC: If Shopee has NO Size tier, sizes MUST be [] (NEVER invent S/M/L or Freesize!)
-      const derivedSizes = Array.isArray(item.sizes)
-        ? item.sizes.map((s) => String(s || '').trim()).filter(Boolean)
-        : [];
 
       const cleanedDesc = cleanProductDescription(item.description || '');
       const finalDesc =
@@ -1332,6 +1497,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         productTag: incomingTag,
         originType: 'cloned',
         deepSynced: Boolean(item.deepSynced || (prev && prev.deepSynced)),
+        stockVerifiedV6: Boolean(isV6Verified || finalVariants.length > 0 || (prev && prev.stockVerifiedV6)),
         platformItemId: incomingItemId || prev?.platformItemId || '',
         isLocked: prev ? Boolean(prev.isLocked) : false,
         name: cleanName,
@@ -1453,14 +1619,15 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       if (
         /^(add to cart|buy now|thêm vào giỏ.*|mua ngay|chat now|chat ngay|view shop|xem shop|follow|theo dõi|report|tố cáo|share|chia sẻ|favorite.*|yêu thích.*|đăng nhập|login|sign up|search|decrease|increase|giảm|tăng|\+|-|×|✕)$/i.test(
           label
-        )
+        ) ||
+        isExtensionJunkLabel(label)
       ) {
         continue;
       }
       const imgInBtn = (inner.match(/<img[^>]+(?:src|data-src)=["'](https?:\/\/[^"']+)["']/i) || [])[1];
       const hasVarHint =
         Boolean(imgInBtn) ||
-        /variation|sApkZm|option|sku|tier/i.test(attrs) ||
+        /product-variation|variation|sApkZm/i.test(attrs) ||
         /aria-label=["'][^"']+["']/i.test(attrs);
       if (!hasVarHint) continue;
 
@@ -1534,10 +1701,15 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       while ((gi = allImgRe.exec(html)) !== null && galleryImgs.length < 25) {
         const rawU = gi[1];
         if (!/susercontent\.com\/file\/|tiktokcdn|ibyteimg/i.test(rawU)) continue;
-        if (/avatar|icon|logo|badge|emoji|sprite/i.test(rawU)) continue;
+        if (isShopeeAvatarImgUrl(rawU)) continue;
         const cu = cleanCdnImageUrl(rawU);
         if (cu && !galleryImgs.includes(cu)) galleryImgs.push(cu);
       }
+
+      const pdpStockMatch =
+        plainAll.match(/(\d[\d.,]*)\s*(?:pieces?\s*available|sản phẩm có sẵn|sp có sẵn)/i) ||
+        plainAll.match(/(?:^|\n)\s*(?:Stock|Kho hàng|Kho)\s*[\n:\t ]+\s*(\d{1,6})(?:\s*\n|$)/i);
+      const pdpAuthStock = pdpStockMatch ? parseInt(String(pdpStockMatch[1]).replace(/[^\d]/g, ''), 10) : null;
 
       // Extract description after "Product Description" or "Mô tả sản phẩm"
       let descText = '';
@@ -1558,6 +1730,14 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         baseUrl;
 
       if (pdpTitle) {
+        const activeDetailVars = detailVariants.filter((v) => v.stock > 0);
+        if (pdpAuthStock !== null && activeDetailVars.length > 0 && pdpAuthStock !== activeDetailVars.length) {
+          const bShare = Math.floor(pdpAuthStock / activeDetailVars.length);
+          const bRem = pdpAuthStock % activeDetailVars.length;
+          activeDetailVars.forEach((v, idx) => {
+            v.stock = bShare + (idx < bRem ? 1 : 0);
+          });
+        }
         pushCandidate({
           name: pdpTitle,
           price: pdpPrice,
@@ -1571,6 +1751,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
             price: pdpPrice,
             stock: v.stock
           })),
+          authoritativeTotalStock: pdpAuthStock,
           description: descText,
           sourceUrl: canonUrl
         });
@@ -2006,12 +2187,12 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
           ? JSON.parse(req.body)
           : req.body || {};
 
-      // Block stale legacy bookmarklets (< V5) when called via browser syncKey so old static bookmarks NEVER corrupt stock/data!
+      // Block stale legacy bookmarklets (< V6) when called via browser syncKey so old scripts NEVER re-inject avatars or N^2 stock!
       const isExternalSyncKey = Boolean(req.query?.syncKey || req.headers['x-sync-key']);
-      if (isExternalSyncKey && Number(bodyObj.harvesterVersion || 0) < 5) {
+      if (isExternalSyncKey && Number(bodyObj.harvesterVersion || 0) < 6) {
         return res.status(409).json({
           success: false,
-          message: 'Dấu trang cũ! Vui lòng xóa dấu trang cũ trên trình duyệt và dùng nút Đồng bộ 1-1 (V5) mới trên /shop-admin.'
+          message: 'Dấu trang hoặc lệnh cũ (< V6)! Hãy tải lại trang /shop-admin (Ctrl+F5) và dùng nút Đồng bộ 1-1 V6 mới nhé.'
         });
       }
 
@@ -2312,10 +2493,13 @@ function repairAndMigrateProductsStore(products, categories = []) {
       }
     }
 
-    // 5. Remove accidental quantity +/- ghost variants ("Decrease", "Increase")
+    // 5. Remove accidental quantity +/- ghost variants ("Decrease", "Increase") & browser extension buttons
     if (Array.isArray(p.variants) && p.variants.length > 0) {
       const cleanedVars = p.variants.filter(
-        (v) => v && !/^(decrease|increase|giảm|tăng|\+|-)$/i.test(String(v.label || '').trim())
+        (v) =>
+          v &&
+          !/^(decrease|increase|giảm|tăng|\+|-|×|✕)$/i.test(String(v.label || '').trim()) &&
+          !isExtensionJunkLabel(v.label || '')
       );
       if (cleanedVars.length !== p.variants.length) {
         p.variants = cleanedVars;
@@ -2323,14 +2507,57 @@ function repairAndMigrateProductsStore(products, categories = []) {
       }
     }
 
-    // 6. Clear fake default ['S', 'M', 'L'] sizes on Shopee clones
-    if (
-      p.productTag === 'shopee' &&
-      Array.isArray(p.sizes) &&
-      p.sizes.join(',') === 'S,M,L'
-    ) {
-      p.sizes = [];
-      changed = true;
+    // 5b. Clean Shopee navbar/shop avatar non-product images from gallery
+    if (Array.isArray(p.images) && p.images.length > 1) {
+      const cleanGallery = p.images.filter((u) => !isShopeeAvatarImgUrl(u));
+      if (cleanGallery.length > 0 && cleanGallery.length !== p.images.length) {
+        p.images = cleanGallery;
+        changed = true;
+      }
+    }
+
+    // 6. Clear fake default ['S', 'M', 'L'] sizes AND browser-extension-injected buttons (e.g. "Scrape", "1688 Sourcing") on Shopee clones
+    if (Array.isArray(p.sizes) && p.sizes.length > 0) {
+      if (p.productTag === 'shopee' && p.sizes.join(',') === 'S,M,L') {
+        p.sizes = [];
+        changed = true;
+      } else {
+        const cleanedSizes = p.sizes.filter((s) => Boolean(s) && !isExtensionJunkLabel(s));
+        if (cleanedSizes.length !== p.sizes.length) {
+          p.sizes = cleanedSizes;
+          changed = true;
+        }
+      }
+    }
+
+    // 6b. Repair V5 duplicated total-stock bug (where K active variants each received TotalStock instead of per-variant stock, making p.stock = K * TotalStock)
+    if (Array.isArray(p.variants) && p.variants.length > 0) {
+      const activeVars = p.variants.filter((v) => Number(v.stock ?? 0) > 0);
+      if (!p.stockVerifiedV6 && activeVars.length >= 2) {
+        const firstStock = Number(activeVars[0].stock || 0);
+        const curSum = activeVars.reduce((s, v) => s + Number(v.stock || 0), 0);
+        if (
+          firstStock >= activeVars.length &&
+          activeVars.every((v) => Number(v.stock || 0) === firstStock) &&
+          Number(p.stock) === curSum &&
+          curSum === activeVars.length * firstStock
+        ) {
+          const trueTotal = firstStock;
+          const baseShare = Math.floor(trueTotal / activeVars.length);
+          const rem = trueTotal % activeVars.length;
+          activeVars.forEach((v, idx) => {
+            v.stock = baseShare + (idx < rem ? 1 : 0);
+          });
+          p.stock = trueTotal;
+          p.stockVerifiedV6 = true;
+          changed = true;
+        }
+      }
+      const exactVarSum = p.variants.reduce((s, v) => s + Math.max(0, Number(v.stock ?? 0)), 0);
+      if (Number(p.stock) !== exactVarSum) {
+        p.stock = exactVarSum;
+        changed = true;
+      }
     }
   }
 
@@ -2358,6 +2585,18 @@ function repairAndMigrateProductsStore(products, categories = []) {
   }
 
   return changed;
+}
+
+function isExtensionJunkLabel(str) {
+  return /\b(scrape|1688\s*sourcing|1688|sourcing|aliprice|taobao|tmall|aliexpress|search\s*by\s*image|search\s*similar|tìm\s*nguồn.*|tìm\s*hàng.*|lịch\s*sử\s*giá.*|biến\s*động\s*giá.*|tải\s*ảnh.*|download.*|copy\s*link.*|phân\s*tích.*)$/i.test(
+    String(str || '').trim()
+  );
+}
+
+function isShopeeAvatarImgUrl(u) {
+  return /(?:^|\/|-)(?:[a-z]{2}-)?(?:11134216|11134226|11134233)-|avatar|icon|logo|badge|emoji|sprite/i.test(
+    String(u || '')
+  );
 }
 
 function cleanCdnImageUrl(u) {
@@ -2402,18 +2641,42 @@ function normalizeVariantsList(rawVariants, fallbackPrice = 110000) {
     const v = rawVariants[i];
     if (!v) continue;
     const label = String(v.label || v.name || '').trim();
-    if (!label || /^(decrease|increase|giảm|tăng|\+|-|×|✕)$/i.test(label)) continue;
+    if (!label || /^(decrease|increase|giảm|tăng|\+|-|×|✕)$/i.test(label) || isExtensionJunkLabel(label)) continue;
     const key = label.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
     const vPrice = parsePriceVnd(v.price) || parsePriceVnd(fallbackPrice) || 110000;
-    out.push({
+    const entry = {
       id: v.id || `var_${i + 1}`,
       label: label.slice(0, 50),
       image: cleanCdnImageUrl(v.image || ''),
       price: vPrice,
       stock: v.stock !== undefined ? Math.max(0, Number(v.stock)) : 1
-    });
+    };
+    if (v.sizeStocks && typeof v.sizeStocks === 'object' && !Array.isArray(v.sizeStocks)) {
+      const cleanSizeStocks = {};
+      for (const [sk, sv] of Object.entries(v.sizeStocks)) {
+        if (sk && !isExtensionJunkLabel(sk)) {
+          cleanSizeStocks[String(sk).trim()] = Math.max(0, Number(sv || 0));
+        }
+      }
+      if (Object.keys(cleanSizeStocks).length > 0) {
+        entry.sizeStocks = cleanSizeStocks;
+      }
+    }
+    if (v.sizePrices && typeof v.sizePrices === 'object' && !Array.isArray(v.sizePrices)) {
+      const cleanSizePrices = {};
+      for (const [sk, pv] of Object.entries(v.sizePrices)) {
+        const parsedP = parsePriceVnd(pv);
+        if (sk && !isExtensionJunkLabel(sk) && parsedP > 0) {
+          cleanSizePrices[String(sk).trim()] = parsedP;
+        }
+      }
+      if (Object.keys(cleanSizePrices).length > 0) {
+        entry.sizePrices = cleanSizePrices;
+      }
+    }
+    out.push(entry);
   }
   return out;
 }

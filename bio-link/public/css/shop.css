@@ -179,9 +179,11 @@ body::before {
 .fly-to-bag-clone {
   position: fixed;
   z-index: 9999;
-  width: 56px;
-  height: 68px;
-  object-fit: cover;
+  width: 60px;
+  height: 60px;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  background: #ffffff;
   border-radius: 14px;
   border: 2px solid #fff;
   box-shadow: 0 12px 28px rgba(200, 55, 103, 0.35);
@@ -297,20 +299,33 @@ body::before {
 }
 
 .brand-emblem {
-  width: 40px;
-  height: 40px;
-  border-radius: 13px;
-  background: var(--rose-100);
-  border: 1px solid var(--rose-200);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  padding: 2px;
+  background: linear-gradient(135deg, #fff0f6, #f4cad8);
+  border: 1.5px solid var(--rose-300);
   color: var(--cherry);
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(200, 55, 103, 0.16);
   transition: transform 0.3s var(--ease-spring);
 }
 
+.brand-logo-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 20%;
+  display: block;
+}
+
 .shop-brand:hover .brand-emblem {
-  transform: rotate(-8deg) scale(1.05);
+  transform: scale(1.06);
 }
 
 .brand-copy {
@@ -979,10 +994,13 @@ body::before {
 }
 
 .look-piece-card img {
-  width: 58px;
-  height: 66px;
+  width: 62px;
+  height: 62px;
+  aspect-ratio: 1 / 1;
   border-radius: 11px;
-  object-fit: cover;
+  object-fit: contain;
+  background: #ffffff;
+  border: 1px solid var(--line);
   flex-shrink: 0;
 }
 
@@ -1145,9 +1163,9 @@ body::before {
 
 .prod-img-wrap {
   position: relative;
-  aspect-ratio: 3 / 3.85;
+  aspect-ratio: 1 / 1;
   overflow: hidden;
-  background: var(--rose-50);
+  background: #ffffff;
   cursor: pointer;
 }
 
@@ -1157,8 +1175,9 @@ body::before {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center 20%;
+  object-fit: contain;
+  object-position: center;
+  background: #ffffff;
   transition: opacity 0.45s ease, transform 0.65s var(--ease-spring);
 }
 
@@ -1172,11 +1191,11 @@ body::before {
 
 .product-card:hover .prod-img-secondary {
   opacity: 1;
-  transform: scale(1.05);
+  transform: scale(1.02);
 }
 
 .product-card:hover .prod-img-primary:not(.has-alt) {
-  transform: scale(1.05);
+  transform: scale(1.02);
 }
 
 .prod-badges-top {
@@ -1415,10 +1434,13 @@ body::before {
 }
 
 .recent-mini-card img {
-  width: 52px;
-  height: 62px;
+  width: 56px;
+  height: 56px;
+  aspect-ratio: 1 / 1;
   border-radius: 10px;
-  object-fit: cover;
+  object-fit: contain;
+  background: #ffffff;
+  border: 1px solid var(--line);
 }
 
 .text-link-btn {
@@ -1518,11 +1540,22 @@ body::before {
 .footer-brand-line {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   font-family: var(--font-serif);
   font-size: 1.3rem;
   font-weight: 700;
   color: var(--ink);
+}
+
+.footer-brand-logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 20%;
+  border: 1.5px solid var(--rose-300);
+  box-shadow: 0 3px 10px rgba(200, 55, 103, 0.16);
+  display: block;
 }
 
 .footer-copy {
@@ -1727,6 +1760,16 @@ body::before {
   background: var(--rose-50);
   color: var(--cherry);
   font-weight: 700;
+}
+
+.variant-pill.is-soldout,
+.variant-pill:disabled {
+  opacity: 0.45;
+  border-style: dashed;
+  background: #f6f1f3;
+  color: var(--ink-muted);
+  cursor: not-allowed;
+  text-decoration: line-through;
 }
 
 /* Lightbox */
@@ -2312,10 +2355,13 @@ body::before {
 }
 
 .live-proof-toast img {
-  width: 40px;
+  width: 44px;
   height: 44px;
+  aspect-ratio: 1 / 1;
   border-radius: 10px;
-  object-fit: cover;
+  object-fit: contain;
+  background: #ffffff;
+  border: 1px solid var(--line);
 }
 
 .proof-kicker { font-size: 0.72rem; font-weight: 700; color: var(--cherry); }
@@ -2374,8 +2420,10 @@ body::before {
 .variant-chip-rich img {
   width: 30px;
   height: 30px;
+  aspect-ratio: 1 / 1;
   border-radius: 7px;
-  object-fit: cover;
+  object-fit: contain;
+  background: #ffffff;
   border: 1px solid var(--line);
   flex-shrink: 0;
 }
@@ -2456,8 +2504,10 @@ body::before {
 .card-var-swatch {
   width: 24px;
   height: 24px;
+  aspect-ratio: 1 / 1;
   border-radius: 6px;
-  object-fit: cover;
+  object-fit: contain;
+  background: #ffffff;
   border: 1.5px solid var(--line-strong);
   cursor: pointer;
   flex-shrink: 0;

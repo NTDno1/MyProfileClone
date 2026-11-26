@@ -24,7 +24,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           'Content-Type': 'application/json',
           'X-Sync-Key': syncKey
         },
-        body: JSON.stringify({ products: msg.products || [] })
+        body: JSON.stringify({ harvesterVersion: 6, products: msg.products || [] })
       });
 
       const data = await res.json().catch(() => ({}));

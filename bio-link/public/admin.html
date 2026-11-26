@@ -5,6 +5,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Quản Trị Bio Link ✨ Studio Thiết Kế</title>
+  <link rel="icon" type="image/png" sizes="128x128" href="/images/favicon-girlfriend-2.png?v=2" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2" />
+  <link rel="shortcut icon" href="/favicon.ico?v=2" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -82,17 +86,39 @@
     }
 
     .login-logo {
-      width: 60px;
-      height: 60px;
-      border-radius: 20px;
-      background: linear-gradient(135deg, #e88ca7, #c85a7c);
-      color: #fff;
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      padding: 3px;
+      background: linear-gradient(135deg, #fff0f6, #e88ca7);
+      border: 1.5px solid #eaa3bb;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.7rem;
+      overflow: hidden;
       margin-bottom: 14px;
-      box-shadow: 0 10px 24px rgba(200, 90, 124, 0.3);
+      box-shadow: 0 10px 24px rgba(200, 90, 124, 0.28);
+    }
+
+    .login-logo img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      object-position: center 20%;
+      display: block;
+    }
+
+    .brand-logo-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid #f4cad8;
+      object-fit: cover;
+      object-position: center 20%;
+      box-shadow: 0 0 0 1px rgba(200, 55, 103, 0.22), 0 4px 12px rgba(200, 55, 103, 0.16);
+      flex-shrink: 0;
+      display: block;
     }
 
     /* Top Header (Aligned to exact same container grid as .admin-main) */
@@ -693,7 +719,7 @@
   <!-- LOGIN OVERLAY -->
   <div class="login-overlay" id="login-overlay">
     <div class="login-card">
-      <div class="login-logo">🌸</div>
+      <div class="login-logo"><img src="/images/brand-logo.jpg?v=2" alt="NA 2HAND Logo" /></div>
       <h1 style="font-family: 'Cormorant Garamond', serif; font-size: 2rem; margin-bottom: 6px;">Bio Link Studio</h1>
       <p style="font-size: 0.84rem; color: var(--adm-muted); margin-bottom: 24px;">
         Đăng nhập để tùy chỉnh đường dẫn, hình ảnh, icon và giao diện Bio của bạn
@@ -725,7 +751,7 @@
   <header class="admin-header">
     <div class="admin-header-inner">
       <div class="brand-title">
-        <span style="font-size: 1.4rem;">🌸</span>
+        <img src="/images/brand-logo.jpg?v=2" alt="NA 2HAND Logo" class="brand-logo-avatar" />
         <span>Bio Link Studio</span>
         <span class="brand-badge">Canva Feminine Edition</span>
       </div>

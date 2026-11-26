@@ -484,9 +484,18 @@
         editingVariants[Number(el.dataset.idx)].price = Number(el.value || 0);
       });
     });
+    const syncTotalStockInputFromVariants = () => {
+      if (editingVariants.length === 0) return;
+      const total = editingVariants.reduce((s, v) => s + Math.max(0, Number(v.stock ?? 0)), 0);
+      const stockInp = document.getElementById('pf-stock');
+      if (stockInp) stockInp.value = String(total);
+    };
+    syncTotalStockInputFromVariants();
+
     box.querySelectorAll('.var-inp-stock').forEach((el) => {
       el.addEventListener('input', () => {
         editingVariants[Number(el.dataset.idx)].stock = Math.max(0, Number(el.value || 0));
+        syncTotalStockInputFromVariants();
       });
     });
     box.querySelectorAll('.var-btn-del').forEach((btn) => {
@@ -763,7 +772,7 @@
         return `
           <tr style="${locked ? 'background:#fff5f7; opacity:0.86;' : ''}">
             <td>
-              <img src="${escapeHtml(img)}" style="width:48px; height:48px; border-radius:11px; object-fit:cover; border:1px solid var(--border);" />
+              <img src="${escapeHtml(img)}" style="width:48px; height:48px; aspect-ratio:1/1; border-radius:11px; object-fit:contain; background:#ffffff; border:1px solid var(--border);" />
             </td>
             <td>
               <div style="font-weight:700; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
@@ -952,7 +961,7 @@
           <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:14px; padding:10px 12px;">
             <div style="font-size:0.73rem; color:#9a3412; font-weight:700;">🧡 2. Hàng Shopee</div>
             <div style="font-size:1.25rem; font-weight:800; color:#c2410c;">${c.shopee || 0} SP</div>
-            <div style="font-size:0.7rem; color:#9a3412;">✅ Chuẩn V5 (Đủ kho thật): ${sh.deepSyncedComplete || 0}/${c.shopee || 0} SP</div>
+            <div style="font-size:0.7rem; color:#9a3412;">✅ Chuẩn V6 (Đủ kho từng phân hệ): ${sh.deepSyncedComplete || 0}/${c.shopee || 0} SP</div>
           </div>
           <div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:14px; padding:10px 12px;">
             <div style="font-size:0.73rem; color:#6b21a8; font-weight:700;">🎵 3. Hàng TikTok</div>
@@ -970,8 +979,8 @@
           <div style="font-weight:800; color:${needResyncCount > 0 ? '#be123c' : '#15803d'}; margin-bottom:6px;">
             ${
               needResyncCount > 0
-                ? `⚠️ Có ${needResyncCount}/${c.shopee || 0} SP Shopee cần bấm chạy lại 1 lượt Đồng Bộ 1-1 (V5) để cập nhật chính xác 100% số lượng tồn kho thật của từng phân hệ (thay vì kho ảo 10 của Shopee).`
-                : `✅ Tuyệt vời! Toàn bộ ${c.shopee || 0}/${c.shopee || 0} sản phẩm Shopee trên Web đã đồng bộ chuẩn 1-1 cả ảnh gốc, phân hệ lẫn số lượng tồn kho thật!`
+                ? `⚠️ Có ${needResyncCount}/${c.shopee || 0} SP Shopee cần bấm chạy lại 1 lượt Đồng Bộ 1-1 (V6) để cập nhật chuẩn tồn kho từng phân hệ &amp; từng Size (báo hết hàng chuẩn xác và loại sạch ảnh avatar).`
+                : `✅ Tuyệt vời! Toàn bộ ${c.shopee || 0}/${c.shopee || 0} sản phẩm Shopee trên Web đã đồng bộ chuẩn 1-1 V6 (ảnh 1:1 sạch avatar, đủ phân hệ + ma trận Size &amp; tồn kho thật)!`
             }
           </div>
           <div style="font-size:0.78rem; color:var(--text); line-height:1.55; margin-bottom:10px;">

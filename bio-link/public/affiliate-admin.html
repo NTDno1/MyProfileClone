@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản Trị Affiliate ✨ NA 2HAND Creator Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --pri: #d9467e;
+      --pri-light: #fff0f6;
+      --border: #f2d5e1;
+      --text: #381826;
+      --muted: #8a6273;
+      --bg: #fcf7f9;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: clip;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .login-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: linear-gradient(145deg, #ffe4ef, #f3bfd3);
+      display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .login-card {
+      width: 100%; max-width: 400px; background: #fff; border-radius: 26px; padding: 32px 26px;
+      text-align: center; box-shadow: 0 24px 60px rgba(140, 45, 80, 0.2);
+    }
+    .top-bar {
+      position: sticky; top: 0; z-index: 40;
+      background: rgba(255, 255, 255, 0.94); backdrop-filter: blur(14px);
+      border-bottom: 1.5px solid var(--border);
+      width: 100%;
+    }
+    .top-bar-inner {
+      width: 100%; max-width: 1360px; margin: 0 auto;
+      padding: 12px clamp(14px, 2.5vw, 28px);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 9px 15px; border-radius: 13px; border: 1px solid var(--border);
+      background: #fff; color: var(--text); font-family: inherit; font-size: 0.82rem; font-weight: 700;
+      cursor: pointer; text-decoration: none; transition: all 0.2s ease;
+    }
+    .btn:hover { background: var(--pri-light); border-color: #efaac4; }
+    .btn-primary {
+      background: linear-gradient(135deg, #f05d95, #d13470); color: #fff; border-color: transparent;
+      box-shadow: 0 6px 16px rgba(209, 52, 112, 0.25);
+    }
+    .btn-primary:hover { background: linear-gradient(135deg, #e54d87, #bd2760); color: #fff; }
+    .btn-danger { background: #fff1f2; color: #e11d48; border-color: #fecdd3; }
+    .btn-sm { padding: 6px 11px; font-size: 0.76rem; border-radius: 10px; }
+
+    .container { width: 100%; max-width: 1360px; margin: 0 auto; padding: 22px clamp(14px, 2.5vw, 28px) 80px; }
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-bottom: 22px;
+    }
+    .kpi-card {
+      min-width: 0; background: #fff; border: 1.5px solid var(--border); border-radius: 20px; padding: 16px 18px;
+      box-shadow: 0 6px 20px rgba(180, 90, 125, 0.05);
+    }
+    .kpi-val { font-size: 1.4rem; font-weight: 800; color: var(--pri); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kpi-lbl { font-size: 0.76rem; color: var(--muted); font-weight: 600; }
+
+    .tabs {
+      display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 6px; margin-bottom: 18px;
+    }
+    @media (max-width: 768px) {
+      .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+      .tabs::-webkit-scrollbar { display: none; }
+    }
+    .tab-btn {
+      padding: 10px 16px; border-radius: 14px; border: 1.5px solid var(--border);
+      background: #fff; color: var(--muted); font-family: inherit; font-weight: 700; font-size: 0.83rem;
+      white-space: nowrap; cursor: pointer;
+    }
+    .tab-btn.active { background: var(--pri); color: #fff; border-color: var(--pri); }
+
+    .card {
+      min-width: 0; background: #fff; border: 1.5px solid var(--border); border-radius: 22px; padding: 22px; margin-bottom: 18px;
+    }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: 120px minmax(0, 1fr) 210px; gap: 14px; }
+    .grid-2 > *, .grid-3 > * { min-width: 0; }
+    @media (max-width: 760px) {
+      .grid-2, .grid-3 { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    .label { display: block; font-size: 0.78rem; font-weight: 700; margin-bottom: 5px; color: #54283b; }
+    .input, .select, .textarea {
+      width: 100%; padding: 10px 13px; border-radius: 12px; border: 1.5px solid #ebd0dc;
+      font-family: inherit; font-size: 15px; color: var(--text); outline: none; margin-bottom: 12px;
+    }
+    .input:focus, .select:focus, .textarea:focus { border-color: var(--pri); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th, td { padding: 11px 10px; border-bottom: 1px solid #f6e4ec; text-align: left; vertical-align: middle; }
+    th { color: var(--muted); font-weight: 700; background: #fff9fb; white-space: nowrap; }
+
+    .badge {
+      display: inline-block; padding: 3px 9px; border-radius: 99px; font-size: 0.7rem; font-weight: 700;
+    }
+    .toast {
+      position: fixed; right: 20px; bottom: 20px; z-index: 150;
+      background: #381625; color: #fff; padding: 12px 18px; border-radius: 14px; font-size: 0.84rem; font-weight: 700;
+      transform: translateY(90px); opacity: 0; transition: all 0.28s ease;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+  </style>
+</head>
+<body>
+  <!-- LOGIN OVERLAY (Unified SSO with /admin & /shop-admin) -->
+  <div class="login-overlay" id="login-overlay">
+    <div class="login-card">
+      <div style="font-size: 2.3rem; margin-bottom: 8px;">✨</div>
+      <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 1.9rem; margin-bottom: 6px;">Quản Trị Affiliate</h2>
+      <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 20px;">Dùng chung tài khoản Quản trị Bio &amp; Shop của bạn</p>
+      <form id="login-form">
+        <input type="text" id="login-user" class="input" placeholder="Tài khoản quản trị (admin)" required />
+        <input type="password" id="login-pass" class="input" placeholder="Mật khẩu bảo mật" required />
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;">✨ Đăng nhập</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="top-bar">
+    <div class="top-bar-inner">
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <span style="font-size: 1.35rem;">✨</span>
+        <strong style="font-size: 1.05rem;">Quản Trị Affiliate Showcase</strong>
+        <span class="badge" id="db-badge" style="background: #e6f9ed; color: #157f3d;">🟢 MongoDB: na2hand_shop</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <a href="/affiliate" target="_blank" class="btn btn-primary btn-sm">🔗 Xem Trang Affiliate (/affiliate)</a>
+        <a href="/shop-admin" class="btn btn-sm">🎀 Quản trị Shop</a>
+        <a href="/admin" class="btn btn-sm">🌸 Quản trị Bio Link</a>
+        <button type="button" class="btn btn-sm" id="btn-logout">Đăng xuất</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- KPI CARDS -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-lbl">🔗 Tổng Sản Phẩm Affiliate</div>
+        <div class="kpi-val" id="kpi-items">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-lbl">👆 Tổng Lượt Bấm Link Affiliate</div>
+        <div class="kpi-val" id="kpi-clicks">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-lbl">👁️ Lượt Xem Trang Affiliate</div>
+        <div class="kpi-val" id="kpi-views">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-lbl">🔥 Sản Phẩm Nhiều Click Nhất</div>
+        <div class="kpi-val" id="kpi-top" style="font-size: 0.96rem; margin-top: 8px;">Chưa có lượt bấm</div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button type="button" class="tab-btn active" data-tab="pane-items">👗 1. Đăng &amp; Quản Lý SP Affiliate</button>
+      <button type="button" class="tab-btn" data-tab="pane-bulk">⚡ 2. Đăng Hàng Loạt &amp; Đồng Bộ</button>
+      <button type="button" class="tab-btn" data-tab="pane-cats">🗂️ 3. Danh Mục (Quần, Áo, Đầm...)</button>
+      <button type="button" class="tab-btn" data-tab="pane-profile">🎨 4. Hồ Sơ &amp; Giao Diện Trang Affiliate</button>
+    </div>
+
+    <!-- PANE 1: ADD / EDIT & LIST AFFILIATE ITEMS -->
+    <section class="tab-pane" id="pane-items">
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+          <div>
+            <h3 style="font-size:1.06rem;" id="aff-form-heading">➕ Đăng Sản Phẩm Affiliate Mới</h3>
+            <p style="font-size:0.78rem; color:var(--muted);">Mã số tự động tăng dần (VD: 07, 08... hoặc 179) để gắn trên bình luận TikTok / Reels giống chuẩn Passio</p>
+          </div>
+          <button type="button" class="btn btn-sm" id="btn-reset-form">Làm mới form</button>
+        </div>
+
+        <form id="aff-item-form">
+          <input type="hidden" id="af-id" />
+
+          <div style="margin-bottom:4px;">
+            <label class="label">Link Affiliate kiếm hoa hồng (Shopee / TikTok / Lazada...) *</label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+              <input
+                type="url"
+                id="af-url"
+                class="input"
+                style="flex: 1 1 280px; margin-bottom:0;"
+                placeholder="Dán link tiếp thị liên kết vào đây (VD: https://s.shopee.vn/... hoặc https://vt.tiktok.com/...)..."
+                required
+              />
+              <button type="button" class="btn" id="btn-auto-fetch-meta">
+                🪄 Tự Đọc Tên &amp; Ảnh Từ Link
+              </button>
+            </div>
+          </div>
+
+          <div class="grid-3">
+            <div>
+              <label class="label">Mã số (VD: 179)</label>
+              <input type="text" id="af-code" class="input" placeholder="Tự động" />
+            </div>
+            <div>
+              <label class="label">Tên sản phẩm hiển thị *</label>
+              <input type="text" id="af-name" class="input" placeholder="VD: Quần tây nữ chất xước thái ống rộng cạp trễ" required />
+            </div>
+            <div>
+              <label class="label">Danh mục *</label>
+              <select id="af-cat" class="select"></select>
+            </div>
+          </div>
+
+          <div class="grid-2" style="align-items: start;">
+            <div>
+              <label class="label">Ảnh sản phẩm (Dán URL ảnh hoặc tải ảnh từ máy/điện thoại lên)</label>
+              <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                <img id="af-img-preview" src="/media/bio-link/girlfriend-1.jpg" alt="Preview" style="width:68px; height:68px; border-radius:12px; object-fit:cover; border:1.5px solid var(--border); flex-shrink:0;" />
+                <div style="flex:1; min-width:190px;">
+                  <input type="text" id="af-image" class="input" placeholder="https://... hoặc /media/bio-link/..." style="margin-bottom:6px;" />
+                  <label class="btn btn-sm" style="cursor:pointer;">
+                    📤 Tải ảnh từ máy/điện thoại
+                    <input type="file" id="af-upload-file" accept="image/*" style="display:none;" />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div>
+                <label class="label">Giá tham khảo (Tùy chọn)</label>
+                <input type="number" id="af-price" class="input" placeholder="185000" />
+              </div>
+              <div>
+                <label class="label">Nhãn nhỏ góc ảnh (Tùy chọn)</label>
+                <input type="text" id="af-badge" class="input" placeholder="VD: HOT, Mới lên clip" />
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:18px; flex-wrap:wrap; margin:8px 0 16px; font-size:0.84rem; font-weight:700;">
+            <label><input type="checkbox" id="af-pinned" /> 📌 Ghim lên đầu danh mục</label>
+            <label><input type="checkbox" id="af-enabled" checked /> 👁️ Hiển thị trên trang Affiliate</label>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="btn-save-aff-item">💾 Lưu Sản Phẩm Affiliate</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+          <div>
+            <h3 style="font-size:1.05rem;">📋 Danh Sách Sản Phẩm Affiliate (<span id="list-total-cnt">0</span>)</h3>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <input type="text" id="filter-search" class="input" style="margin-bottom:0; width:210px; padding:7px 11px; font-size:0.8rem;" placeholder="Tìm mã số hoặc tên..." />
+            <select id="filter-cat" class="select" style="margin-bottom:0; width:175px; padding:7px 10px; font-size:0.8rem;">
+              <option value="all">Tất cả danh mục</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Ảnh</th>
+                <th>Mã &amp; Tên sản phẩm</th>
+                <th>Danh mục</th>
+                <th>Link Affiliate</th>
+                <th>Lượt Click</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="aff-items-tbody"></tbody>
+          </table>
+        </div>
+        <div id="aff-items-pager" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:14px; font-size:0.79rem;"></div>
+      </div>
+    </section>
+
+    <!-- PANE 2: BULK IMPORT & QUICK CLONE FROM SHOP -->
+    <section class="tab-pane" id="pane-bulk" style="display: none;">
+      <div class="card">
+        <h3 style="font-size:1.06rem; margin-bottom:6px;">⚡ Đăng Hàng Loạt Nhiều Link Affiliate Cùng Lúc</h3>
+        <p style="font-size:0.8rem; color:var(--muted); margin-bottom:12px; line-height:1.55;">
+          Mỗi dòng tương ứng 1 sản phẩm theo cú pháp: <code>Tên sản phẩm | Link Affiliate | Link Ảnh (tùy chọn)</code> hoặc <code>Mã số | Tên sản phẩm | Link Affiliate | Link Ảnh</code>.
+        </p>
+
+        <div style="max-width: 320px;">
+          <label class="label">Danh mục áp dụng cho lô sản phẩm này</label>
+          <select id="bulk-cat" class="select"></select>
+        </div>
+
+        <label class="label">Dán danh sách sản phẩm (mỗi sản phẩm 1 dòng)</label>
+        <textarea
+          id="bulk-lines"
+          rows="6"
+          class="textarea"
+          placeholder="Quần tây nữ ống rộng cạp trễ | https://s.shopee.vn/8VAfrswNOG | https://down-vn.img.susercontent.com/file/...&#10;Chân váy Jeans dài dáng chữ A | https://s.shopee.vn/8VAfrswNOG"
+        ></textarea>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary" id="btn-run-bulk">🚀 Đăng Hàng Loạt Ngay</button>
+          <button type="button" class="btn" id="btn-clone-from-shop">🪄 Đồng Bộ Nhanh Các SP Đang Có Từ Shop Sang Affiliate</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANE 3: CATEGORIES MANAGEMENT -->
+    <section class="tab-pane" id="pane-cats" style="display: none;">
+      <div class="card" style="max-width: 680px;">
+        <h3 style="font-size:1.05rem; margin-bottom:6px;">🗂️ Quản Lý Danh Mục Trang Affiliate</h3>
+        <p style="font-size:0.79rem; color:var(--muted); margin-bottom:14px;">
+          Các nút lọc hiển thị kèm số lượng giống Passio: <code>Quần - Chân váy (179)</code>, <code>Áo (348)</code>, <code>Đầm (55)</code>...
+        </p>
+        <div style="display:flex; gap:8px; margin-bottom:14px;">
+          <input type="text" id="new-cat-name" class="input" placeholder="Nhập tên danh mục mới (VD: Mỹ phẩm, Decor phòng...)" style="flex:1; margin-bottom:0;" />
+          <button type="button" class="btn btn-primary" id="btn-add-aff-cat">+ Thêm Danh Mục</button>
+        </div>
+        <div id="aff-cats-admin-list"></div>
+      </div>
+    </section>
+
+    <!-- PANE 4: PROFILE & THEME CUSTOMIZATION -->
+    <section class="tab-pane" id="pane-profile" style="display: none;">
+      <div class="card" style="max-width: 780px;">
+        <h3 style="font-size:1.06rem; margin-bottom:14px;">🎨 Hồ Sơ Cá Nhân &amp; Giao Diện Trang Affiliate (/affiliate)</h3>
+
+        <div style="margin-bottom:14px;">
+          <label class="label">Ảnh đại diện trên trang Affiliate</label>
+          <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+            <img id="pf-aff-avatar-prev" src="/media/bio-link/girlfriend-1.jpg" alt="Avatar" style="width:82px; height:82px; border-radius:50%; object-fit:cover; border:2px solid var(--border);" />
+            <div style="flex:1; min-width:210px;">
+              <input type="text" id="pf-aff-avatar" class="input" style="margin-bottom:6px;" />
+              <label class="btn btn-sm" style="cursor:pointer;">
+                📤 Tải ảnh đại diện mới
+                <input type="file" id="pf-aff-avatar-file" accept="image/*" style="display:none;" />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <label class="label">Tên tài khoản góc trái trên (Handle)</label>
+            <input type="text" id="pf-aff-handle" class="input" placeholder="na2hand" />
+          </div>
+          <div>
+            <label class="label">Tiêu đề chính dưới Avatar (VD: HuonnTown / NA 2HAND Closet)</label>
+            <input type="text" id="pf-aff-title" class="input" placeholder="NA 2HAND Closet" />
+          </div>
+        </div>
+
+        <div>
+          <label class="label">Dòng hướng dẫn dưới tiêu đề</label>
+          <input type="text" id="pf-aff-sub" class="input" placeholder="Search khung tìm kiếm phía dưới là siêu nhanh 👇" />
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <label class="label">Bố cục hiển thị sản phẩm</label>
+            <select id="pf-aff-layout" class="select">
+              <option value="zigzag">✨ So le Trái - Phải (Chuẩn mẫu kimhuonn.passio.eco)</option>
+              <option value="grid">📱 Lưới 2 cột hiện đại</option>
+            </select>
+          </div>
+          <div>
+            <label class="label">Tông màu nền trang Affiliate</label>
+            <select id="pf-aff-tone" class="select">
+              <option value="oatmeal">🥛 Kem Yến Mạch Trầm (Chuẩn Passio)</option>
+              <option value="blush">🌸 Hồng Phấn Nữ Tính</option>
+              <option value="ivory">🤍 Trắng Kem Tinh Khôi</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:18px; flex-wrap:wrap; margin:6px 0 16px; font-size:0.84rem; font-weight:700;">
+          <label><input type="checkbox" id="pf-aff-show-price" /> 💰 Hiển thị giá tham khảo dưới tên sản phẩm</label>
+          <label><input type="checkbox" id="pf-aff-show-plat" /> 🏷️ Hiển thị nhãn sàn (Shopee / TikTok Shop)</label>
+        </div>
+
+        <button type="button" class="btn btn-primary" id="btn-save-aff-profile">💾 Lưu Hồ Sơ &amp; Giao Diện Affiliate</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast">Đã lưu thành công!</div>
+
+  <script src="/js/affiliate-admin.js?v=1"></script>
+</body>
+</html>

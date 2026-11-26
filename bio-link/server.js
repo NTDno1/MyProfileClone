@@ -5,6 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { MongoClient } = require('mongodb');
 const { registerShopRoutes } = require('./shop-routes');
+const { registerAffiliateRoutes } = require('./affiliate-routes');
 const {
   uploadToFileStorage,
   listProjectFiles,
@@ -141,6 +142,22 @@ async function initMongoConnection(customUri, customDbName) {
       ) {
         migrated.data.socials[zaloIdx].url = 'https://zalo.me/0359427135';
         migrated.data.socials[zaloIdx].enabled = true;
+        cfgChanged = true;
+      }
+      if (!Array.isArray(migrated.data.links)) migrated.data.links = [];
+      const hasAffLink = migrated.data.links.some((l) => l && (l.id === 'link-affiliate' || l.url === '/affiliate'));
+      if (!hasAffLink) {
+        migrated.data.links.splice(1, 0, {
+          id: 'link-affiliate',
+          title: 'TỦ ĐỒ AFFILIATE & LINK ĐỒ XINH',
+          subtitle: '',
+          url: '/affiliate',
+          icon: 'sparkles',
+          badge: 'NEW',
+          shimmer: true,
+          enabled: true,
+          clicks: 0
+        });
         cfgChanged = true;
       }
       fs.writeFileSync(CONFIG_FILE, JSON.stringify(migrated.data, null, 2), 'utf8');
@@ -1064,8 +1081,15 @@ app.delete('/api/storage/files', requireAuth, async (req, res) => {
   }
 });
 
-// Register Full E-Commerce Shop Routes (MongoDB `na2hand_shop`)
+// Register Full E-Commerce Shop Routes & Passio-Style Affiliate Showcase Routes (MongoDB `na2hand_shop`)
 registerShopRoutes(app, {
+  dataDir: DATA_DIR,
+  getMongoDb: () => (mongoConnected ? mongoDb : null),
+  requireAuth,
+  recordAnalyticsEvent
+});
+
+registerAffiliateRoutes(app, {
   dataDir: DATA_DIR,
   getMongoDb: () => (mongoConnected ? mongoDb : null),
   requireAuth,
@@ -1079,6 +1103,14 @@ app.get('/shop', (req, res) => {
 
 app.get('/shop-admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'shop-admin.html'));
+});
+
+app.get('/affiliate', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'affiliate.html'));
+});
+
+app.get('/affiliate-admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'affiliate-admin.html'));
 });
 
 app.get('/admin', (req, res) => {

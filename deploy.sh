@@ -41,7 +41,7 @@ pull_latest_code() {
   mkdir -p "$BACKUP_DIR"
 
   # Sao lưu dữ liệu runtime của bio-link tránh xung đột khi git pull
-  for f in config.json auth.json mongo-settings.json shop-store.json analytics-logs.json; do
+  for f in config.json auth.json mongo-settings.json shop-store.json affiliate-store.json analytics-logs.json; do
     if [ -f "$REPO_DIR/bio-link/data/$f" ]; then
       cp -f "$REPO_DIR/bio-link/data/$f" "$BACKUP_DIR/$f"
     fi
@@ -52,7 +52,7 @@ pull_latest_code() {
 
   # Khôi phục lại dữ liệu runtime đã sao lưu
   mkdir -p "$REPO_DIR/bio-link/data" "$REPO_DIR/bio-link/uploads"
-  for f in config.json auth.json mongo-settings.json shop-store.json analytics-logs.json; do
+  for f in config.json auth.json mongo-settings.json shop-store.json affiliate-store.json analytics-logs.json; do
     if [ -f "$BACKUP_DIR/$f" ]; then
       cp -f "$BACKUP_DIR/$f" "$REPO_DIR/bio-link/data/$f"
     fi

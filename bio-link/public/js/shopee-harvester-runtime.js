@@ -154,7 +154,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
         if (el.children.length > 2) continue;
         const tx = (el.textContent || '').trim();
         if (
-          /^(Product Specifications|Chi tiết sản phẩm|Product Ratings|Đánh giá sản phẩm|From The Same Shop|(?:Các\s+)?Sản phẩm khác của Shop)$/i.test(
+          /^(Product Specifications|Chi tiết sản phẩm|Product Ratings|Đánh giá sản phẩm|From The Same Shop|Sản phẩm khác của Shop)$/i.test(
             tx
           )
         ) {
@@ -211,17 +211,13 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
 
     const readStock = (doc) => {
       const txt = doc.body ? doc.body.innerText : '';
-      const m =
-        txt.match(/(\d+)\s*(?:pieces?\s*available|sản phẩm có sẵn|sp có sẵn)/i) ||
-        txt.match(/còn\s*(\d+)\s*sản phẩm/i);
+      const m = txt.match(/(\d+)\s*(?:pieces?\s*available|sản phẩm có sẵn|sp có sẵn)/i);
       return m ? parseInt(m[1], 10) : 1;
     };
 
     const hasStockRendered = (doc) => {
       const txt = doc.body ? doc.body.innerText : '';
-      return /\d+\s*(?:pieces?\s*available|sản phẩm có sẵn|sp có sẵn)|còn\s*\d+\s*sản phẩm|out of stock|đã hết hàng|tạm hết hàng|hết hàng/i.test(
-        txt
-      );
+      return /\d+\s*(?:pieces?\s*available|sản phẩm có sẵn|sp có sẵn)|out of stock|hết hàng/i.test(txt);
     };
 
     const readMainImg = (doc) => {
@@ -352,7 +348,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
     };
 
     const NON_VARIATION_BTN_RE =
-      /^(add to cart|buy now|thêm vào giỏ.*|mua ngay|mua với voucher.*|chat now|chat ngay|view shop|xem shop|follow|theo dõi|report|tố cáo|share|chia sẻ|favorite.*|yêu thích.*|size chart.*|bảng quy đổi.*|decrease|increase|giảm|tăng|\+|-|×|✕|.*change of mind.*|.*trả hàng.*|.*đổi trả.*|.*an tâm mua sắm.*|.*bảo hiểm.*|.*chính hãng.*|.*đồng kiểm.*|.*free ship.*|.*miễn phí vận chuyển.*|.*vận chuyển.*|.*shipping.*|.*spaylater.*|.*trả góp.*|.*voucher.*|.*mã giảm giá.*)$/i;
+      /^(add to cart|buy now|thêm vào giỏ.*|mua ngay|chat now|chat ngay|view shop|xem shop|follow|theo dõi|report|tố cáo|share|chia sẻ|favorite.*|yêu thích.*|size chart.*|bảng quy đổi.*|decrease|increase|giảm|tăng|\+|-|×|✕|.*change of mind.*|.*đổi trả.*|.*an tâm mua sắm.*|.*free ship.*|.*miễn phí vận chuyển.*|.*vận chuyển.*|.*shipping.*|.*spaylater.*|.*trả góp.*|.*voucher.*|.*mã giảm giá.*)$/i;
 
     /* Detect whether the Shopee PDP visibly displays variation rows in DOM */
     const pageShowsVariationUI = (doc) => {
@@ -648,7 +644,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       const fullTxt = doc.body ? doc.body.innerText : '';
       if (!desc) {
         const dm = fullTxt.match(
-          /(?:Product Description|Mô tả sản phẩm)\s*\n([\s\S]{12,1800}?)(?:Product Ratings|Đánh giá sản phẩm|From The Same Shop|(?:Các\s+)?Sản phẩm khác của Shop|You May Also Like|Có thể bạn cũng thích|CUSTOMER SERVICE|CHĂM SÓC KHÁCH HÀNG|$)/i
+          /(?:Product Description|Mô tả sản phẩm)\s*\n([\s\S]{12,1800}?)(?:Product Ratings|Đánh giá sản phẩm|From The Same Shop|Sản phẩm khác của Shop|You May Also Like|Có thể bạn cũng thích|CUSTOMER SERVICE|CHĂM SÓC KHÁCH HÀNG|$)/i
         );
         if (dm) desc = dm[1].trim();
       }
@@ -656,7 +652,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
         .replace(/(?:CUSTOMER SERVICE|CHĂM SÓC KHÁCH HÀNG)[\s\S]*$/i, '')
         .trim();
 
-      const soldM = fullTxt.match(/(\d+)\s*(?:Sold|Đã bán)|Đã bán\s*(\d+)/i);
+      const soldM = fullTxt.match(/(\d+)\s*Sold|Đã bán\s*(\d+)/i);
       const sold =
         reactItem && (reactItem.historical_sold !== undefined || reactItem.sold !== undefined)
           ? Number(reactItem.historical_sold || reactItem.sold || 0)

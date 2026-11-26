@@ -2000,12 +2000,12 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
           ? JSON.parse(req.body)
           : req.body || {};
 
-      // Block stale legacy bookmarklets (< V3) when called via browser syncKey so old bookmarks NEVER corrupt data!
+      // Block stale legacy bookmarklets (< V4) when called via browser syncKey so old static bookmarks NEVER corrupt data!
       const isExternalSyncKey = Boolean(req.query?.syncKey || req.headers['x-sync-key']);
-      if (isExternalSyncKey && Number(bodyObj.harvesterVersion || 0) < 3) {
+      if (isExternalSyncKey && Number(bodyObj.harvesterVersion || 0) < 4) {
         return res.status(409).json({
           success: false,
-          message: 'Dấu trang cũ! Vui lòng xóa dấu trang cũ trên trình duyệt và dùng nút Đồng bộ 1-1 (V3) mới trên /shop-admin.'
+          message: 'Dấu trang cũ! Vui lòng xóa dấu trang cũ trên trình duyệt và dùng nút Đồng bộ 1-1 mới trên /shop-admin.'
         });
       }
 
@@ -2015,7 +2015,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         ? [bodyObj.product]
         : [];
 
-      // Server-side completeness gate for external V3 harvester: reject incomplete items (missing real CDN image) with 422 so V3 auto-retries!
+      // Server-side completeness & 1-to-1 URL match gate: reject incomplete or mismatched items with 422 so harvester auto-retries!
       if (isExternalSyncKey && rawProducts.length > 0) {
         for (const rp of rawProducts) {
           const hasRealCdn = Array.isArray(rp?.images) && rp.images.some((u) => /^https?:\/\//i.test(String(u || '')));
@@ -2024,6 +2024,14 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
               success: false,
               retry: true,
               message: 'Sản phẩm chưa tải xong ảnh gốc từ sàn — yêu cầu quét lại!'
+            });
+          }
+          const slugInfo = extractSlugFromShopeeUrl(rp?.sourceUrl || '');
+          if (slugInfo && !titleMatchesSlugWords(rp?.name || '', slugInfo.prettyTitle)) {
+            return res.status(422).json({
+              success: false,
+              retry: true,
+              message: 'Tên sản phẩm và đường dẫn Shopee chưa khớp 1-1 — yêu cầu quét lại!'
             });
           }
         }
@@ -2166,17 +2174,25 @@ function normalizeSlugWords(str) {
     .trim();
 }
 
+const CRITICAL_SLUG_TOKENS = [
+  'xxs', 'xs', 's', 'm', 'l', 'xl', 'xxl', '2xl', '3xl', '4xl', 'freesize',
+  'dung', 'rong', 'loe', 'hoodie', 'sweater', 'jeans', 'jean', 'ung', 'stickers', 'sticker', '2hand', 'secondhand'
+];
+
 function titleMatchesSlugWords(candTitle, slugTitle) {
   if (!slugTitle) return true;
   const cw = normalizeSlugWords(candTitle).split(' ').filter(Boolean);
   const sw = normalizeSlugWords(slugTitle).split(' ').filter(Boolean);
   if (sw.length === 0) return true;
   if (cw.length === 0) return false;
+  for (const tok of CRITICAL_SLUG_TOKENS) {
+    if (sw.includes(tok) !== cw.includes(tok)) return false;
+  }
   let hits = 0;
   for (const w of sw) {
     if (cw.includes(w)) hits++;
   }
-  return hits / sw.length >= 0.8;
+  return hits / sw.length >= 0.95;
 }
 
 function extractSlugFromShopeeUrl(url) {
@@ -2239,6 +2255,11 @@ function repairAndMigrateProductsStore(products, categories = []) {
         p.sourcePlatform = targetManualTag;
         changed = true;
       }
+      // Clear generic store-homepage placeholder URLs on built-in manual sample items so they never show fake Shopee product links
+      if (/^prod-\d+$/.test(String(p.id || '')) && p.sourceUrl && !isSpecificProductUrl(p.sourceUrl)) {
+        p.sourceUrl = '';
+        changed = true;
+      }
       continue;
     }
 
@@ -2276,13 +2297,6 @@ function repairAndMigrateProductsStore(products, categories = []) {
         if (unusedSwap) {
           p.sourceUrl = unusedSwap.cleanUrl;
           p.platformItemId = unusedSwap.platformItemId;
-          changed = true;
-        } else if (curSlug.prettyTitle) {
-          // URL & images belong to curSlug, only DOM title was polluted -> restore true Vietnamese title!
-          p.name = curSlug.prettyTitle;
-          if (categories.length > 0) {
-            p.category = inferCategoryFromName(p.name, categories);
-          }
           changed = true;
         }
       }
@@ -2408,14 +2422,14 @@ function inferCategoryFromName(name, categories = []) {
   const lower = String(name || '').toLowerCase();
   const findCat = (regex) => categories.find((c) => regex.test(`${c.id} ${c.name}`));
   if (/quần|jeans|jean|culottes|short|chân váy/.test(lower)) {
-    const c = findCat(/chan-vay|quan|jeans|váy/i);
+    const c = findCat(/chan-vay|quần|jeans/i);
     if (c) return c.id;
   }
   if (/áo|hoodie|sweater|cardigan|sơ mi|croptop|khoác/.test(lower)) {
-    const c = findCat(/ao-kieu|áo/i);
+    const c = findCat(/ao-xinh|ao-kieu|áo/i);
     if (c) return c.id;
   }
-  if (/sticker|dép|kẹp|nơ|túi|phụ kiện|mũ|tất|vớ/.test(lower)) {
+  if (/sticker|dép|ủng|giày|kẹp|nơ|túi|phụ kiện|mũ|tất|vớ/.test(lower)) {
     const c = findCat(/phu-kien|phụ kiện/i);
     if (c) return c.id;
   }

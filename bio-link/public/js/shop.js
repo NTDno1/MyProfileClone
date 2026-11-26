@@ -834,13 +834,23 @@
     const initialPrice = (chosenVariant && Number(chosenVariant.price) > 0) ? chosenVariant.price : p.price;
     const initialStock = chosenVariant ? Number(chosenVariant.stock ?? 1) : Number(p.stock ?? 10);
 
-    // Build clean direct Shopee product/store URL so user can always click to order directly on Shopee
+    // Build guaranteed 1-to-1 Shopee product URL (verified against platformItemId shopid_itemid)
+    const pTag = String(p.productTag || p.sourcePlatform || 'manual').toLowerCase();
     const rawSrcUrl = String(p.sourceUrl || '').replace(/&amp;/g, '&').trim();
-    const shopeeDirectUrl =
-      rawSrcUrl && rawSrcUrl.includes('shopee')
-        ? rawSrcUrl
-        : settings.shopeeShopUrl || 'https://s.shopee.vn/8VAfrswNOG';
-    const isExactShopeeItem = Boolean(rawSrcUrl && rawSrcUrl.includes('shopee'));
+    const pidMatch = String(p.platformItemId || '').match(/^shopee_(\d+)_(\d+)$/i);
+    const urlItemMatch = rawSrcUrl.match(/shopee\.vn\/(?:[^?#]+-i\.(\d+)\.(\d+)|product\/(\d+)\/(\d+))/i);
+    const exactShopId = (pidMatch && pidMatch[1]) || (urlItemMatch && (urlItemMatch[1] || urlItemMatch[3])) || '';
+    const exactItemId = (pidMatch && pidMatch[2]) || (urlItemMatch && (urlItemMatch[2] || urlItemMatch[4])) || '';
+
+    let shopeeDirectUrl = '';
+    if (exactShopId && exactItemId) {
+      if (urlItemMatch && (urlItemMatch[2] || urlItemMatch[4]) === exactItemId) {
+        shopeeDirectUrl = rawSrcUrl.split('?')[0];
+      } else {
+        shopeeDirectUrl = `https://shopee.vn/product/${exactShopId}/${exactItemId}`;
+      }
+    }
+    const isExactShopeeItem = Boolean(exactShopId && exactItemId && shopeeDirectUrl);
 
     content.innerHTML = `
       <button type="button" class="modal-close-btn" id="close-prod-modal" aria-label="Đóng">✕</button>
@@ -958,25 +968,29 @@
             </button>
           </div>
 
-          <!-- DIRECT SHOPEE ORDER BUTTON -->
-          <a
-            href="${escapeAttr(shopeeDirectUrl)}"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="btn-shopee-direct shimmer-sheen"
-            id="btn-open-shopee-direct"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M6 7h12l-1 13H7L6 7z"></path>
-              <path d="M9 7V5a3 3 0 0 1 6 0v2"></path>
-              <path d="M10 12.5c0-.7.9-1.2 2-1.2s2 .5 2 1.2-.9 1-2 1.3-2 .6-2 1.3.9 1.2 2 1.2 2-.5 2-1.2"></path>
-            </svg>
-            <span>${isExactShopeeItem ? 'Mở Trực Tiếp Sản Phẩm & Đặt Hàng Trên Shopee' : 'Mở Gian Hàng Shopee Để Đặt Mua'}</span>
-            <span style="font-size:0.86rem;">↗</span>
-          </a>
+          <!-- DIRECT SHOPEE ORDER BUTTON (Only rendered when product has an exact 1-to-1 Shopee item URL!) -->
+          ${
+            isExactShopeeItem
+              ? `<a
+                  href="${escapeAttr(shopeeDirectUrl)}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="btn-shopee-direct shimmer-sheen"
+                  id="btn-open-shopee-direct"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M6 7h12l-1 13H7L6 7z"></path>
+                    <path d="M9 7V5a3 3 0 0 1 6 0v2"></path>
+                    <path d="M10 12.5c0-.7.9-1.2 2-1.2s2 .5 2 1.2-.9 1-2 1.3-2 .6-2 1.3.9 1.2 2 1.2 2-.5 2-1.2"></path>
+                  </svg>
+                  <span>Mở Trực Tiếp Sản Phẩm &amp; Đặt Hàng Trên Shopee</span>
+                  <span style="font-size:0.86rem;">↗</span>
+                </a>`
+              : ''
+          }
 
           ${
-            rawSrcUrl && rawSrcUrl.includes('tiktok')
+            pTag === 'tiktok' && rawSrcUrl && rawSrcUrl.includes('tiktok')
               ? `<a href="${escapeAttr(rawSrcUrl)}" target="_blank" rel="noopener noreferrer" style="display:block; text-align:center; font-size:0.77rem; color:var(--ink-muted); text-decoration:underline; margin-bottom:14px;">
                   Hoặc mở xem trên TikTok Shop chính thức &rarr;
                 </a>`

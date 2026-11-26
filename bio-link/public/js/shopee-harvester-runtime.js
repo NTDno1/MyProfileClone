@@ -8,7 +8,7 @@
    ========================================================================== */
 window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
   (async function () {
-    const HARVESTER_VERSION = 3;
+    const HARVESTER_VERSION = 4;
     const MAX_ATTEMPTS_PER_ITEM = 4;
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -104,18 +104,28 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       }
     };
 
-    /* Strict slug match (>= 80% words) so Size XS vs Size XL or 2hand vs SECONDHAND never confuse each other! */
+    /* Strict token-aware slug match (>= 95% words + 100% exact size/style tokens) so Size S vs M or Đứng vs Rộng NEVER mix! */
+    const CRITICAL_TOKENS = [
+      'xxs', 'xs', 's', 'm', 'l', 'xl', 'xxl', '2xl', '3xl', '4xl', 'freesize',
+      'dung', 'rong', 'loe', 'hoodie', 'sweater', 'jeans', 'jean', 'ung', 'stickers', 'sticker', '2hand', 'secondhand'
+    ];
     const titleMatchesSlugStrict = (candTitle, slugTitle) => {
       if (!slugTitle) return Boolean(candTitle && candTitle.length >= 4);
       const cw = normWords(candTitle).split(' ').filter(Boolean);
       const sw = normWords(slugTitle).split(' ').filter(Boolean);
       if (sw.length === 0) return true;
       if (cw.length === 0) return false;
+      for (let t = 0; t < CRITICAL_TOKENS.length; t++) {
+        const tok = CRITICAL_TOKENS[t];
+        const inSlug = sw.indexOf(tok) > -1;
+        const inCand = cw.indexOf(tok) > -1;
+        if (inSlug !== inCand) return false;
+      }
       let hit = 0;
       for (let i = 0; i < sw.length; i++) {
         if (cw.indexOf(sw[i]) > -1) hit++;
       }
-      return hit / sw.length >= 0.8;
+      return hit / sw.length >= 0.95;
     };
 
     const normApiPrice = (n) => {
@@ -249,21 +259,27 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       return bestSrc;
     };
 
-    const readCleanDocTitle = (doc, expectedUrl) => {
-      const slugFallback = slugTitleFromUrl(expectedUrl);
+    /* Read ACTUAL rendered DOM title ONLY (NEVER substitute URL slug fallback, so stale DOMs are caught and retried!) */
+    const readCleanDocTitle = (doc) => {
+      const h1 = doc.querySelector('h1');
       const og = doc.querySelector('meta[property="og:title"]');
-      const cands = [og ? og.getAttribute('content') : '', doc.title || ''];
+      const cands = [
+        h1 ? h1.textContent : '',
+        og ? og.getAttribute('content') : '',
+        doc.title || ''
+      ];
       for (let i = 0; i < cands.length; i++) {
         const cleaned = String(cands[i] || '')
           .replace(/^Mua\s+/i, '')
           .replace(/\s*\|\s*Shopee.*$/i, '')
           .replace(/\s*-\s*TikTok.*$/i, '')
+          .replace(/\s+/g, ' ')
           .trim();
-        if (cleaned.length >= 4 && titleMatchesSlugStrict(cleaned, slugFallback)) {
+        if (cleaned.length >= 4 && !/^shopee\b/i.test(cleaned)) {
           return cleaned;
         }
       }
-      return slugFallback || String(doc.title || '').replace(/\s*\|\s*Shopee.*$/i, '').trim();
+      return '';
     };
 
     /* STRICT React Fiber item matcher: requires cid === expectedItemId so stale Fiber props NEVER leak! */
@@ -681,14 +697,28 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       };
     };
 
-    /* Completeness check: returns null if 100% complete, or error reason string to trigger automatic retry! */
+    /* Completeness & 1-to-1 URL Identity check: returns null if 100% verified, or error reason to trigger automatic retry! */
     const checkScanDefect = (prod) => {
       if (!prod || !prod.name || prod.name.length < 4) return 'Chưa đọc được tên SP';
+      const urlSlugTitle = slugTitleFromUrl(prod.sourceUrl || '');
+      if (urlSlugTitle && !titleMatchesSlugStrict(prod.name, urlSlugTitle)) {
+        return 'Tên SP trên trang chưa khớp với đường dẫn Shopee';
+      }
       const realImgs = (prod.images || []).filter(isRealPlatformImg);
       if (realImgs.length === 0) return 'Chưa tải xong ảnh gốc Shopee';
       if (!prod.price || prod.price < 1000) return 'Chưa tải xong giá bán';
       if (prod._expectedHasVars && (!prod.variants || prod.variants.length === 0) && (!prod.sizes || prod.sizes.length === 0)) {
         return 'Trang có phân hệ nhưng chưa đọc đủ nút phân hệ';
+      }
+      if (Array.isArray(prod.variants) && prod.variants.length > 0) {
+        const nw = normWords(prod.name);
+        const firstLbl = String(prod.variants[0].label || '').trim();
+        if (/\bjeans?\b/.test(nw) && /^h(?:xs|s|m|l|xl|xxl)\d+$/i.test(firstLbl)) {
+          return 'Phân hệ Hoodie bị lẫn vào trang Jeans';
+        }
+        if (/\bhoodie\b/.test(nw) && /^(?:l|d|r)(?:xs|s|m|l|xl)\d+$/i.test(firstLbl)) {
+          return 'Phân hệ Jeans bị lẫn vào trang Hoodie';
+        }
       }
       return null;
     };
@@ -865,13 +895,16 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
           if (expectedKey && curHref.indexOf(expectedKey) === -1) continue;
           if (d.readyState !== 'complete') continue;
 
-          /* Wait until EITHER exact React Fiber item for expectedKey is ready OR real Shopee image + price + stock are rendered! */
+          /* Wait until exact React Fiber item OR (DOM title strictly matches URL slug + real image + price + stock)! */
           const reactReady = Boolean(findShopeeReactItem(d, expectedKey));
           const mainImgReady = Boolean(readMainImg(d));
           const priceReady = readPriceInfo(d).min > 0;
           const stockReady = hasStockRendered(d);
+          const expectedSlugTitle = slugTitleFromUrl(itemUrl);
+          const domTitleNow = readCleanDocTitle(d);
+          const titleReady = !expectedSlugTitle || (domTitleNow && titleMatchesSlugStrict(domTitleNow, expectedSlugTitle));
 
-          if ((reactReady && mainImgReady) || (mainImgReady && priceReady && stockReady)) {
+          if ((reactReady && mainImgReady) || (titleReady && mainImgReady && priceReady && stockReady)) {
             targetDoc = d;
             break;
           }

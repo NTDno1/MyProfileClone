@@ -754,9 +754,10 @@
             ? `${formatVnd(p.price)} – ${formatVnd(maxP)}`
             : formatVnd(p.price);
 
+        const hasRealImg = /^https?:\/\//i.test(String(img || ''));
         const missingImgWarn =
-          tag === 'shopee' && String(img).startsWith('/media/bio-link/')
-            ? `<div style="font-size:0.7rem; color:#be123c; font-weight:700; margin-top:2px;">⚠️ Chưa có ảnh thật từ Shopee (hãy chạy Đồng bộ 1-1)</div>`
+          tag === 'shopee' && !hasRealImg
+            ? `<div style="font-size:0.7rem; color:#be123c; font-weight:700; margin-top:2px;">⚠️ Dữ liệu từ dấu trang cũ thiếu ảnh gốc — hãy xóa dấu trang cũ &amp; chạy bản V3 (Tự quét lại)!</div>`
             : '';
 
         return `
@@ -776,8 +777,10 @@
                 ${
                   Array.isArray(p.variants) && p.variants.length > 0
                     ? ` • <span style="color:#15803d; font-weight:700;">🧩 ${p.variants.length} phân hệ (${p.variants.filter((v) => Number(v.stock ?? 1) > 0).length} còn)</span>`
+                    : cloned && p.deepSynced && hasRealImg
+                    ? ` • <span style="color:#0f766e; font-weight:700;">✅ 1 mẫu đơn (Sàn không chia phân hệ)</span>`
                     : cloned
-                    ? ` • <span style="color:#b45309;">⚪ 1 mẫu đơn / Chưa quét phân hệ</span>`
+                    ? ` • <span style="color:#b45309; font-weight:700;">⚠️ Chưa quét phân hệ (Dấu trang cũ)</span>`
                     : ''
                 }
               </div>
@@ -922,7 +925,8 @@
 
   function buildLiveBookmarkletHref(serverUrl, syncKey) {
     const base = `${serverUrl}/api/shop/harvester.js?syncKey=${encodeURIComponent(syncKey)}&t=`;
-    return `javascript:(function(){var s=document.createElement('script');s.src=${JSON.stringify(base)}+Date.now();document.body.appendChild(s);})();`;
+    const safeSingleQuoted = "'" + base.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
+    return `javascript:(function(){var u=${safeSingleQuoted}+Date.now(),s=document.createElement('script');s.src=u;s.onerror=function(){fetch(u).then(function(r){return r.text();}).then(eval);};document.body.appendChild(s);})();`;
   }
 
   async function loadSyncAudit() {
@@ -934,8 +938,9 @@
       const sh = res.shopeeHealth || {};
       const shopeeList = res.byTag?.shopee || [];
 
-      const needResyncCount = shopeeList.filter((x) => !x.hasRealImg || !x.slugOk).length;
-      const zeroVarCount = shopeeList.filter((x) => x.variantCount === 0).length;
+      const needResyncCount = shopeeList.filter((x) => !x.hasRealImg || !x.slugOk || !x.deepSynced).length;
+      const syncKey = res.syncKey || shopData?.settings?.syncApiKey || '';
+      const v3BookmarkletHref = buildLiveBookmarkletHref(window.location.origin, syncKey);
 
       box.innerHTML = `
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(165px, 1fr)); gap:10px; margin-bottom:14px;">
@@ -947,7 +952,7 @@
           <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:14px; padding:10px 12px;">
             <div style="font-size:0.73rem; color:#9a3412; font-weight:700;">🧡 2. Hàng Shopee</div>
             <div style="font-size:1.25rem; font-weight:800; color:#c2410c;">${c.shopee || 0} SP</div>
-            <div style="font-size:0.7rem; color:#9a3412;">🔄 Chế độ đồng bộ 2 chiều 1-1</div>
+            <div style="font-size:0.7rem; color:#9a3412;">✅ Đạt chuẩn V3: ${sh.deepSyncedComplete || 0}/${c.shopee || 0} SP</div>
           </div>
           <div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:14px; padding:10px 12px;">
             <div style="font-size:0.73rem; color:#6b21a8; font-weight:700;">🎵 3. Hàng TikTok</div>
@@ -961,19 +966,44 @@
           </div>
         </div>
 
-        <div style="padding:12px 14px; border-radius:14px; border:1px solid ${needResyncCount > 0 ? '#fda4af' : '#bbf7d0'}; background:${needResyncCount > 0 ? '#fff1f2' : '#f0fdf4'};">
-          <div style="font-weight:800; color:${needResyncCount > 0 ? '#be123c' : '#15803d'}; margin-bottom:4px;">
+        <div style="padding:14px 16px; border-radius:14px; border:1.5px solid ${needResyncCount > 0 ? '#fda4af' : '#bbf7d0'}; background:${needResyncCount > 0 ? '#fff1f2' : '#f0fdf4'};">
+          <div style="font-weight:800; color:${needResyncCount > 0 ? '#be123c' : '#15803d'}; margin-bottom:6px;">
             ${
               needResyncCount > 0
-                ? `⚠️ Phát hiện ${needResyncCount} sản phẩm Shopee trên Web chưa đủ ảnh gốc hoặc vừa kéo sơ bộ (Hiện có ${c.shopee || 0} SP Shopee trên web, ${sh.withVariants || 0} SP đã có phân hệ con, ${zeroVarCount} SP chưa có phân hệ con).`
-                : `✅ Toàn bộ ${c.shopee || 0} sản phẩm Shopee trên Web đã khớp 100% tên & link ID định danh (${sh.withVariants || 0} SP có phân hệ con)!`
+                ? `⚠️ Có ${needResyncCount}/${c.shopee || 0} SP Shopee đang lưu từ Dấu trang cũ (chưa có cơ chế Tự quét lại V3 nên thiếu ảnh/phân hệ).`
+                : `✅ Tuyệt vời! Toàn bộ ${c.shopee || 0}/${c.shopee || 0} sản phẩm Shopee trên Web đã quét đủ 100% ảnh gốc, phân hệ &amp; khớp chuẩn 1-1!`
             }
           </div>
-          <div style="font-size:0.77rem; color:var(--text); line-height:1.5;">
-            💡 Để đồng bộ chuẩn <strong>1 - 1 hai chiều</strong> với toàn bộ sản phẩm hiện có trên gian hàng Shopee (tự gom đủ cả 15/15 SP trên sàn, cập nhật ảnh gốc + phân hệ + giá từng mẫu, và tự xóa bỏ bất kỳ SP Shopee nào trên web không còn trên sàn): bấm <strong>🚀 Tự Động Kéo Toàn Bộ Sản Phẩm</strong> ở trên rồi chạy nút Dấu trang / Lệnh F12 trên trang <code>shopee.vn/na2hand3</code>.
+          <div style="font-size:0.78rem; color:var(--text); line-height:1.55; margin-bottom:10px;">
+            🚨 <strong>Lưu ý cực quan trọng:</strong> Nếu trên thanh Dấu trang (Bookmarks Bar) trình duyệt của bạn vẫn đang để nút kéo từ lần trước, hãy <strong>chuột phải XÓA dấu trang cũ đó đi</strong> (vì dấu trang cũ lưu code tĩnh đời đầu chưa có tự quét lại; server hiện đã chặn dấu trang cũ để bảo vệ dữ liệu). Hãy kéo nút <strong>V3 (Tự Quét Lại)</strong> dưới đây lên thay thế — bản V3 sẽ tự kiểm tra từng SP, nếu SP nào mạng chậm thiếu ảnh hoặc thiếu phân hệ sẽ <strong>tự động xếp hàng quét lại tối đa 4 lượt cho đến khi đủ 100%</strong>!
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <a href="https://shopee.vn/na2hand3" target="_blank" rel="noopener" class="btn btn-sm">🔗 Mở shopee.vn/na2hand3</a>
+            <a id="audit-v3-bookmarklet" href="${escapeHtml(v3BookmarkletHref)}" class="btn btn-sm btn-primary" title="Kéo nút V3 này thả lên thanh Dấu Trang trình duyệt">
+              🪄 Đồng Bộ 1-1 V3 — Tự Quét Lại (Kéo lên Dấu Trang)
+            </a>
+            <button type="button" class="btn btn-sm" id="audit-btn-copy-v3" style="border-color:#e14b85; color:#be185d;">
+              ⚡ Copy Lệnh V3 Tự Quét Lại (Dán F12 Console)
+            </button>
           </div>
         </div>
       `;
+
+      box.querySelector('#audit-v3-bookmarklet')?.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        alert('Hãy XÓA dấu trang cũ trên thanh Bookmarks Bar, sau đó giữ chuột KÉO nút hồng "🪄 Đồng Bộ 1-1 V3 — Tự Quét Lại" này thả lên thanh Dấu trang trình duyệt nhé!');
+      });
+
+      box.querySelector('#audit-btn-copy-v3')?.addEventListener('click', async () => {
+        try {
+          const code = buildDeepHarvesterScript(window.location.origin, syncKey);
+          await navigator.clipboard.writeText(code);
+          startLiveSyncPolling();
+          showToast('Đã copy Lệnh V3 (Tự quét lại khi lỗi)! Sang tab shopee.vn/na2hand3 nhấn F12 -> Console -> Ctrl+V -> Enter nhé! 🚀');
+        } catch {
+          showToast('Không thể copy tự động, hãy kéo nút Dấu trang V3 bên cạnh nhé!', true);
+        }
+      });
     } catch {
       box.textContent = 'Không thể tải báo cáo kiểm tra đối chiếu.';
     }
@@ -1073,7 +1103,7 @@
     let ticks = 0;
     syncPollTimer = setInterval(async () => {
       ticks++;
-      if (ticks > 35) {
+      if (ticks > 85) {
         clearInterval(syncPollTimer);
         syncPollTimer = null;
         return;
@@ -1144,8 +1174,8 @@
             <a href="${escapeHtml(finalShopUrl)}" target="_blank" rel="noopener" class="btn btn-sm">
               🔗 1. Mở Trang Shop / Sản Phẩm
             </a>
-            <a id="deep-bookmarklet-btn" href="${bookmarkletHref}" class="btn btn-sm btn-primary" title="Kéo nút này thả lên thanh Dấu Trang (Bookmarks Bar) của trình duyệt">
-              🪄 Hút Sâu Cả Shop &amp; Phân Hệ (Kéo lên Dấu Trang)
+            <a id="deep-bookmarklet-btn" href="${escapeHtml(bookmarkletHref)}" class="btn btn-sm btn-primary" title="Kéo nút này thả lên thanh Dấu Trang (Bookmarks Bar) của trình duyệt">
+              🪄 Đồng Bộ 1-1 V3 — Tự Quét Lại (Kéo lên Dấu Trang)
             </a>
             <button type="button" class="btn btn-sm" id="btn-copy-deep-script" style="border-color:#e14b85; color:#be185d;">
               ⚡ Copy Lệnh Quét Sâu Hết Phân Hệ (F12 Console)

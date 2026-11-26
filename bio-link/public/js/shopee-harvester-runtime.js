@@ -1,13 +1,17 @@
 /* ==========================================================================
-   NA 2HAND — TRÌNH ĐỒNG BỘ 1-1 CHUẨN SÀN SHOPEE & TIKTOK SHOP (LIVE RUNTIME)
-   - Tự gom đủ 100% sản phẩm trên trang Shop (kể cả danh sách ảo & nhiều trang)
-   - Dọn sạch DOM cũ qua about:blank + đối chiếu Slug tiêu đề chống lệch link 100%
-   - Tự lấy đủ phân hệ con (Mẫu LS1..LS15), giá riêng từng phân hệ & ẩn Size nếu sàn không có Size
-   - Đồng bộ 2 chiều chuẩn 1-1: Tự xóa SP tag Shopee trên web nếu đã gỡ trên sàn, giữ nguyên Hàng tự đăng!
+   NA 2HAND — TRÌNH ĐỒNG BỘ 1-1 CHUẨN SÀN SHOPEE & TIKTOK SHOP (V3 AUTO-RETRY)
+   - Gom đủ 100% sản phẩm trên trang Shop (mọi nấc cuộn danh sách ảo & phân trang)
+   - Chờ xác nhận xóa trắng DOM qua about:blank 100% trước khi mở từng sản phẩm
+   - Kiểm định nghiêm ngặt từng SP: Bắt buộc có Ảnh thật CDN + Giá thật + Đủ phân hệ
+   - CƠ CHẾ TỰ ĐỘNG QUÉT LẠI (AUTO-RETRY 4 LƯỢT): SP nào mạng chậm / thiếu ảnh / thiếu
+     phân hệ sẽ tự động đưa vào hàng đợi quét lại cho đến khi đủ 100%, không lưu dữ liệu lỗi!
    ========================================================================== */
 window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
   (async function () {
+    const HARVESTER_VERSION = 3;
+    const MAX_ATTEMPTS_PER_ITEM = 4;
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
     if (!/shopee\.|tiktok\./i.test(location.hostname)) {
       alert('Hãy mở trang Gian hàng Shopee (VD: shopee.vn/na2hand3) hoặc trang sản phẩm rồi chạy nút này nhé!');
       return;
@@ -20,17 +24,17 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
     const hud = document.createElement('div');
     hud.id = 'na2hand-deep-hud';
     hud.style.cssText =
-      'position:fixed;right:18px;bottom:18px;width:375px;z-index:2147483647;background:#fff;border:2px solid #e14b85;border-radius:20px;padding:16px;box-shadow:0 20px 50px rgba(120,25,65,0.32);font-family:sans-serif;color:#3d1a29;font-size:13px;line-height:1.5;';
+      'position:fixed;right:18px;bottom:18px;width:390px;z-index:2147483647;background:#fff;border:2px solid #e14b85;border-radius:20px;padding:16px;box-shadow:0 20px 50px rgba(120,25,65,0.34);font-family:sans-serif;color:#3d1a29;font-size:13px;line-height:1.5;';
     hud.innerHTML =
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
-      '<strong style="color:#d63874;font-size:14px;">🎀 NA 2HAND — Đồng Bộ 1-1 Sàn &amp; Web</strong>' +
+      '<strong style="color:#d63874;font-size:14px;">🎀 NA 2HAND — Đồng Bộ 1-1 (V3 Tự Quét Lại)</strong>' +
       '<button id="na2h-stop" style="border:1px solid #f3b8d2;background:#fff0f6;color:#be123c;border-radius:8px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;">Dừng ✕</button>' +
       '</div>' +
-      '<div id="na2h-status" style="margin-bottom:8px;font-weight:600;color:#54283b;">Đang khởi tạo trình đồng bộ 1-1...</div>' +
+      '<div id="na2h-status" style="margin-bottom:8px;font-weight:700;color:#54283b;">Đang khởi tạo trình đồng bộ 1-1 (V3)...</div>' +
       '<div style="height:8px;background:#fce7f3;border-radius:99px;overflow:hidden;margin-bottom:6px;">' +
       '<div id="na2h-bar" style="height:100%;width:4%;background:linear-gradient(90deg,#f4669d,#d63874);transition:width 0.3s;"></div>' +
       '</div>' +
-      '<div id="na2h-sub" style="font-size:11px;color:#8c6274;">Chế độ 1-1: Giữ nguyên Hàng tự đăng, khớp chuẩn 100% Hàng Shopee</div>';
+      '<div id="na2h-sub" style="font-size:11.5px;color:#8c6274;">Tự động kiểm tra ảnh gốc, phân hệ, giá &amp; tự quét lại nếu lỗi</div>';
     document.body.appendChild(hud);
 
     const statusEl = hud.querySelector('#na2h-status');
@@ -52,6 +56,9 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
         .replace(/&amp;/g, '&')
         .replace(/@resize[^"'\s?]*/gi, '')
         .replace(/_tn(?=$|\?)/i, '');
+
+    const isRealPlatformImg = (u) =>
+      /^https?:\/\/[^"'\s]*(?:susercontent\.com\/file\/|tiktokcdn|ibyteimg)/i.test(String(u || ''));
 
     const cleanUrl = (u) => {
       const s = String(u || '').trim().replace(/&amp;/g, '&');
@@ -97,17 +104,18 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       }
     };
 
-    const titleMatchesSlug = (candTitle, slugTitle) => {
+    /* Strict slug match (>= 80% words) so Size XS vs Size XL or 2hand vs SECONDHAND never confuse each other! */
+    const titleMatchesSlugStrict = (candTitle, slugTitle) => {
       if (!slugTitle) return Boolean(candTitle && candTitle.length >= 4);
-      const cw = normWords(candTitle).split(' ').filter((w) => w.length >= 2);
-      const sw = normWords(slugTitle).split(' ').filter((w) => w.length >= 2);
+      const cw = normWords(candTitle).split(' ').filter(Boolean);
+      const sw = normWords(slugTitle).split(' ').filter(Boolean);
       if (sw.length === 0) return true;
       if (cw.length === 0) return false;
       let hit = 0;
       for (let i = 0; i < sw.length; i++) {
         if (cw.indexOf(sw[i]) > -1) hit++;
       }
-      return hit / sw.length >= 0.5;
+      return hit / sw.length >= 0.8;
     };
 
     const normApiPrice = (n) => {
@@ -135,12 +143,16 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
         const el = els[i];
         if (el.children.length > 2) continue;
         const tx = (el.textContent || '').trim();
-        if (/^(Product Specifications|Chi tiết sản phẩm|Product Ratings|Đánh giá sản phẩm|From The Same Shop|Sản phẩm khác của Shop)$/i.test(tx)) {
+        if (
+          /^(Product Specifications|Chi tiết sản phẩm|Product Ratings|Đánh giá sản phẩm|From The Same Shop|Sản phẩm khác của Shop)$/i.test(
+            tx
+          )
+        ) {
           const dy = el.getBoundingClientRect().top + sy;
           if (dy > 260) return dy;
         }
       }
-      return 2400;
+      return 2500;
     };
 
     const readPriceInfo = (doc) => {
@@ -159,7 +171,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
         if (!/[₫đ]/i.test(t)) continue;
         const r = el.getBoundingClientRect();
         const docY = r.top + sy;
-        if (docY < 60 || docY > specY || r.width === 0 || r.height === 0) continue;
+        if (docY < 75 || docY > specY || r.width === 0 || r.height === 0) continue;
         const cs = win.getComputedStyle(el);
         const pcs = el.parentElement ? win.getComputedStyle(el.parentElement) : null;
         const isStrike =
@@ -173,7 +185,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
           continue;
         }
         const fs = parseFloat(cs.fontSize || '14');
-        if (fs < 17) continue;
+        if (fs < 19) continue;
         if (fs > bestSize || (fs === bestSize && nums.length >= bestNums.length)) {
           bestSize = fs;
           bestNums = nums;
@@ -193,6 +205,11 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       return m ? parseInt(m[1], 10) : 1;
     };
 
+    const hasStockRendered = (doc) => {
+      const txt = doc.body ? doc.body.innerText : '';
+      return /\d+\s*(?:pieces?\s*available|sản phẩm có sẵn|sp có sẵn)|out of stock|hết hàng/i.test(txt);
+    };
+
     const readMainImg = (doc) => {
       const win = doc.defaultView || window;
       const sy = win.scrollY || 0;
@@ -202,19 +219,31 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       const imgs = doc.querySelectorAll('img');
       for (let i = 0; i < imgs.length; i++) {
         const im = imgs[i];
-        const src = im.currentSrc || im.src || '';
-        if (!/susercontent\.com\/file\/|tiktokcdn|ibyteimg/i.test(src)) continue;
-        if (/avatar|icon|logo|badge|emoji/i.test(src)) continue;
+        const src = im.currentSrc || im.src || im.getAttribute('src') || '';
+        if (!isRealPlatformImg(src)) continue;
+        if (/avatar|icon|logo|badge|emoji|sprite/i.test(src)) continue;
         const r = im.getBoundingClientRect();
         const docY = r.top + sy;
         if (docY > specY) continue;
         const w = Math.max(r.width || 0, im.naturalWidth || 0);
         const h = Math.max(r.height || 0, im.naturalHeight || 0);
-        if (w < 160 || h < 160) continue;
-        const area = (r.width || 200) * (r.height || 200);
+        if (w < 150 || h < 150) continue;
+        const area = Math.max(w * h, (r.width || 180) * (r.height || 180));
         if (area > bestArea) {
           bestArea = area;
           bestSrc = cleanImg(src);
+        }
+      }
+      /* Fallback: check background-image style on Shopee gallery divs if img not yet decoded */
+      if (!bestSrc) {
+        const bgDivs = doc.querySelectorAll('div[style*="susercontent.com/file/"]');
+        for (let j = 0; j < bgDivs.length; j++) {
+          const st = bgDivs[j].getAttribute('style') || '';
+          const m = st.match(/url\(["']?(https?:\/\/[^"')]+susercontent\.com\/file\/[^"')]+)["']?\)/i);
+          if (m && m[1]) {
+            bestSrc = cleanImg(m[1]);
+            break;
+          }
         }
       }
       return bestSrc;
@@ -223,38 +252,41 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
     const readCleanDocTitle = (doc, expectedUrl) => {
       const slugFallback = slugTitleFromUrl(expectedUrl);
       const og = doc.querySelector('meta[property="og:title"]');
-      const cands = [
-        og ? og.getAttribute('content') : '',
-        doc.title || ''
-      ];
+      const cands = [og ? og.getAttribute('content') : '', doc.title || ''];
       for (let i = 0; i < cands.length; i++) {
         const cleaned = String(cands[i] || '')
           .replace(/^Mua\s+/i, '')
           .replace(/\s*\|\s*Shopee.*$/i, '')
           .replace(/\s*-\s*TikTok.*$/i, '')
           .trim();
-        if (cleaned.length >= 4 && titleMatchesSlug(cleaned, slugFallback)) {
+        if (cleaned.length >= 4 && titleMatchesSlugStrict(cleaned, slugFallback)) {
           return cleaned;
         }
       }
       return slugFallback || String(doc.title || '').replace(/\s*\|\s*Shopee.*$/i, '').trim();
     };
 
+    /* STRICT React Fiber item matcher: requires cid === expectedItemId so stale Fiber props NEVER leak! */
     const findShopeeReactItem = (doc, expectedKey) => {
       const expectedItemId = expectedKey && expectedKey.indexOf('.') > -1 ? expectedKey.split('.')[1] : '';
       const seen = new WeakSet();
       const scanObj = (obj, depth) => {
-        if (!obj || typeof obj !== 'object' || depth > 5) return null;
+        if (!obj || typeof obj !== 'object' || depth > 6) return null;
         if (seen.has(obj)) return null;
         seen.add(obj);
         if (Array.isArray(obj.models) && obj.models.length > 0 && Array.isArray(obj.tier_variations)) {
-          const cid = String(obj.itemid || obj.item_id || (obj.models[0] && obj.models[0].itemid) || '');
-          if (!expectedItemId || !cid || cid === expectedItemId) {
+          const cid = String(
+            obj.itemid ||
+              obj.item_id ||
+              (obj.models[0] && (obj.models[0].itemid || obj.models[0].item_id)) ||
+              ''
+          );
+          if (!expectedItemId || (cid && cid === expectedItemId)) {
             return obj;
           }
         }
         const keys = Object.keys(obj);
-        for (let i = 0; i < Math.min(keys.length, 35); i++) {
+        for (let i = 0; i < Math.min(keys.length, 40); i++) {
           const k = keys[i];
           if (k === 'children' || k === 'owner' || k === '_owner' || k === 'stateNode' || k === 'return') continue;
           try {
@@ -268,8 +300,8 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
         return null;
       };
 
-      const probes = doc.querySelectorAll('button, [aria-label], main, #main');
-      for (let p = 0; p < Math.min(probes.length, 55); p++) {
+      const probes = doc.querySelectorAll('button, [aria-label], section, main, #main');
+      for (let p = 0; p < Math.min(probes.length, 65); p++) {
         const el = probes[p];
         const fk = Object.keys(el).find(
           (k) => k.indexOf('__reactFiber$') === 0 || k.indexOf('__reactInternalInstance$') === 0
@@ -277,7 +309,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
         if (!fk) continue;
         let cur = el[fk];
         let steps = 0;
-        while (cur && steps < 45) {
+        while (cur && steps < 50) {
           const hit1 = scanObj(cur.memoizedProps, 0);
           if (hit1) return hit1;
           if (cur.memoizedState && cur.memoizedState.memoizedState) {
@@ -291,10 +323,47 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       return null;
     };
 
+    /* Only treat button <img> as a variation thumbnail if hosted on real product CDN (not UI icons like shield/truck)! */
+    const getBtnRealThumb = (b) => {
+      const im = b ? b.querySelector('img') : null;
+      if (!im) return '';
+      const src = im.currentSrc || im.src || im.getAttribute('src') || '';
+      return isRealPlatformImg(src) ? cleanImg(src) : '';
+    };
+
+    const NON_VARIATION_BTN_RE =
+      /^(add to cart|buy now|thêm vào giỏ.*|mua ngay|chat now|chat ngay|view shop|xem shop|follow|theo dõi|report|tố cáo|share|chia sẻ|favorite.*|yêu thích.*|size chart.*|bảng quy đổi.*|decrease|increase|giảm|tăng|\+|-|×|✕|.*change of mind.*|.*đổi trả.*|.*an tâm mua sắm.*|.*free ship.*|.*miễn phí vận chuyển.*|.*vận chuyển.*|.*shipping.*|.*spaylater.*|.*trả góp.*|.*voucher.*|.*mã giảm giá.*)$/i;
+
+    /* Detect whether the Shopee PDP visibly displays variation rows in DOM */
+    const pageShowsVariationUI = (doc) => {
+      const win = doc.defaultView || window;
+      const sy = win.scrollY || 0;
+      const specY = getSpecCutoffDocY(doc);
+      const btns = doc.querySelectorAll('button');
+      const parentCounts = new Map();
+      for (let i = 0; i < btns.length; i++) {
+        const b = btns[i];
+        const dy = b.getBoundingClientRect().top + sy;
+        if (dy < 80 || dy > specY) continue;
+        const it = (b.innerText || '').replace(/\s+/g, ' ').trim();
+        if (!it || it.length > 44 || NON_VARIATION_BTN_RE.test(it)) continue;
+        if (getBtnRealThumb(b)) return true;
+        const al = (b.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
+        if (al && al === it && b.parentElement) {
+          parentCounts.set(b.parentElement, (parentCounts.get(b.parentElement) || 0) + 1);
+          if (parentCounts.get(b.parentElement) >= 2) return true;
+        }
+      }
+      return false;
+    };
+
     const extractProductDeep = async (doc, expectedUrl, expectedKey) => {
       const win = doc.defaultView || window;
-      try { win.scrollTo(0, 0); } catch (e) {}
-      await sleep(150);
+      try {
+        win.focus();
+        win.scrollTo(0, 0);
+      } catch (e) {}
+      await sleep(180);
 
       const liveHref = doc.location && doc.location.href ? doc.location.href : expectedUrl;
       const finalUrl = cleanUrl(liveHref || expectedUrl);
@@ -304,10 +373,10 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
 
       let title = readCleanDocTitle(doc, finalUrl);
       const domPrice = readPriceInfo(doc);
-      let basePrice = domPrice.min || 110000;
+      let basePrice = domPrice.min || 0;
       let maxPrice = domPrice.max || basePrice;
       let origPrice = domPrice.orig || 0;
-      const baseMainImg = readMainImg(doc);
+      let baseMainImg = readMainImg(doc);
 
       let variantGroupName = 'Mẫu';
       const variants = [];
@@ -315,7 +384,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       let usedReactModels = false;
 
       const reactItem = plat === 'shopee' ? findShopeeReactItem(doc, finalKey) : null;
-      if (reactItem && Array.isArray(reactItem.tier_variations) && reactItem.tier_variations.length > 0) {
+      if (reactItem) {
         if (reactItem.name && String(reactItem.name).trim().length >= 4) {
           title = String(reactItem.name).trim();
         }
@@ -325,56 +394,65 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
         if (rMin > 0) basePrice = rMin;
         if (rMax > 0) maxPrice = Math.max(basePrice, rMax);
         if (rOrig > maxPrice) origPrice = rOrig;
-
-        const tv0 = reactItem.tier_variations[0];
-        const tv1 = reactItem.tier_variations[1];
-        const opts0 = Array.isArray(tv0.options) ? tv0.options : [];
-        const imgs0 = Array.isArray(tv0.images) ? tv0.images : [];
-        const isSingleSizeOnly =
-          !tv1 &&
-          imgs0.filter(Boolean).length === 0 &&
-          /^(size|kích cỡ|kích thước)$/i.test(String(tv0.name || '').trim()) &&
-          basePrice === maxPrice;
-
-        if (isSingleSizeOnly) {
-          sizes = opts0.map((s) => String(s || '').trim()).filter(Boolean);
-        } else {
-          variantGroupName = String(tv0.name || 'Mẫu').trim();
-          if (tv1 && Array.isArray(tv1.options)) {
-            sizes = tv1.options.map((s) => String(s || '').trim()).filter(Boolean);
-          }
-          opts0.forEach((optLabel, idx) => {
-            const matching = (reactItem.models || []).filter((md) => {
-              if (Array.isArray(md.tier_index)) return md.tier_index[0] === idx;
-              if (md.extinfo && Array.isArray(md.extinfo.tier_index)) return md.extinfo.tier_index[0] === idx;
-              return String(md.name || '').split(',')[0].trim() === String(optLabel || '').trim();
-            });
-            const inStockM = matching.filter((md) => Number(md.stock ?? md.normal_stock ?? 0) > 0);
-            const pool = inStockM.length > 0 ? inStockM : matching;
-            const mPrices = pool.map((md) => normApiPrice(md.price)).filter((p) => p > 0);
-            const optStock =
-              matching.length > 0
-                ? matching.reduce((acc, md) => acc + Math.max(0, Number(md.stock ?? md.normal_stock ?? 0)), 0)
-                : 1;
-            const rawImg = imgs0[idx] || '';
-            const fullVarImg = rawImg
-              ? String(rawImg).indexOf('http') === 0
-                ? cleanImg(rawImg)
-                : 'https://down-vn.img.susercontent.com/file/' + rawImg
-              : baseMainImg;
-            variants.push({
-              id: 'var_' + (idx + 1),
-              label: String(optLabel || '').trim(),
-              image: fullVarImg,
-              price: mPrices.length > 0 ? Math.min.apply(null, mPrices) : basePrice,
-              stock: optStock
-            });
-          });
+        if (!baseMainImg && reactItem.image) {
+          baseMainImg = String(reactItem.image).indexOf('http') === 0
+            ? cleanImg(reactItem.image)
+            : 'https://down-vn.img.susercontent.com/file/' + reactItem.image;
         }
-        usedReactModels = true;
+
+        if (Array.isArray(reactItem.tier_variations) && reactItem.tier_variations.length > 0) {
+          const tv0 = reactItem.tier_variations[0];
+          const tv1 = reactItem.tier_variations[1];
+          const opts0 = Array.isArray(tv0.options) ? tv0.options.filter(Boolean) : [];
+          const imgs0 = Array.isArray(tv0.images) ? tv0.images : [];
+          if (opts0.length > 0) {
+            const isSingleSizeOnly =
+              !tv1 &&
+              imgs0.filter(Boolean).length === 0 &&
+              /^(size|kích cỡ|kích thước)$/i.test(String(tv0.name || '').trim()) &&
+              basePrice === maxPrice;
+
+            if (isSingleSizeOnly) {
+              sizes = opts0.map((s) => String(s || '').trim()).filter(Boolean);
+            } else {
+              variantGroupName = String(tv0.name || 'Mẫu').trim();
+              if (tv1 && Array.isArray(tv1.options)) {
+                sizes = tv1.options.map((s) => String(s || '').trim()).filter(Boolean);
+              }
+              opts0.forEach((optLabel, idx) => {
+                const matching = (reactItem.models || []).filter((md) => {
+                  if (Array.isArray(md.tier_index)) return md.tier_index[0] === idx;
+                  if (md.extinfo && Array.isArray(md.extinfo.tier_index)) return md.extinfo.tier_index[0] === idx;
+                  return String(md.name || '').split(',')[0].trim() === String(optLabel || '').trim();
+                });
+                const inStockM = matching.filter((md) => Number(md.stock ?? md.normal_stock ?? 0) > 0);
+                const pool = inStockM.length > 0 ? inStockM : matching;
+                const mPrices = pool.map((md) => normApiPrice(md.price)).filter((p) => p > 0);
+                const optStock =
+                  matching.length > 0
+                    ? matching.reduce((acc, md) => acc + Math.max(0, Number(md.stock ?? md.normal_stock ?? 0)), 0)
+                    : 1;
+                const rawImg = imgs0[idx] || '';
+                const fullVarImg = rawImg
+                  ? String(rawImg).indexOf('http') === 0
+                    ? cleanImg(rawImg)
+                    : 'https://down-vn.img.susercontent.com/file/' + rawImg
+                  : baseMainImg;
+                variants.push({
+                  id: 'var_' + (idx + 1),
+                  label: String(optLabel || '').trim(),
+                  image: fullVarImg,
+                  price: mPrices.length > 0 ? Math.min.apply(null, mPrices) : basePrice,
+                  stock: optStock
+                });
+              });
+            }
+          }
+          usedReactModels = true;
+        }
       }
 
-      /* DOM Clicker Fallback: immune to Windows 125%/150% display scaling! */
+      /* DOM Variation Clicker when React Fiber didn't expose tier_variations */
       if (!usedReactModels) {
         const sy = win.scrollY || 0;
         const specY = getSpecCutoffDocY(doc);
@@ -387,15 +465,11 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
           if (docY < 80 || docY > specY) continue;
           const lbl = (b.innerText || '').replace(/\s+/g, ' ').trim();
           if (!lbl || lbl.length > 44) continue;
-          if (
-            /^(add to cart|buy now|thêm vào giỏ.*|mua ngay|chat now|chat ngay|view shop|xem shop|follow|theo dõi|report|tố cáo|share|chia sẻ|favorite.*|yêu thích.*|size chart.*|bảng quy đổi.*|decrease|increase|giảm|tăng|\+|-|×|✕)$/i.test(
-              lbl
-            )
-          ) {
+          if (NON_VARIATION_BTN_RE.test(lbl)) {
             continue;
           }
           const ariaLbl = (b.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
-          if (ariaLbl && /^(decrease|increase|giảm|tăng)$/i.test(ariaLbl)) continue;
+          if (ariaLbl && NON_VARIATION_BTN_RE.test(ariaLbl)) continue;
           const p = b.parentElement;
           if (!p) continue;
           if (!groupMap.has(p)) groupMap.set(p, []);
@@ -405,7 +479,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
         const tiers = [];
         groupMap.forEach((btns, parentEl) => {
           if (btns.length === 0) return;
-          const hasImg = btns.some((b) => !!b.querySelector('img'));
+          const hasImg = btns.some((b) => Boolean(getBtnRealThumb(b)));
           const hasMatchingAria = btns.some((b) => {
             const al = (b.getAttribute('aria-label') || '').trim();
             const it = (b.innerText || '').trim();
@@ -426,7 +500,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
           const primaryIdx = tiers.findIndex((t) => t.hasImg) >= 0 ? tiers.findIndex((t) => t.hasImg) : 0;
           const primary = tiers[primaryIdx];
           try { primary.btns[0].scrollIntoView({ block: 'center' }); } catch (e) {}
-          await sleep(120);
+          await sleep(160);
 
           const isBtnDisabled = (b) => {
             const cs = win.getComputedStyle(b);
@@ -456,7 +530,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
               }
             }
           });
-          if (tiers.length > 1) await sleep(220);
+          if (tiers.length > 1) await sleep(240);
 
           const isSingleSizeOnlyDom =
             tiers.length === 1 &&
@@ -475,21 +549,20 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
               if (stopped) break;
               const btn = primary.btns[k];
               const label = (btn.innerText || 'Mẫu ' + (k + 1)).replace(/\s+/g, ' ').trim();
-              const imEl = btn.querySelector('img');
-              const btnImg = imEl ? cleanImg(imEl.currentSrc || imEl.src || '') : '';
+              const btnImg = getBtnRealThumb(btn);
 
               if (isBtnDisabled(btn)) {
                 variants.push({
                   id: 'var_' + (k + 1),
                   label,
                   image: btnImg || baseMainImg,
-                  price: basePrice,
+                  price: basePrice || 110000,
                   stock: 0
                 });
               } else {
                 if (!isBtnSelected(btn) && primary.btns.length <= 50) {
                   try { btn.click(); } catch (e) {}
-                  await sleep(250);
+                  await sleep(270);
                 }
                 const pNow = readPriceInfo(doc);
                 const vPrice = pNow.min || basePrice;
@@ -519,12 +592,12 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       }
 
       try { win.scrollTo(0, 0); } catch (e) {}
-      await sleep(120);
+      await sleep(140);
 
       const gallery = [];
       const addG = (u) => {
         const cu = cleanImg(u);
-        if (cu && cu.indexOf('http') === 0 && gallery.indexOf(cu) === -1) gallery.push(cu);
+        if (cu && isRealPlatformImg(cu) && gallery.indexOf(cu) === -1) gallery.push(cu);
       };
       if (reactItem && Array.isArray(reactItem.images)) {
         reactItem.images.forEach((h) => {
@@ -532,17 +605,17 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
         });
       }
       if (baseMainImg) addG(baseMainImg);
-      const specLimit = getSpecCutoffDocY(doc) + 200;
+      const specLimit = getSpecCutoffDocY(doc) + 220;
       const allImgs = doc.querySelectorAll('img');
       for (let i = 0; i < allImgs.length && gallery.length < 25; i++) {
         const im = allImgs[i];
-        const src = im.currentSrc || im.src || '';
-        if (!/susercontent\.com\/file\/|tiktokcdn|ibyteimg/i.test(src)) continue;
+        const src = im.currentSrc || im.src || im.getAttribute('src') || '';
+        if (!isRealPlatformImg(src)) continue;
         if (/avatar|icon|logo|badge|emoji|sprite/i.test(src)) continue;
         const r = im.getBoundingClientRect();
         const docY = r.top + (win.scrollY || 0);
         const w = Math.max(r.width || 0, im.naturalWidth || 0);
-        if (w >= 38 && docY < specLimit) addG(src);
+        if (w >= 36 && docY < specLimit) addG(src);
       }
       variants.forEach((v) => {
         if (v.image) addG(v.image);
@@ -571,57 +644,106 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
           ? parseInt(soldM[1] || soldM[2] || '0', 10)
           : 0;
 
+      const stockTotal =
+        variants.length > 0
+          ? variants.reduce((s, v) => s + Math.max(0, Number(v.stock || 0)), 0)
+          : reactItem && (reactItem.stock !== undefined || reactItem.normal_stock !== undefined)
+          ? Number(reactItem.stock ?? reactItem.normal_stock ?? 1)
+          : readStock(doc);
+
+      const expectedHasVars = reactItem
+        ? (Array.isArray(reactItem.models) && reactItem.models.length > 1) ||
+          (Array.isArray(reactItem.tier_variations) &&
+            reactItem.tier_variations.some(
+              (tv) => Array.isArray(tv && tv.options) && tv.options.filter(Boolean).length > 1
+            ))
+        : pageShowsVariationUI(doc) || maxPrice > basePrice;
+
       return {
+        harvesterVersion: HARVESTER_VERSION,
         deepSynced: true,
         productTag: plat,
         platformItemId,
         name: title,
         price: basePrice,
-        maxPrice,
-        originalPrice: origPrice > maxPrice ? origPrice : maxPrice,
+        maxPrice: Math.max(basePrice, maxPrice),
+        originalPrice: origPrice > Math.max(basePrice, maxPrice) ? origPrice : Math.max(basePrice, maxPrice),
         images: gallery,
         sizes,
         variantGroupName,
         variants,
+        stock: stockTotal,
         sold,
         description: desc,
         sourcePlatform: plat,
-        sourceUrl: finalUrl
+        sourceUrl: finalUrl,
+        _expectedHasVars: expectedHasVars
       };
+    };
+
+    /* Completeness check: returns null if 100% complete, or error reason string to trigger automatic retry! */
+    const checkScanDefect = (prod) => {
+      if (!prod || !prod.name || prod.name.length < 4) return 'Chưa đọc được tên SP';
+      const realImgs = (prod.images || []).filter(isRealPlatformImg);
+      if (realImgs.length === 0) return 'Chưa tải xong ảnh gốc Shopee';
+      if (!prod.price || prod.price < 1000) return 'Chưa tải xong giá bán';
+      if (prod._expectedHasVars && (!prod.variants || prod.variants.length === 0) && (!prod.sizes || prod.sizes.length === 0)) {
+        return 'Trang có phân hệ nhưng chưa đọc đủ nút phân hệ';
+      }
+      return null;
     };
 
     const endpoint = serverUrl + '/api/shop/import?syncKey=' + encodeURIComponent(syncKey);
 
     const pushToServer = async (prod) => {
+      const payloadProd = Object.assign({}, prod);
+      delete payloadProd._expectedHasVars;
       const r = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-        body: JSON.stringify({ product: prod })
+        body: JSON.stringify({ harvesterVersion: HARVESTER_VERSION, product: payloadProd })
       });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     };
 
+    /* Single Product Page Mode (with automatic retry up to 4 attempts) */
     const isSingleProductPage = /-i\.\d+\.\d+|\/product\/\d+\/\d+|\/view\/product\//i.test(location.href);
-
     if (isSingleProductPage) {
-      statusEl.textContent = 'Đang đồng bộ 1-1 sản phẩm & giá từng phân hệ...';
-      barEl.style.width = '45%';
-      const prod = await extractProductDeep(document, location.href, extractItemKey(location.href));
-      barEl.style.width = '85%';
-      await pushToServer(prod);
+      let finalProd = null;
+      for (let att = 1; att <= MAX_ATTEMPTS_PER_ITEM && !stopped; att++) {
+        statusEl.textContent =
+          att === 1
+            ? 'Đang quét đầy đủ ảnh, phân hệ & giá từng mẫu...'
+            : '🔄 Tự động quét lại lần ' + att + '/' + MAX_ATTEMPTS_PER_ITEM + ' để lấy đủ ảnh & phân hệ...';
+        barEl.style.width = Math.min(85, att * 25) + '%';
+        if (att > 1) await sleep(1200);
+        const cand = await extractProductDeep(document, location.href, extractItemKey(location.href));
+        const defect = checkScanDefect(cand);
+        if (!defect) {
+          finalProd = cand;
+          break;
+        }
+        subEl.textContent = '⚠️ ' + defect + ' — đang tự thử lại...';
+      }
+      if (!finalProd) {
+        statusEl.innerHTML = '<span style="color:#be123c;">Trang Shopee chưa tải xong ảnh/giá. Hãy cuộn nhẹ trang rồi bấm lại nhé!</span>';
+        return;
+      }
+      await pushToServer(finalProd);
       barEl.style.width = '100%';
       statusEl.innerHTML =
         '🎉 <span style="color:#15803d;">Đã đồng bộ chuẩn 1-1 SP kèm <strong>' +
-        prod.variants.length +
-        ' phân hệ</strong> (' +
-        (prod.sizes.length > 0 ? 'Size: ' + prod.sizes.join(', ') : 'Không phân size') +
-        ')!</span>';
+        finalProd.variants.length +
+        ' phân hệ</strong> &amp; <strong>' +
+        finalProd.images.length +
+        ' ảnh gốc</strong>!</span>';
       return;
     }
 
-    /* Read official shop product count if displayed on Shopee Shop header (e.g. Products: 15 / Sản phẩm: 15) */
+    /* Full Shop Listing Mode: Collect 100% of Shop Products across virtual scroll & pagination */
     const readExpectedShopCount = () => {
-      const topTxt = (document.body ? document.body.innerText : '').slice(0, 2600);
+      const topTxt = (document.body ? document.body.innerText : '').slice(0, 2800);
       const m =
         topTxt.match(/(?:Products|Sản phẩm)\s*[:\n]?\s*(\d{1,4})\b/i) ||
         topTxt.match(/\b(\d{1,4})\s*(?:Products|Sản phẩm)\b/i);
@@ -647,25 +769,23 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       });
     };
 
-    /* Click All Products tab if present so full catalog renders */
     const allProdTab = document.querySelector('a[href*="#product_list"]');
     if (allProdTab) {
       try { allProdTab.click(); } catch (e) {}
-      await sleep(450);
+      await sleep(500);
     }
 
-    /* Collect links AT EVERY SCROLL STEP (prevents Shopee virtual list from unmounting top rows!) + multi-page support */
     let pageLoop = 0;
     while (!stopped && pageLoop < 8) {
       pageLoop++;
       collectVisibleLinks();
-      const maxScroll = Math.max(3800, document.documentElement.scrollHeight + 800);
-      for (let y = 0; y <= maxScroll && !stopped; y += 380) {
+      const maxScroll = Math.max(4000, document.documentElement.scrollHeight + 900);
+      for (let y = 0; y <= maxScroll && !stopped; y += 360) {
         window.scrollTo(0, y);
         await sleep(420);
         collectVisibleLinks();
         statusEl.textContent =
-          '🔍 Đang quét danh sách SP trên sàn: đã thấy ' +
+          '🔍 Đang gom danh sách SP trên sàn: ' +
           urlSet.length +
           (expectedTotal > 0 ? '/' + expectedTotal : '') +
           ' sản phẩm...';
@@ -680,7 +800,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       if (nextBtn && !nextBtn.disabled) {
         const beforeLen = urlSet.length;
         try { nextBtn.click(); } catch (e) {}
-        await sleep(1100);
+        await sleep(1150);
         collectVisibleLinks();
         if (urlSet.length === beforeLen) break;
       } else {
@@ -701,104 +821,195 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       .map((u) => toPlatformItemId(shopPlat, extractItemKey(u)))
       .filter(Boolean);
 
-    subEl.textContent =
-      'Đã gom đủ ' +
-      urlSet.length +
-      ' SP trên sàn — Đang mở lần lượt từng SP để lấy phân hệ & giá chuẩn 1-1...';
-
-    let okCount = 0;
-    let totalVars = 0;
-
-    for (let i = 0; i < urlSet.length; i++) {
-      if (stopped) break;
-      const itemUrl = urlSet[i];
+    /* Open and scan a single itemUrl in workerWin with strict about:blank reset + real image/price hydration wait */
+    const scanOneUrlInWorker = async (itemUrl, attemptNum) => {
       const expectedKey = extractItemKey(itemUrl);
-      const expectedSlugTitle = slugTitleFromUrl(itemUrl);
-
-      statusEl.textContent =
-        '⏳ (' + (i + 1) + '/' + urlSet.length + ') Đang mở đúng link & quét phân hệ...';
-      barEl.style.width = Math.round(((i + 0.25) / urlSet.length) * 100) + '%';
 
       if (!workerWin || workerWin.closed) {
-        workerWin = window.open(itemUrl, 'na2hand_worker', 'width=1280,height=900,left=30,top=30');
+        workerWin = window.open('about:blank', 'na2hand_worker', 'width=1280,height=920,left=25,top=25');
+        if (!workerWin) return { ok: false, reason: 'POPUP_BLOCKED' };
+        await sleep(150);
       } else {
-        /* Wipe previous product DOM completely via about:blank before loading next product! */
+        /* Strictly wait until workerWin has completely unloaded onto about:blank! */
         try { workerWin.location.replace('about:blank'); } catch (e) {}
-        await sleep(180);
+        for (let b = 0; b < 30; b++) {
+          await sleep(80);
+          try {
+            if (
+              workerWin.location.href === 'about:blank' &&
+              workerWin.document &&
+              workerWin.document.readyState === 'complete'
+            ) {
+              break;
+            }
+          } catch (e) {}
+        }
+      }
+
+      try {
+        workerWin.focus();
         workerWin.location.replace(itemUrl);
+      } catch (e) {
+        workerWin = window.open(itemUrl, 'na2hand_worker', 'width=1280,height=920,left=25,top=25');
+        if (!workerWin) return { ok: false, reason: 'POPUP_BLOCKED' };
       }
 
-      if (!workerWin) {
-        statusEl.innerHTML =
-          '<span style="color:#be123c;">Trình duyệt chặn cửa sổ phụ — hãy bấm biểu tượng Pop-up trên thanh địa chỉ Shopee chọn Cho phép (Allow) rồi chạy lại nhé!</span>';
-        break;
-      }
-
+      const maxPolls = 38 + attemptNum * 8;
       let targetDoc = null;
-      for (let w = 0; w < 42; w++) {
-        await sleep(380);
+      for (let w = 0; w < maxPolls && !stopped; w++) {
+        await sleep(400);
         try {
           const d = workerWin.document;
           const curHref = d && d.location && d.location.href ? d.location.href : '';
           if (!curHref || curHref === 'about:blank') continue;
-          const keyMatched = !expectedKey || curHref.indexOf(expectedKey) > -1;
-          const curTitle = String((d && d.title) || '')
-            .replace(/\s*\|\s*Shopee.*$/i, '')
-            .trim();
-          const slugMatched = titleMatchesSlug(curTitle, expectedSlugTitle);
-          const hasActionText =
-            d &&
-            d.body &&
-            /add to cart|buy now|thêm vào giỏ|mua ngay|pieces?\s*available|sản phẩm có sẵn/i.test(
-              d.body.innerText || ''
-            );
-          const hasHydratedPrice = d ? readPriceInfo(d).min > 0 : false;
+          if (expectedKey && curHref.indexOf(expectedKey) === -1) continue;
+          if (d.readyState !== 'complete') continue;
 
-          if (d && keyMatched && d.readyState === 'complete' && slugMatched && hasActionText && (hasHydratedPrice || w >= 20)) {
+          /* Wait until EITHER exact React Fiber item for expectedKey is ready OR real Shopee image + price + stock are rendered! */
+          const reactReady = Boolean(findShopeeReactItem(d, expectedKey));
+          const mainImgReady = Boolean(readMainImg(d));
+          const priceReady = readPriceInfo(d).min > 0;
+          const stockReady = hasStockRendered(d);
+
+          if ((reactReady && mainImgReady) || (mainImgReady && priceReady && stockReady)) {
             targetDoc = d;
             break;
           }
-        } catch (e) {}
-      }
-
-      if (targetDoc) {
-        await sleep(750);
-        try {
-          const prod = await extractProductDeep(targetDoc, itemUrl, expectedKey);
-          if (prod && prod.name) {
-            await pushToServer(prod);
-            okCount++;
-            totalVars += (prod.variants || []).length;
-            statusEl.textContent =
-              '✅ (' +
-              (i + 1) +
-              '/' +
-              urlSet.length +
-              ') ' +
-              prod.name.slice(0, 26) +
-              '... (' +
-              (prod.variants || []).length +
-              ' mẫu)';
+          /* Scroll slightly halfway through polling to wake up lazy image loaders in background windows */
+          if (w === 10 || w === 20) {
+            try {
+              workerWin.focus();
+              workerWin.scrollTo(0, 180);
+              await sleep(120);
+              workerWin.scrollTo(0, 0);
+            } catch (e) {}
           }
         } catch (e) {}
       }
 
-      barEl.style.width = Math.round(((i + 1) / urlSet.length) * 100) + '%';
-      await sleep(240);
+      if (!targetDoc) {
+        return { ok: false, reason: 'Trang Shopee phản hồi chậm quá thời gian chờ' };
+      }
+
+      /* Extra hydration settle (longer on retries so slow variation buttons always mount) */
+      await sleep(750 + (attemptNum - 1) * 550);
+
+      let prod = await extractProductDeep(targetDoc, itemUrl, expectedKey);
+      let defect = checkScanDefect(prod);
+
+      /* Quick in-page second look before closing page if variations or images lagged by 1s */
+      if (defect && !stopped) {
+        try {
+          workerWin.focus();
+          workerWin.scrollTo(0, 260);
+          await sleep(900);
+          workerWin.scrollTo(0, 0);
+          await sleep(400);
+        } catch (e) {}
+        prod = await extractProductDeep(targetDoc, itemUrl, expectedKey);
+        defect = checkScanDefect(prod);
+      }
+
+      if (defect) {
+        return { ok: false, reason: defect };
+      }
+      return { ok: true, prod };
+    };
+
+    /* MULTI-PASS AUTO-RETRY ENGINE:
+       Pass 1 scans all items; Pass 2..4 automatically re-scan any failed/incomplete items! */
+    let pendingQueue = urlSet.map((u, idx) => ({ url: u, origIdx: idx + 1 }));
+    let completedCount = 0;
+    let totalVars = 0;
+    let popupBlocked = false;
+
+    for (let pass = 1; pass <= MAX_ATTEMPTS_PER_ITEM && pendingQueue.length > 0 && !stopped; pass++) {
+      if (pass > 1) {
+        /* Refresh worker window cleanly before retry pass */
+        if (workerWin && !workerWin.closed) {
+          try { workerWin.close(); } catch (e) {}
+        }
+        workerWin = null;
+        subEl.textContent =
+          '🔄 Phát hiện ' +
+          pendingQueue.length +
+          ' SP tải thiếu dữ liệu — Đang tự động quét lại (Lượt ' +
+          pass +
+          '/' +
+          MAX_ATTEMPTS_PER_ITEM +
+          ')...';
+        await sleep(900);
+      }
+
+      const nextRetryQueue = [];
+
+      for (let q = 0; q < pendingQueue.length && !stopped; q++) {
+        const entry = pendingQueue[q];
+        statusEl.textContent =
+          (pass === 1
+            ? '⏳ Đang quét SP (' + entry.origIdx + '/' + urlSet.length + ')...'
+            : '🔄 Tự quét lại SP #' +
+              entry.origIdx +
+              ' (Lượt ' +
+              pass +
+              '/' +
+              MAX_ATTEMPTS_PER_ITEM +
+              ')...');
+
+        const scanRes = await scanOneUrlInWorker(entry.url, pass);
+        if (scanRes.reason === 'POPUP_BLOCKED') {
+          popupBlocked = true;
+          statusEl.innerHTML =
+            '<span style="color:#be123c;">Trình duyệt chặn cửa sổ phụ — hãy bấm biểu tượng Pop-up trên thanh địa chỉ Shopee chọn Cho phép (Allow) rồi chạy lại nhé!</span>';
+          break;
+        }
+
+        if (scanRes.ok && scanRes.prod) {
+          try {
+            await pushToServer(scanRes.prod);
+            completedCount++;
+            totalVars += (scanRes.prod.variants || []).length;
+            barEl.style.width = Math.round((completedCount / urlSet.length) * 100) + '%';
+            statusEl.textContent =
+              '✅ (' +
+              completedCount +
+              '/' +
+              urlSet.length +
+              ') ' +
+              scanRes.prod.name.slice(0, 25) +
+              '... (' +
+              (scanRes.prod.variants || []).length +
+              ' phân hệ, ' +
+              (scanRes.prod.images || []).length +
+              ' ảnh)';
+          } catch (pushErr) {
+            nextRetryQueue.push({ url: entry.url, origIdx: entry.origIdx, lastReason: 'Lỗi mạng khi lưu về Web' });
+          }
+        } else {
+          subEl.textContent =
+            '⚠️ SP #' + entry.origIdx + ': ' + (scanRes.reason || 'Chưa đủ dữ liệu') + ' -> Đã xếp hàng tự quét lại!';
+          nextRetryQueue.push({ url: entry.url, origIdx: entry.origIdx, lastReason: scanRes.reason });
+        }
+
+        await sleep(320);
+      }
+
+      if (popupBlocked) break;
+      pendingQueue = nextRetryQueue;
     }
 
     if (workerWin && !workerWin.closed) {
       try { workerWin.close(); } catch (e) {}
     }
 
+    if (popupBlocked || stopped) return;
+
     /* Strict Two-Way 1-to-1 Reconciliation:
-       Delete any Shopee-tagged item on Web that is NOT in discoveredPlatformIds!
-       (Never touches Hàng tự đăng or other platforms!) */
+       Delete any Shopee-tagged item on Web that is NOT in discoveredPlatformIds! */
     let prunedNote = '';
     const fullCatalogConfirmed =
-      !stopped &&
       discoveredPlatformIds.length > 0 &&
-      okCount > 0 &&
+      completedCount === urlSet.length &&
       (!expectedTotal || discoveredPlatformIds.length >= expectedTotal);
 
     if (fullCatalogConfirmed) {
@@ -807,6 +1018,7 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
           body: JSON.stringify({
+            harvesterVersion: HARVESTER_VERSION,
             reconcilePlatform: shopPlat,
             activePlatformItemIds: discoveredPlatformIds
           })
@@ -819,18 +1031,30 @@ window.NA2HAND_DEEP_HARVESTER = function (serverUrl, syncKey) {
       } catch (e) {}
     }
 
-    if (!stopped) {
+    if (pendingQueue.length === 0) {
+      barEl.style.width = '100%';
       statusEl.innerHTML =
-        '🎉 <span style="color:#15803d;">ĐỒNG BỘ 1-1 HOÀN TẤT! Đã khớp chuẩn <strong>' +
-        okCount +
+        '🎉 <span style="color:#15803d;">ĐỒNG BỘ 1-1 HOÀN TẤT 100%! Đã quét đủ <strong>' +
+        completedCount +
         '/' +
         urlSet.length +
-        ' SP</strong> &amp; <strong>' +
+        ' SP</strong> (đủ ảnh gốc &amp; <strong>' +
         totalVars +
-        ' phân hệ</strong> về Web!' +
+        ' phân hệ</strong>)!' +
         prunedNote +
         '</span>';
-      subEl.textContent = 'Hàng tự đăng trên web được giữ nguyên 100% không bị ảnh hưởng.';
+      subEl.textContent = 'Không có bất kỳ sản phẩm lỗi nào! Hàng tự đăng trên web được giữ nguyên 100%.';
+    } else {
+      statusEl.innerHTML =
+        '⚠️ <span style="color:#b45309;">Đã lưu chuẩn <strong>' +
+        completedCount +
+        '/' +
+        urlSet.length +
+        ' SP</strong>. Còn ' +
+        pendingQueue.length +
+        ' SP Shopee phản hồi quá chậm sau ' +
+        MAX_ATTEMPTS_PER_ITEM +
+        ' lần tự thử lại — hãy bấm chạy thêm 1 lượt nữa để bù nốt nhé!</span>';
     }
   })();
 };

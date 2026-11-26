@@ -996,6 +996,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         maxPrice: p.maxPrice || p.price,
         sizes: p.sizes || [],
         variantCount: Array.isArray(p.variants) ? p.variants.length : 0,
+        deepSynced: Boolean(p.deepSynced),
         isLocked: Boolean(p.isLocked),
         enabled: p.enabled !== false,
         hasRealImg,
@@ -1006,6 +1007,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
 
     res.json({
       success: true,
+      syncKey: store.settings?.syncApiKey || '',
       counts: {
         total: products.length,
         manual: byTag.manual.length,
@@ -1016,6 +1018,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       },
       shopeeHealth: {
         totalShopeeOnWeb: byTag.shopee.length,
+        deepSyncedComplete: byTag.shopee.filter((x) => x.deepSynced && x.hasRealImg && x.slugOk).length,
         withVariants: byTag.shopee.filter((x) => x.variantCount > 0).length,
         missingRealImg: byTag.shopee.filter((x) => !x.hasRealImg).length,
         urlMatchedCount: byTag.shopee.filter((x) => x.slugOk && Boolean(x.platformItemId)).length
@@ -1324,6 +1327,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         id: prev ? prev.id : `prod_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         productTag: incomingTag,
         originType: 'cloned',
+        deepSynced: Boolean(item.deepSynced || (prev && prev.deepSynced)),
         platformItemId: incomingItemId || prev?.platformItemId || '',
         isLocked: prev ? Boolean(prev.isLocked) : false,
         name: cleanName,
@@ -1995,11 +1999,35 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         typeof req.body === 'string'
           ? JSON.parse(req.body)
           : req.body || {};
+
+      // Block stale legacy bookmarklets (< V3) when called via browser syncKey so old bookmarks NEVER corrupt data!
+      const isExternalSyncKey = Boolean(req.query?.syncKey || req.headers['x-sync-key']);
+      if (isExternalSyncKey && Number(bodyObj.harvesterVersion || 0) < 3) {
+        return res.status(409).json({
+          success: false,
+          message: 'Dấu trang cũ! Vui lòng xóa dấu trang cũ trên trình duyệt và dùng nút Đồng bộ 1-1 (V3) mới trên /shop-admin.'
+        });
+      }
+
       const rawProducts = Array.isArray(bodyObj.products)
         ? bodyObj.products
         : bodyObj.product
         ? [bodyObj.product]
         : [];
+
+      // Server-side completeness gate for external V3 harvester: reject incomplete items (missing real CDN image) with 422 so V3 auto-retries!
+      if (isExternalSyncKey && rawProducts.length > 0) {
+        for (const rp of rawProducts) {
+          const hasRealCdn = Array.isArray(rp?.images) && rp.images.some((u) => /^https?:\/\//i.test(String(u || '')));
+          if (!hasRealCdn) {
+            return res.status(422).json({
+              success: false,
+              retry: true,
+              message: 'Sản phẩm chưa tải xong ảnh gốc từ sàn — yêu cầu quét lại!'
+            });
+          }
+        }
+      }
 
       let saved = { addedCount: 0, updatedCount: 0, totalVariantsSynced: 0, importedItems: [] };
       if (rawProducts.length > 0) {
@@ -2140,15 +2168,15 @@ function normalizeSlugWords(str) {
 
 function titleMatchesSlugWords(candTitle, slugTitle) {
   if (!slugTitle) return true;
-  const cw = normalizeSlugWords(candTitle).split(' ').filter((w) => w.length >= 2);
-  const sw = normalizeSlugWords(slugTitle).split(' ').filter((w) => w.length >= 2);
+  const cw = normalizeSlugWords(candTitle).split(' ').filter(Boolean);
+  const sw = normalizeSlugWords(slugTitle).split(' ').filter(Boolean);
   if (sw.length === 0) return true;
   if (cw.length === 0) return false;
   let hits = 0;
   for (const w of sw) {
     if (cw.includes(w)) hits++;
   }
-  return hits / sw.length >= 0.5;
+  return hits / sw.length >= 0.8;
 }
 
 function extractSlugFromShopeeUrl(url) {

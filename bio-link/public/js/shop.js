@@ -544,12 +544,15 @@
             ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)
             : 0;
         const isLiked = wishlist.includes(p.id);
+        const pTag = String(p.productTag || p.sourcePlatform || 'manual').toLowerCase();
         const platLabel =
-          p.sourcePlatform === 'shopee'
-            ? 'Shopee Mall'
-            : p.sourcePlatform === 'tiktok'
-            ? 'TikTok Shop'
-            : 'Atelier';
+          pTag === 'shopee'
+            ? 'Hàng Shopee'
+            : pTag === 'tiktok'
+            ? 'Hàng TikTok'
+            : pTag === 'lazada'
+            ? 'Hàng Lazada'
+            : 'Atelier Tự Đăng';
 
         const quickChipsHtml =
           inStockVars.length > 0

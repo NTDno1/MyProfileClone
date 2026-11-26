@@ -509,26 +509,26 @@ async function recordAnalyticsEvent(req, eventData) {
   return logItem;
 }
 
-// --- UNIFIED AUTH HELPERS (Shared 100% between /admin and /shop-admin) ---
-const AUTH_SYNC_VERSION = 'unified_admin_123_v2';
+// --- UNIFIED AUTH HELPERS (Shared 100% between /admin, /shop-admin & /affiliate-admin) ---
+const AUTH_SYNC_VERSION = 'unified_admin_15041911_v3';
 const TOKEN_SIGN_SECRET = process.env.ADMIN_TOKEN_SECRET || 'na2hand_unified_secret_2026';
 
 function loadAuth() {
-  const defaultAuth = { username: 'admin', password: '123', syncVersion: AUTH_SYNC_VERSION };
+  const defaultAuth = { username: 'admin', password: '15041911', syncVersion: AUTH_SYNC_VERSION };
   try {
     if (!fs.existsSync(AUTH_FILE)) {
       fs.writeFileSync(AUTH_FILE, JSON.stringify(defaultAuth, null, 2), 'utf8');
       return defaultAuth;
     }
     const parsed = JSON.parse(fs.readFileSync(AUTH_FILE, 'utf8'));
-    // Auto-reset once to admin / 123 when upgrading to unified v2
+    // Auto-upgrade once to admin / 15041911 when upgrading to unified v3
     if (parsed.syncVersion !== AUTH_SYNC_VERSION) {
       fs.writeFileSync(AUTH_FILE, JSON.stringify(defaultAuth, null, 2), 'utf8');
       return defaultAuth;
     }
     return {
       username: parsed.username || 'admin',
-      password: String(parsed.password ?? '123'),
+      password: String(parsed.password ?? '15041911'),
       syncVersion: AUTH_SYNC_VERSION
     };
   } catch (err) {
@@ -539,7 +539,7 @@ function loadAuth() {
 async function saveAuth(auth) {
   const payload = {
     username: String(auth.username || 'admin').trim() || 'admin',
-    password: String(auth.password ?? '123'),
+    password: String(auth.password ?? '15041911'),
     syncVersion: AUTH_SYNC_VERSION
   };
   fs.writeFileSync(AUTH_FILE, JSON.stringify(payload, null, 2), 'utf8');
@@ -568,14 +568,14 @@ async function syncAuthWithMongo(db) {
       };
       fs.writeFileSync(AUTH_FILE, JSON.stringify(synced, null, 2), 'utf8');
     } else {
-      const resetAuth = { username: 'admin', password: '123', syncVersion: AUTH_SYNC_VERSION };
+      const resetAuth = { username: 'admin', password: '15041911', syncVersion: AUTH_SYNC_VERSION };
       fs.writeFileSync(AUTH_FILE, JSON.stringify(resetAuth, null, 2), 'utf8');
       await col.updateOne(
         { _id: 'shared_admin_account' },
         { $set: { ...resetAuth, updatedAt: new Date() } },
         { upsert: true }
       );
-      console.log('🔐 [Auth] Đã đồng bộ tài khoản dùng chung (/admin & /shop-admin): tk=admin | mk=123');
+      console.log('🔐 [Auth] Đã đồng bộ tài khoản quản trị dùng chung (/admin, /shop-admin & /affiliate-admin): tk=admin');
     }
   } catch {}
 }

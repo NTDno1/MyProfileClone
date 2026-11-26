@@ -323,7 +323,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
 
   async function getShopStoreRaw() {
     const local = loadLocalShopData();
-    if (Array.isArray(local.products) && repairAndMigrateProductsStore(local.products)) {
+    if (Array.isArray(local.products) && repairAndMigrateProductsStore(local.products, local.categories)) {
       saveLocalShopData(local);
     }
     const db = getMongoDb();
@@ -351,7 +351,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
           settingsChanged = true;
         }
         if (Array.isArray(merged.products)) {
-          if (repairAndMigrateProductsStore(merged.products)) {
+          if (repairAndMigrateProductsStore(merged.products, merged.categories)) {
             settingsChanged = true;
           }
         }
@@ -870,6 +870,12 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
     const b = req.body || {};
     const rawSrc = cleanSourceUrl(b.sourceUrl || '');
     const platItemId = extractPlatformItemId(rawSrc);
+    const chosenTag = normalizeProductTag(
+      b.productTag || b.sourcePlatform,
+      rawSrc,
+      b.productTag === 'manual' ? 'local' : platItemId ? 'cloned' : 'local',
+      b.id
+    );
     const newProd = {
       id: b.id || `prod_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
       name: String(b.name || 'Sản phẩm mới').trim(),
@@ -890,11 +896,12 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       isFeatured: b.isFeatured !== false,
       isNew: b.isNew !== false,
       isLocked: Boolean(b.isLocked),
-      originType: platItemId ? 'cloned' : 'local',
+      productTag: chosenTag,
+      originType: chosenTag === 'manual' ? 'local' : platItemId ? 'cloned' : 'local',
       platformItemId: platItemId || '',
-      sourcePlatform: platItemId ? (rawSrc.includes('tiktok') ? 'tiktok' : 'shopee') : (b.sourcePlatform || 'manual'),
+      sourcePlatform: chosenTag,
       sourceUrl: rawSrc,
-      description: String(b.description || ''),
+      description: cleanProductDescription(b.description || ''),
       enabled: b.enabled !== false,
       createdAt: new Date().toISOString()
     };
@@ -910,23 +917,111 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
     const idx = (store.products || []).findIndex((p) => p.id === req.params.id);
     if (idx === -1) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm.' });
 
+    const prev = store.products[idx];
     const b = req.body || {};
+    const nextUrl = b.sourceUrl !== undefined ? cleanSourceUrl(b.sourceUrl) : prev.sourceUrl;
+    const nextPid = extractPlatformItemId(nextUrl) || prev.platformItemId || '';
+    const nextTag =
+      b.productTag !== undefined
+        ? normalizeProductTag(b.productTag, nextUrl, b.productTag === 'manual' ? 'local' : 'cloned', prev.id)
+        : getProductTag(prev);
+
     store.products[idx] = {
-      ...store.products[idx],
+      ...prev,
       ...b,
-      sourceUrl: b.sourceUrl !== undefined ? cleanSourceUrl(b.sourceUrl) : store.products[idx].sourceUrl,
-      images: Array.isArray(b.images) ? b.images.map(cleanCdnImageUrl) : store.products[idx].images,
+      productTag: nextTag,
+      sourcePlatform: nextTag,
+      originType: nextTag === 'manual' ? 'local' : nextPid ? 'cloned' : prev.originType || 'local',
+      platformItemId: nextPid,
+      sourceUrl: nextUrl,
+      images: Array.isArray(b.images) ? b.images.map(cleanCdnImageUrl) : prev.images,
       variants: Array.isArray(b.variants)
-        ? normalizeVariantsList(b.variants, b.price ?? store.products[idx].price)
-        : store.products[idx].variants,
-      price: b.price !== undefined ? Number(b.price) : store.products[idx].price,
-      originalPrice: b.originalPrice !== undefined ? Number(b.originalPrice) : store.products[idx].originalPrice,
-      stock: b.stock !== undefined ? Number(b.stock) : store.products[idx].stock,
+        ? normalizeVariantsList(b.variants, b.price ?? prev.price)
+        : prev.variants,
+      price: b.price !== undefined ? Number(b.price) : prev.price,
+      originalPrice: b.originalPrice !== undefined ? Number(b.originalPrice) : prev.originalPrice,
+      stock: b.stock !== undefined ? Number(b.stock) : prev.stock,
+      description: b.description !== undefined ? cleanProductDescription(b.description) : prev.description,
       updatedAt: new Date().toISOString()
     };
 
     await saveShopStore(store);
     res.json({ success: true, product: store.products[idx], message: 'Đã cập nhật sản phẩm!' });
+  });
+
+  // Quick Change Product Tag (1. Hàng tự đăng, 2. Hàng Shopee, 3. Hàng TikTok, 4. Hàng Lazada, 5. Nguồn khác...)
+  app.post('/api/shop/admin/products/:id/tag', requireAuth, async (req, res) => {
+    const store = await getShopStore();
+    const prod = (store.products || []).find((p) => p.id === req.params.id);
+    if (!prod) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm.' });
+
+    const rawTag = String(req.body?.productTag || 'manual').trim().toLowerCase();
+    const nextTag = rawTag || 'manual';
+    prod.productTag = nextTag;
+    prod.sourcePlatform = nextTag;
+    if (nextTag === 'manual') {
+      prod.originType = 'local';
+    } else if (extractPlatformItemId(prod.sourceUrl || '') || prod.platformItemId) {
+      prod.originType = 'cloned';
+      prod.platformItemId = prod.platformItemId || extractPlatformItemId(prod.sourceUrl || '');
+    }
+    prod.updatedAt = new Date().toISOString();
+    await saveShopStore(store);
+    res.json({
+      success: true,
+      product: prod,
+      message: `🏷️ Đã gắn tag "${getProductTagLabel(nextTag)}" cho sản phẩm!`
+    });
+  });
+
+  // Sync & Tag Audit Summary (Kiểm tra đối chiếu toàn bộ dữ liệu Web & Sàn)
+  app.get('/api/shop/admin/sync-audit', requireAuth, async (req, res) => {
+    const store = await getShopStore();
+    const products = store.products || [];
+    const byTag = { manual: [], shopee: [], tiktok: [], lazada: [], other: [] };
+
+    for (const p of products) {
+      const t = getProductTag(p);
+      const bucket = byTag[t] ? t : 'other';
+      const hasRealImg = Array.isArray(p.images) && p.images.some((u) => /^https?:\/\//i.test(u));
+      const slugInfo = extractSlugFromShopeeUrl(p.sourceUrl || '');
+      const slugOk = !slugInfo || titleMatchesSlugWords(p.name, slugInfo.prettyTitle);
+      byTag[bucket].push({
+        id: p.id,
+        name: p.name,
+        productTag: t,
+        platformItemId: p.platformItemId || extractPlatformItemId(p.sourceUrl || ''),
+        sourceUrl: p.sourceUrl || '',
+        price: p.price,
+        maxPrice: p.maxPrice || p.price,
+        sizes: p.sizes || [],
+        variantCount: Array.isArray(p.variants) ? p.variants.length : 0,
+        isLocked: Boolean(p.isLocked),
+        enabled: p.enabled !== false,
+        hasRealImg,
+        slugOk,
+        updatedAt: p.updatedAt || p.createdAt
+      });
+    }
+
+    res.json({
+      success: true,
+      counts: {
+        total: products.length,
+        manual: byTag.manual.length,
+        shopee: byTag.shopee.length,
+        tiktok: byTag.tiktok.length,
+        lazada: byTag.lazada.length,
+        other: byTag.other.length
+      },
+      shopeeHealth: {
+        totalShopeeOnWeb: byTag.shopee.length,
+        withVariants: byTag.shopee.filter((x) => x.variantCount > 0).length,
+        missingRealImg: byTag.shopee.filter((x) => !x.hasRealImg).length,
+        urlMatchedCount: byTag.shopee.filter((x) => x.slugOk && Boolean(x.platformItemId)).length
+      },
+      byTag
+    });
   });
 
   // Toggle Lock on a Single Product
@@ -948,13 +1043,13 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
     });
   });
 
-  // Bulk Lock / Unlock All Non-Platform-Cloned Local Web Products ("các sản phẩm sẵn trên web")
+  // Bulk Lock / Unlock All Non-Platform-Cloned Local Web Products ("1. Hàng tự đăng / SP sẵn trên web")
   app.post('/api/shop/admin/products/lock-local', requireAuth, async (req, res) => {
     const store = await getShopStore();
     const shouldLock = req.body?.locked !== false;
     let count = 0;
     (store.products || []).forEach((p) => {
-      if (!isPlatformClonedProduct(p)) {
+      if (getProductTag(p) === 'manual' || !isPlatformClonedProduct(p)) {
         p.isLocked = shouldLock;
         count++;
       }
@@ -964,8 +1059,8 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       success: true,
       count,
       message: shouldLock
-        ? `🔒 Đã khóa toàn bộ ${count} sản phẩm sẵn trên web (không phải clone từ sàn)!`
-        : `🔓 Đã mở khóa ${count} sản phẩm sẵn trên web!`
+        ? `🔒 Đã khóa toàn bộ ${count} sản phẩm Hàng tự đăng (sẵn trên web)!`
+        : `🔓 Đã mở khóa ${count} sản phẩm Hàng tự đăng (sẵn trên web)!`
     });
   });
 
@@ -1103,14 +1198,27 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
     for (const item of rawProducts) {
       if (!item || !item.name) continue;
 
-      const cleanName = String(item.name).trim();
       const cleanedIncomingUrl = cleanSourceUrl(item.sourceUrl || '');
       const incomingItemId = item.platformItemId || extractPlatformItemId(cleanedIncomingUrl);
+      const slugInfo = extractSlugFromShopeeUrl(cleanedIncomingUrl);
 
-      // STRICT 1-TO-1 ISOLATION: Match ONLY platform-cloned products (NEVER touch local/built-in web products!)
+      // Guard against polluted DOM title: if Shopee URL slug disagrees with incoming title, recover true title from slug!
+      let cleanName = String(item.name).trim();
+      if (slugInfo && slugInfo.prettyTitle && !titleMatchesSlugWords(cleanName, slugInfo.prettyTitle)) {
+        cleanName = slugInfo.prettyTitle;
+      }
+
+      const incomingTag = normalizeProductTag(
+        item.productTag || item.sourcePlatform || (cleanedIncomingUrl.includes('tiktok') ? 'tiktok' : 'shopee'),
+        cleanedIncomingUrl,
+        'cloned'
+      );
+
+      // STRICT TAG ISOLATION: Match ONLY products with the same platform tag (NEVER touch `manual` Hàng tự đăng!)
       const existingIdx = (store.products || []).findIndex((p) => {
-        if (!isPlatformClonedProduct(p)) return false;
-        if (p.isLocked) return false;
+        const pTag = getProductTag(p);
+        if (pTag === 'manual' || !isPlatformClonedProduct(p)) return false;
+        if (pTag !== incomingTag) return false;
 
         const existingUrl = cleanSourceUrl(p.sourceUrl || '');
         const existingItemId = p.platformItemId || extractPlatformItemId(existingUrl);
@@ -1138,7 +1246,11 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       // 1-to-1 inner variants & per-variant prices
       const incomingVariants = normalizeVariantsList(item.variants, baseIncomingPrice);
       const finalVariants = Array.isArray(item.variants)
-        ? incomingVariants
+        ? incomingVariants.length > 0 || item.deepSynced
+          ? incomingVariants
+          : prev && Array.isArray(prev.variants)
+          ? prev.variants
+          : []
         : prev && Array.isArray(prev.variants)
         ? prev.variants
         : [];
@@ -1174,22 +1286,14 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       finalVariants.forEach((v) => {
         if (v.image) addImg(v.image);
       });
-      if (imgSet.length === 0 && prev && Array.isArray(prev.images)) {
-        prev.images.forEach(addImg);
+      if (imgSet.filter((u) => u.startsWith('http')).length === 0 && prev && Array.isArray(prev.images)) {
+        prev.images.filter((u) => String(u || '').startsWith('http')).forEach(addImg);
       }
 
       let finalSourceUrl = cleanedIncomingUrl;
       if (prev && isSpecificProductUrl(prev.sourceUrl) && !isSpecificProductUrl(cleanedIncomingUrl)) {
         finalSourceUrl = cleanSourceUrl(prev.sourceUrl);
       }
-
-      const platform =
-        item.sourcePlatform ||
-        (String(finalSourceUrl || '').includes('tiktok')
-          ? 'tiktok'
-          : prev?.sourcePlatform && prev.sourcePlatform !== 'manual'
-          ? prev.sourcePlatform
-          : 'shopee');
 
       const computedStock =
         finalVariants.length > 0
@@ -1208,19 +1312,22 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         ? item.sizes.map((s) => String(s || '').trim()).filter(Boolean)
         : [];
 
+      const cleanedDesc = cleanProductDescription(item.description || '');
       const finalDesc =
-        item.description && String(item.description).trim().length > 10
-          ? String(item.description).trim()
-          : prev?.description ||
-            `Sản phẩm đồng bộ 1-1 trực tiếp từ ${platform === 'tiktok' ? 'TikTok Shop' : 'Shopee'} chính hãng của NA 2HAND.`;
+        cleanedDesc.length > 10
+          ? cleanedDesc
+          : prev?.description
+          ? cleanProductDescription(prev.description)
+          : `Sản phẩm đồng bộ 1-1 trực tiếp từ ${getProductTagLabel(incomingTag)} chính hãng của NA 2HAND.`;
 
       const productObj = {
         id: prev ? prev.id : `prod_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        productTag: incomingTag,
         originType: 'cloned',
         platformItemId: incomingItemId || prev?.platformItemId || '',
         isLocked: prev ? Boolean(prev.isLocked) : false,
         name: cleanName,
-        category: item.category || prev?.category || inferCategoryFromName(cleanName, store.categories),
+        category: item.category || inferCategoryFromName(cleanName, store.categories),
         price: cleanPrice > 0 ? cleanPrice : 110000,
         maxPrice: cleanMaxPrice > cleanPrice ? cleanMaxPrice : cleanPrice,
         originalPrice: cleanOrig >= cleanMaxPrice ? cleanOrig : cleanMaxPrice,
@@ -1236,7 +1343,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         isFlashSale: rawOrig > cleanMaxPrice,
         isFeatured: true,
         isNew: true,
-        sourcePlatform: platform,
+        sourcePlatform: incomingTag,
         sourceUrl: finalSourceUrl,
         description: finalDesc,
         enabled: prev ? prev.enabled !== false : true,
@@ -1765,16 +1872,31 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         }
 
         const saved = await saveImportedItemsToStore(extracted);
+        let prunedCount = 0;
+        const syncPlat = base.includes('tiktok') ? 'tiktok' : 'shopee';
+        const extractedPids = extracted
+          .map((it) => it.platformItemId || extractPlatformItemId(cleanSourceUrl(it.sourceUrl || '')))
+          .filter(Boolean);
+
+        // If user pasted a Shop listing page (not a single product page) with valid item IDs, reconcile 1-to-1!
+        if (!isSpecificProductUrl(base) && extractedPids.length >= 2 && extractedPids.length === extracted.length && req.body?.reconcile1To1 !== false) {
+          const storeNow = await getShopStore();
+          prunedCount = reconcilePlatformProducts(storeNow, syncPlat, extractedPids);
+          if (prunedCount > 0) await saveShopStore(storeNow);
+        }
+
         const varNote =
           saved.totalVariantsSynced > 0 ? ` (kèm ${saved.totalVariantsSynced} phân hệ con ở trong)` : '';
+        const pruneNote = prunedCount > 0 ? ` • Đã xóa ${prunedCount} SP không còn trên sàn` : '';
         return res.json({
           success: true,
           syncKey,
           addedCount: saved.addedCount,
           updatedCount: saved.updatedCount,
+          prunedCount,
           totalVariantsSynced: saved.totalVariantsSynced,
           products: saved.importedItems,
-          message: `🎉 Đã kéo về thành công ${saved.addedCount} sản phẩm mới & cập nhật ${saved.updatedCount} sản phẩm${varNote}!`
+          message: `🎉 Đồng bộ 1-1 thành công: +${saved.addedCount} mới, cập nhật ${saved.updatedCount} SP${varNote}${pruneNote}!`
         });
       }
 
@@ -1802,15 +1924,26 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
 
       if (extracted.length > 0) {
         const saved = await saveImportedItemsToStore(extracted);
+        let prunedCount = 0;
+        const syncPlat = resolvedUrl.includes('tiktok') ? 'tiktok' : 'shopee';
+        const extractedPids = extracted
+          .map((it) => it.platformItemId || extractPlatformItemId(cleanSourceUrl(it.sourceUrl || '')))
+          .filter(Boolean);
+        if (!isSpecificProductUrl(resolvedUrl) && extractedPids.length >= 2 && extractedPids.length === extracted.length) {
+          const storeNow = await getShopStore();
+          prunedCount = reconcilePlatformProducts(storeNow, syncPlat, extractedPids);
+          if (prunedCount > 0) await saveShopStore(storeNow);
+        }
         return res.json({
           success: true,
           syncKey,
           resolvedUrl,
           addedCount: saved.addedCount,
           updatedCount: saved.updatedCount,
+          prunedCount,
           totalVariantsSynced: saved.totalVariantsSynced,
           products: saved.importedItems,
-          message: `🎉 Đã tự động kéo thành công ${saved.addedCount} sản phẩm mới & cập nhật ${saved.updatedCount} sản phẩm từ ${resolvedUrl}!`
+          message: `🎉 Đã đồng bộ 1-1 thành công ${saved.addedCount} SP mới & cập nhật ${saved.updatedCount} SP từ ${resolvedUrl}${prunedCount > 0 ? ` (đã xóa ${prunedCount} SP không còn trên sàn)` : ''}!`
         });
       }
 
@@ -1833,8 +1966,28 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
     }
   });
 
+  // Live Server-Hosted Harvester Script (so Bookmarklet NEVER goes stale in browser bookmarks!)
+  app.get('/api/shop/harvester.js', async (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+
+    const store = await getShopStore();
+    const syncKey = String(req.query.syncKey || '');
+    if (!syncKey || syncKey !== store.settings.syncApiKey) {
+      return res.status(403).send('alert("Mã đồng bộ không hợp lệ, hãy lấy lại nút từ trang Quản trị Shop nhé!");');
+    }
+
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'na2hand.com';
+    const origin = `${proto}://${host}`;
+    const runtimePath = path.join(__dirname, 'public', 'js', 'shopee-harvester-runtime.js');
+    const runtimeSrc = fs.readFileSync(runtimePath, 'utf8');
+    res.send(`${runtimeSrc}\nwindow.NA2HAND_DEEP_HARVESTER(${JSON.stringify(origin)}, ${JSON.stringify(syncKey)});\n`);
+  });
+
   // =========================================================================
-  // 4. DIRECT PRODUCT & STRICT 1-TO-1 RECONCILIATION ENDPOINT
+  // 4. DIRECT PRODUCT & STRICT TWO-WAY 1-TO-1 RECONCILIATION ENDPOINT
   // =========================================================================
   app.post('/api/shop/import', requireAdminOrSyncKey, async (req, res) => {
     try {
@@ -1853,39 +2006,18 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         saved = await saveImportedItemsToStore(rawProducts);
       }
 
-      // Optional 1-to-1 Full Shop Reconciliation: removes stale/duplicate clones for `reconcilePlatform`
-      // while NEVER touching non-cloned local products or locked products!
+      // Strict Two-Way 1-to-1 Reconciliation for `reconcilePlatform` (e.g. 'shopee' or 'tiktok'):
+      // Any product on Web tagged with `reconcilePlatform` that is NOT in `activePlatformItemIds` is DELETED from Web!
+      // Products tagged `manual` (1. Hàng tự đăng) or other platforms are 100% UNTOUCHED!
       let prunedCount = 0;
-      if (bodyObj.reconcilePlatform && Array.isArray(bodyObj.activePlatformItemIds) && bodyObj.activePlatformItemIds.length > 0) {
-        const targetPlat = bodyObj.reconcilePlatform;
-        const activeSet = new Set(bodyObj.activePlatformItemIds.filter(Boolean));
-        const seenKeptIds = new Set();
+      if (
+        bodyObj.reconcilePlatform &&
+        Array.isArray(bodyObj.activePlatformItemIds) &&
+        (bodyObj.activePlatformItemIds.length > 0 || bodyObj.allowEmptyShop === true)
+      ) {
+        const targetTag = String(bodyObj.reconcilePlatform).toLowerCase();
         const store = await getShopStore();
-
-        const beforeLen = (store.products || []).length;
-        const keptClonesMap = new Map();
-        const untouchedProducts = [];
-
-        for (const p of store.products || []) {
-          // NEVER touch non-cloned local web products ("không đả động tới SP không phải clone từ sàn")
-          if (!isPlatformClonedProduct(p, targetPlat) || p.isLocked) {
-            untouchedProducts.push(p);
-            continue;
-          }
-          const pid = p.platformItemId || extractPlatformItemId(p.sourceUrl || '');
-          if (pid && activeSet.has(pid) && !seenKeptIds.has(pid)) {
-            seenKeptIds.add(pid);
-            keptClonesMap.set(pid, p);
-          }
-        }
-
-        // Preserve the exact 1-to-1 Shopee display order from activePlatformItemIds, followed by untouched local products
-        const orderedClones = bodyObj.activePlatformItemIds
-          .map((id) => keptClonesMap.get(id))
-          .filter(Boolean);
-
-        store.products = [...orderedClones, ...untouchedProducts];
-        prunedCount = Math.max(0, beforeLen - store.products.length);
+        prunedCount = reconcilePlatformProducts(store, targetTag, bodyObj.activePlatformItemIds);
         await saveShopStore(store);
       }
 
@@ -1895,12 +2027,13 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
 
       const varNote =
         saved.totalVariantsSynced > 0 ? ` (kèm ${saved.totalVariantsSynced} phân hệ con)` : '';
-      const pruneNote = prunedCount > 0 ? ` • Đã dọn ${prunedCount} bản ghi lệch/cũ để khớp chuẩn 1-1` : '';
+      const pruneNote = prunedCount > 0 ? ` • Đã xóa ${prunedCount} SP không còn trên sàn để khớp chuẩn 1-1` : '';
       res.json({
         success: true,
         addedCount: saved.addedCount,
         updatedCount: saved.updatedCount,
         prunedCount,
+        removedCount: prunedCount,
         totalVariantsSynced: saved.totalVariantsSynced,
         products: saved.importedItems,
         message: `🎉 Đồng bộ 1-1 thành công: +${saved.addedCount} mới, cập nhật ${saved.updatedCount} SP${varNote}${pruneNote}!`
@@ -1912,13 +2045,87 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
   });
 }
 
+function getProductTagLabel(tag) {
+  const t = String(tag || 'manual').toLowerCase();
+  if (t === 'manual') return '1. Hàng tự đăng';
+  if (t === 'shopee') return '2. Hàng Shopee';
+  if (t === 'tiktok') return '3. Hàng TikTok';
+  if (t === 'lazada') return '4. Hàng Lazada';
+  return '5. Nguồn khác';
+}
+
+function normalizeProductTag(rawTag, sourceUrl = '', originType = 'local', id = '') {
+  if (/^prod-\d+$/.test(String(id || ''))) {
+    return rawTag && String(rawTag).toLowerCase() === 'manual' ? 'manual' : 'manual';
+  }
+  const clean = String(rawTag || '').trim().toLowerCase();
+  if (clean === 'manual' || clean === 'local' || clean === 'tu-dang') return 'manual';
+  if (clean === 'shopee') return 'shopee';
+  if (clean === 'tiktok') return 'tiktok';
+  if (clean === 'lazada') return 'lazada';
+  if (clean === 'other') return 'other';
+  if (clean) return clean;
+  const pid = extractPlatformItemId(sourceUrl);
+  if (pid.startsWith('shopee_')) return 'shopee';
+  if (pid.startsWith('tiktok_')) return 'tiktok';
+  if (originType === 'local') return 'manual';
+  return 'manual';
+}
+
+function getProductTag(p) {
+  if (!p) return 'manual';
+  if (p.productTag) return String(p.productTag).toLowerCase();
+  if (p.originType === 'local' || /^prod-\d+$/.test(String(p.id || ''))) return 'manual';
+  const pid = p.platformItemId || extractPlatformItemId(p.sourceUrl || '');
+  if (pid.startsWith('shopee_')) return 'shopee';
+  if (pid.startsWith('tiktok_')) return 'tiktok';
+  if (p.sourcePlatform && p.sourcePlatform !== 'manual' && pid) return String(p.sourcePlatform).toLowerCase();
+  return 'manual';
+}
+
 function isPlatformClonedProduct(p, platformFilter = null) {
   if (!p) return false;
-  if (p.originType === 'local' || /^prod-\d+$/.test(String(p.id || ''))) return false;
-  const pid = p.platformItemId || extractPlatformItemId(p.sourceUrl || '');
-  if (!pid && p.originType !== 'cloned') return false;
-  if (platformFilter) return p.sourcePlatform === platformFilter;
-  return p.sourcePlatform === 'shopee' || p.sourcePlatform === 'tiktok';
+  const tag = getProductTag(p);
+  if (tag === 'manual') return false;
+  if (platformFilter) return tag === String(platformFilter).toLowerCase();
+  return tag === 'shopee' || tag === 'tiktok' || tag === 'lazada' || p.originType === 'cloned';
+}
+
+function reconcilePlatformProducts(store, targetTag, activePlatformItemIds) {
+  const normTarget = String(targetTag || 'shopee').toLowerCase();
+  const activeList = (activePlatformItemIds || []).filter(Boolean);
+  const activeSet = new Set(activeList);
+  const seenKeptIds = new Set();
+  const beforeLen = (store.products || []).length;
+
+  const keptClonesMap = new Map();
+  const untouchedProducts = [];
+
+  for (const p of store.products || []) {
+    const pTag = getProductTag(p);
+    // NEVER touch `manual` (1. Hàng tự đăng) or products belonging to OTHER platform tags!
+    if (pTag !== normTarget) {
+      untouchedProducts.push(p);
+      continue;
+    }
+    // For products tagged with `normTarget` (e.g. 'shopee'):
+    // Keep ONLY if its platformItemId is present in `activeSet` (on Shopee); otherwise DELETE!
+    const pid = p.platformItemId || extractPlatformItemId(p.sourceUrl || '');
+    if (pid && activeSet.has(pid) && !seenKeptIds.has(pid)) {
+      seenKeptIds.add(pid);
+      keptClonesMap.set(pid, p);
+    }
+  }
+
+  const orderedClones = activeList.map((id) => keptClonesMap.get(id)).filter(Boolean);
+  store.products = [...orderedClones, ...untouchedProducts];
+  return Math.max(0, beforeLen - store.products.length);
+}
+
+function cleanProductDescription(desc) {
+  return String(desc || '')
+    .replace(/(?:CUSTOMER SERVICE|CHĂM SÓC KHÁCH HÀNG)[\s\S]*$/i, '')
+    .trim();
 }
 
 function normalizeSlugWords(str) {
@@ -1931,6 +2138,19 @@ function normalizeSlugWords(str) {
     .trim();
 }
 
+function titleMatchesSlugWords(candTitle, slugTitle) {
+  if (!slugTitle) return true;
+  const cw = normalizeSlugWords(candTitle).split(' ').filter((w) => w.length >= 2);
+  const sw = normalizeSlugWords(slugTitle).split(' ').filter((w) => w.length >= 2);
+  if (sw.length === 0) return true;
+  if (cw.length === 0) return false;
+  let hits = 0;
+  for (const w of sw) {
+    if (cw.includes(w)) hits++;
+  }
+  return hits / sw.length >= 0.5;
+}
+
 function extractSlugFromShopeeUrl(url) {
   const m = String(url || '').match(/shopee\.vn\/([^/?#]+)-i\.(\d+)\.(\d+)/i);
   if (!m) return null;
@@ -1938,17 +2158,18 @@ function extractSlugFromShopeeUrl(url) {
   try {
     decoded = decodeURIComponent(m[1]);
   } catch {}
+  const prettyTitle = decoded.replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
   return {
     cleanUrl: `https://shopee.vn/${m[1]}-i.${m[2]}.${m[3]}`,
     platformItemId: `shopee_${m[2]}_${m[3]}`,
+    prettyTitle,
     normTitle: normalizeSlugWords(decoded)
   };
 }
 
-function repairAndMigrateProductsStore(products) {
+function repairAndMigrateProductsStore(products, categories = []) {
   let changed = false;
 
-  // 1. Collect pool of all real Shopee item URLs currently in store so any shifted URLs are reunited 1-to-1 with their true product
   const shopeeUrlPool = [];
   for (const p of products) {
     if (!p) continue;
@@ -1965,50 +2186,85 @@ function repairAndMigrateProductsStore(products) {
   for (const p of products) {
     if (!p) continue;
 
-    // Mark built-in sample web products (`prod-1`..`prod-6` or manual items without item IDs) as `originType: 'local'`
-    if (/^prod-\d+$/.test(String(p.id || '')) || (!extractPlatformItemId(p.sourceUrl || '') && !p.platformItemId)) {
+    // 1. Clean Shopee footer garbage from descriptions
+    if (typeof p.description === 'string') {
+      const cd = cleanProductDescription(p.description);
+      if (cd !== p.description) {
+        p.description = cd;
+        changed = true;
+      }
+    }
+
+    // 2. Built-in sample web products (`prod-1`..`prod-6`) or local products without item ID -> Tag `manual` (1. Hàng tự đăng)
+    const extractedPid = extractPlatformItemId(p.sourceUrl || '') || p.platformItemId || '';
+    if (/^prod-\d+$/.test(String(p.id || '')) || (!extractedPid && (!p.productTag || p.originType === 'local'))) {
       if (p.originType !== 'local') {
         p.originType = 'local';
+        changed = true;
+      }
+      const targetManualTag = p.productTag && !['shopee', 'tiktok'].includes(p.productTag) ? p.productTag : 'manual';
+      if (p.productTag !== targetManualTag) {
+        p.productTag = targetManualTag;
+        changed = true;
+      }
+      if (p.sourcePlatform !== targetManualTag) {
+        p.sourcePlatform = targetManualTag;
         changed = true;
       }
       continue;
     }
 
-    if (p.originType !== 'cloned') {
+    // 3. Platform-cloned products -> Assign accurate productTag ('shopee', 'tiktok', etc.)
+    if (p.originType !== 'cloned' && p.productTag !== 'manual') {
       p.originType = 'cloned';
       changed = true;
     }
+    const inferredTag =
+      p.productTag ||
+      (extractedPid.startsWith('tiktok_') || String(p.sourceUrl || '').includes('tiktok') ? 'tiktok' : 'shopee');
+    if (p.productTag !== inferredTag) {
+      p.productTag = inferredTag;
+      changed = true;
+    }
+    if (p.sourcePlatform !== inferredTag) {
+      p.sourcePlatform = inferredTag;
+      changed = true;
+    }
 
-    // Reunite any shifted Shopee clone with its true Shopee URL by matching normalized product name against URL slug
-    if (p.sourcePlatform === 'shopee' && shopeeUrlPool.length > 0) {
-      const pNorm = normalizeSlugWords(p.name);
+    // 4. Repair any mismatched Shopee product title vs URL slug
+    if (p.productTag === 'shopee') {
       const curSlug = extractSlugFromShopeeUrl(p.sourceUrl);
-      if (!curSlug || curSlug.normTitle !== pNorm) {
+      if (curSlug && !titleMatchesSlugWords(p.name, curSlug.prettyTitle)) {
+        const pNorm = normalizeSlugWords(p.name);
         const usedIds = new Set(
           products
             .filter((o) => o && o !== p)
             .map((o) => o.platformItemId || extractPlatformItemId(o.sourceUrl || ''))
             .filter(Boolean)
         );
-        const exactMatch =
-          shopeeUrlPool.find((u) => u.normTitle === pNorm && !usedIds.has(u.platformItemId)) ||
-          shopeeUrlPool.find((u) => u.normTitle === pNorm) ||
-          shopeeUrlPool.find(
-            (u) => (pNorm.startsWith(u.normTitle) || u.normTitle.startsWith(pNorm)) && !usedIds.has(u.platformItemId)
-          );
-        if (exactMatch && p.sourceUrl !== exactMatch.cleanUrl) {
-          p.sourceUrl = exactMatch.cleanUrl;
-          p.platformItemId = exactMatch.platformItemId;
+        const unusedSwap = shopeeUrlPool.find(
+          (u) => u.normTitle === pNorm && !usedIds.has(u.platformItemId)
+        );
+        if (unusedSwap) {
+          p.sourceUrl = unusedSwap.cleanUrl;
+          p.platformItemId = unusedSwap.platformItemId;
+          changed = true;
+        } else if (curSlug.prettyTitle) {
+          // URL & images belong to curSlug, only DOM title was polluted -> restore true Vietnamese title!
+          p.name = curSlug.prettyTitle;
+          if (categories.length > 0) {
+            p.category = inferCategoryFromName(p.name, categories);
+          }
           changed = true;
         }
       }
-      if (!p.platformItemId) {
-        p.platformItemId = extractPlatformItemId(p.sourceUrl || '');
-        if (p.platformItemId) changed = true;
+      if (!p.platformItemId && extractedPid) {
+        p.platformItemId = extractedPid;
+        changed = true;
       }
     }
 
-    // Remove accidental quantity +/- ghost variants ("Decrease", "Increase")
+    // 5. Remove accidental quantity +/- ghost variants ("Decrease", "Increase")
     if (Array.isArray(p.variants) && p.variants.length > 0) {
       const cleanedVars = p.variants.filter(
         (v) => v && !/^(decrease|increase|giảm|tăng|\+|-)$/i.test(String(v.label || '').trim())
@@ -2019,9 +2275,9 @@ function repairAndMigrateProductsStore(products) {
       }
     }
 
-    // Clear fake default ['S', 'M', 'L'] sizes on Shopee clones that did not come from a real 2nd tier
+    // 6. Clear fake default ['S', 'M', 'L'] sizes on Shopee clones
     if (
-      p.sourcePlatform === 'shopee' &&
+      p.productTag === 'shopee' &&
       Array.isArray(p.sizes) &&
       p.sizes.join(',') === 'S,M,L'
     ) {
@@ -2030,11 +2286,11 @@ function repairAndMigrateProductsStore(products) {
     }
   }
 
-  // Deduplicate cloned products sharing the exact same platformItemId (keep the richer one with more variants)
+  // 7. Deduplicate cloned products sharing the exact same platformItemId
   const seenClonedPids = new Map();
   for (let i = 0; i < products.length; i++) {
     const p = products[i];
-    if (!p || p.originType !== 'cloned' || !p.platformItemId) continue;
+    if (!p || p.productTag === 'manual' || !p.platformItemId) continue;
     const prevIdx = seenClonedPids.get(p.platformItemId);
     if (prevIdx === undefined) {
       seenClonedPids.set(p.platformItemId, i);

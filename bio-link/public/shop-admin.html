@@ -288,13 +288,24 @@
 
           <div class="grid-2">
             <div>
+              <label class="label">🏷️ Phân loại Tag nguồn hàng *</label>
+              <select id="pf-tag" class="select">
+                <option value="manual">🎀 1. Hàng tự đăng (Bảo vệ riêng trên web)</option>
+                <option value="shopee">🧡 2. Hàng Shopee (Đồng bộ 1-1 sàn Shopee)</option>
+                <option value="tiktok">🎵 3. Hàng TikTok (Đồng bộ 1-1 sàn TikTok)</option>
+                <option value="lazada">💙 4. Hàng Lazada</option>
+                <option value="other">🏷️ 5. Hàng nguồn khác</option>
+              </select>
+            </div>
+            <div>
               <label class="label">Tồn kho</label>
               <input type="number" id="pf-stock" class="input" value="15" />
             </div>
-            <div>
-              <label class="label">Link gốc Shopee / TikTok (tùy chọn)</label>
-              <input type="text" id="pf-source-url" class="input" placeholder="https://shopee.vn/... hoặc https://tiktok.com/..." />
-            </div>
+          </div>
+
+          <div>
+            <label class="label">Link gốc Shopee / TikTok / Sàn khác (tùy chọn)</label>
+            <input type="text" id="pf-source-url" class="input" placeholder="https://shopee.vn/... hoặc https://tiktok.com/..." />
           </div>
 
           <div>
@@ -338,22 +349,23 @@
       </div>
 
       <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
           <div>
-            <h3 style="font-size:1.05rem; margin-bottom:4px;">👗 Danh Sách Sản Phẩm Hiện Có</h3>
+            <h3 style="font-size:1.05rem; margin-bottom:4px;">👗 Danh Sách Sản Phẩm Theo Tag Nguồn Hàng</h3>
             <p style="font-size:0.77rem; color:var(--muted); line-height:1.5;">
-              🛡️ <strong>SP sẵn trên web (Ngoài sàn)</strong> tuyệt đối không bị ảnh hưởng khi đồng bộ Shopee/TikTok. Bạn có thể bấm <strong>🔒 Khóa</strong> từng mẫu hoặc khóa toàn bộ SP sẵn trên web chỉ với 1 chạm.
+              🎀 <strong>1. Hàng tự đăng</strong> được giữ độc lập 100%, còn 🧡 <strong>2. Hàng Shopee</strong> &amp; 🎵 <strong>3. Hàng TikTok</strong> luôn đồng bộ 1-1 hai chiều với sàn (tự thêm SP mới &amp; tự xóa SP đã gỡ trên sàn).
             </p>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button type="button" class="btn btn-sm" id="btn-lock-all-local" style="background:#fff1f2; border-color:#fda4af; color:#be123c;">
-              🔒 Khóa tất cả SP sẵn trên web
+              🔒 Khóa tất cả Hàng tự đăng
             </button>
             <button type="button" class="btn btn-sm" id="btn-unlock-all-local" style="background:#ecfdf5; border-color:#a7f3d0; color:#047857;">
-              🔓 Mở khóa SP sẵn trên web
+              🔓 Mở khóa Hàng tự đăng
             </button>
           </div>
         </div>
+        <div id="prod-tag-filter-bar" style="display:flex; gap:7px; flex-wrap:wrap; margin-bottom:14px;"></div>
         <div style="overflow-x:auto;">
           <table>
             <thead>
@@ -362,7 +374,7 @@
                 <th>Tên sản phẩm</th>
                 <th>Giá bán</th>
                 <th>Kho / Đã bán</th>
-                <th>Nguồn</th>
+                <th>Tag Nguồn Hàng</th>
                 <th>Thao tác</th>
               </tr>
             </thead>
@@ -404,6 +416,17 @@
         </form>
 
         <div id="sync-live-log" style="display:none; margin-top:16px; padding:16px; border-radius:16px; background:#fff; border:1.5px solid var(--border); font-size:0.84rem; line-height:1.6;"></div>
+      </div>
+
+      <div class="card" id="sync-audit-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+          <div>
+            <h3 style="font-size:1.04rem;">🔍 Bảng Kiểm Tra Đối Chiếu Dữ Liệu Trên Web &amp; Trên Sàn (1-1 Audit)</h3>
+            <p style="font-size:0.77rem; color:var(--muted);">Tự động thống kê số lượng từng Tag nguồn hàng và kiểm tra tính toàn vẹn link/ảnh/phân hệ của các sản phẩm Shopee trên Web.</p>
+          </div>
+          <button type="button" class="btn btn-sm" id="btn-refresh-audit">🔄 Kiểm tra lại ngay</button>
+        </div>
+        <div id="sync-audit-panel" style="font-size:0.82rem; color:var(--muted);">Đang tải dữ liệu đối chiếu...</div>
       </div>
     </section>
 
@@ -573,6 +596,7 @@
 
   <div class="toast" id="toast">Đã lưu thành công!</div>
 
-  <script src="/js/shop-admin.js?v=6"></script>
+  <script src="/js/shopee-harvester-runtime.js?v=2"></script>
+  <script src="/js/shop-admin.js?v=7"></script>
 </body>
 </html>

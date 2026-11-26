@@ -533,11 +533,14 @@
         const imgs = Array.isArray(p.images) && p.images.length > 0 ? p.images : ['/media/bio-link/girlfriend-1.jpg'];
         const img1 = imgs[0];
         const img2 = imgs[1] || '';
-        const sizes = Array.isArray(p.sizes) && p.sizes.length > 0 ? p.sizes : ['Freesize'];
+        const sizes = Array.isArray(p.sizes) ? p.sizes.filter(Boolean) : [];
         const pVariants = Array.isArray(p.variants) ? p.variants : [];
         const inStockVars = pVariants.filter((v) => Number(v.stock ?? 1) > 0);
+        const maxP = Number(p.maxPrice || 0);
+        const hasRange = maxP > Number(p.price || 0);
+        const refTopPrice = hasRange ? maxP : Number(p.price || 0);
         const disc =
-          p.originalPrice && p.originalPrice > p.price
+          p.originalPrice && p.originalPrice > refTopPrice
             ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)
             : 0;
         const isLiked = wishlist.includes(p.id);
@@ -557,13 +560,15 @@
                     `<button type="button" class="quick-size-chip" data-var="${escapeAttr(v.label)}">+ ${escapeHtml(v.label)}</button>`
                 )
                 .join('')
-            : sizes
+            : sizes.length > 0
+            ? sizes
                 .slice(0, 4)
                 .map(
                   (sz) =>
                     `<button type="button" class="quick-size-chip" data-size="${escapeAttr(sz)}">+ ${escapeHtml(sz)}</button>`
                 )
-                .join('');
+                .join('')
+            : `<button type="button" class="quick-size-chip" data-direct="1">+ Thêm nhanh vào Túi Đồ</button>`;
 
         const varStripHtml =
           pVariants.length > 0
@@ -573,13 +578,15 @@
                 .slice(0, 5)
                 .map(
                   (v) =>
-                    `<img src="${escapeAttr(v.image || img1)}" alt="${escapeAttr(v.label)}" title="${escapeAttr(v.label)}${Number(v.stock ?? 1) <= 0 ? ' (Hết)' : ''}" class="card-var-swatch" data-preview="${escapeAttr(v.image || img1)}" style="${Number(v.stock ?? 1) <= 0 ? 'opacity:0.4;' : ''}" />`
+                    `<img src="${escapeAttr(v.image || img1)}" alt="${escapeAttr(v.label)}" title="${escapeAttr(v.label)}${Number(v.price) > 0 ? ' • ' + vnd(v.price) : ''}${Number(v.stock ?? 1) <= 0 ? ' (Hết)' : ''}" class="card-var-swatch" data-preview="${escapeAttr(v.image || img1)}" data-vprice="${Number(v.price || 0)}" style="${Number(v.stock ?? 1) <= 0 ? 'opacity:0.4;' : ''}" />`
                 )
                 .join('')}
               ${pVariants.length > 5 ? `<span class="card-var-more">+${pVariants.length - 5} mẫu</span>` : `<span class="card-var-more">${pVariants.length} mẫu</span>`}
             </div>
           `
             : '';
+
+        const priceDisplayText = hasRange ? `${vnd(p.price)} – ${vnd(maxP)}` : vnd(p.price);
 
         return `
         <article class="product-card" data-id="${escapeAttr(p.id)}">
@@ -597,7 +604,7 @@
             </button>
 
             <div class="quick-add-overlay">
-              <div class="quick-size-label">${inStockVars.length > 0 ? 'Chạm chọn nhanh phân hệ:' : 'Chạm thêm nhanh vào Túi Đồ:'}</div>
+              <div class="quick-size-label">${inStockVars.length > 0 ? 'Chạm chọn nhanh phân hệ:' : sizes.length > 0 ? 'Chạm chọn nhanh size:' : 'Chạm thêm nhanh:'}</div>
               <div class="quick-size-row">
                 ${quickChipsHtml}
               </div>
@@ -614,10 +621,10 @@
             </div>
             <div class="prod-price-row">
               <div>
-                <span class="prod-price">${vnd(p.price)}</span>
-                ${p.originalPrice > p.price ? `<span class="prod-orig-price">${vnd(p.originalPrice)}</span>` : ''}
+                <span class="prod-price" data-default-price="${escapeAttr(priceDisplayText)}">${priceDisplayText}</span>
+                ${!hasRange && p.originalPrice > p.price ? `<span class="prod-orig-price">${vnd(p.originalPrice)}</span>` : ''}
               </div>
-              <button type="button" class="prod-detail-btn open-detail">${pVariants.length > 0 ? `Chọn mẫu (${pVariants.length})` : 'Chọn mẫu'}</button>
+              <button type="button" class="prod-detail-btn open-detail">${pVariants.length > 0 ? `Chọn mẫu (${pVariants.length})` : 'Xem chi tiết'}</button>
             </div>
           </div>
         </article>
@@ -638,7 +645,10 @@
           e.stopPropagation();
           const pImg = card.querySelector('.prod-img-primary');
           const src = sw.getAttribute('data-preview');
+          const vp = Number(sw.getAttribute('data-vprice') || 0);
           if (pImg && src) pImg.src = src;
+          const pEl = card.querySelector('.prod-price');
+          if (pEl && vp > 0) pEl.textContent = vnd(vp);
           card.querySelectorAll('.card-var-swatch').forEach((x) => x.classList.remove('active'));
           sw.classList.add('active');
         };
@@ -659,20 +669,21 @@
           e.stopPropagation();
           if (!prod) return;
           const varLbl = chip.getAttribute('data-var');
+          const prodSizes = Array.isArray(prod.sizes) ? prod.sizes.filter(Boolean) : [];
           if (varLbl && Array.isArray(prod.variants)) {
             const vObj = prod.variants.find((v) => v.label === varLbl);
-            const sz = (prod.sizes && prod.sizes[0]) || 'Freesize';
+            const sz = prodSizes[0] || '';
             const col = `${prod.variantGroupName || 'Mẫu'}: ${varLbl}`;
             addToCart(prod, sz, col, 1, vObj);
             animateFlyToBag(vObj?.image || (prod.images && prod.images[0]) || '', card.querySelector('.prod-img-wrap'));
             showToast(`Đã thêm "${prod.name.slice(0, 22)}..." (${varLbl}) vào Túi Đồ!`);
             return;
           }
-          const sz = chip.getAttribute('data-size') || 'Freesize';
-          const col = (prod.colors && prod.colors[0]) || 'Theo hình';
+          const sz = chip.getAttribute('data-size') || prodSizes[0] || '';
+          const col = (prod.colors && prod.colors[0]) || '';
           addToCart(prod, sz, col, 1);
           animateFlyToBag((prod.images && prod.images[0]) || '', card.querySelector('.prod-img-wrap'));
-          showToast(`Đã thêm "${prod.name.slice(0, 26)}..." (${sz}) vào Túi Đồ!`);
+          showToast(`Đã thêm "${prod.name.slice(0, 26)}..."${sz ? ` (${sz})` : ''} vào Túi Đồ!`);
         });
       });
     });
@@ -790,20 +801,28 @@
     const modal = document.getElementById('product-modal');
     const content = document.getElementById('product-modal-content');
     const imgs = Array.isArray(p.images) && p.images.length > 0 ? p.images : ['/media/bio-link/girlfriend-1.jpg'];
-    const sizes = Array.isArray(p.sizes) && p.sizes.length > 0 ? p.sizes : ['Freesize'];
-    const colors = Array.isArray(p.colors) && p.colors.length > 0 ? p.colors : ['Theo hình'];
+    const sizes = Array.isArray(p.sizes) ? p.sizes.filter(Boolean) : [];
+    const colors = Array.isArray(p.colors)
+      ? p.colors.filter((c) => c && c !== 'Theo hình' && c !== 'Mặc định')
+      : [];
     const pVariants = Array.isArray(p.variants) ? p.variants : [];
     const hasRichVariants = pVariants.length > 0;
     const varGroupTitle = p.variantGroupName || 'Mẫu';
     const firstAvailableVar =
       pVariants.find((v) => Number(v.stock ?? 1) > 0) || pVariants[0] || null;
 
+    const varPrices = pVariants.map((v) => Number(v.price || 0)).filter((x) => x > 0);
+    const distinctVarPrices = [...new Set(varPrices)];
+    const hasVarPriceDiff = distinctVarPrices.length > 1;
+    const minVarPrice = varPrices.length > 0 ? Math.min(...varPrices) : Number(p.price || 0);
+    const maxVarPrice = varPrices.length > 0 ? Math.max(...varPrices) : Number(p.maxPrice || p.price || 0);
+
     const prodReviews = reviews.filter((r) => r.productId === p.id);
     const related = products.filter((x) => x.id !== p.id).slice(0, 3);
 
     let chosenVariant = firstAvailableVar;
-    let chosenSize = sizes[0];
-    let chosenColor = chosenVariant ? `${varGroupTitle}: ${chosenVariant.label}` : colors[0];
+    let chosenSize = sizes[0] || '';
+    let chosenColor = chosenVariant ? `${varGroupTitle}: ${chosenVariant.label}` : colors[0] || '';
     let qty = 1;
     let chosenStars = 5;
     let pendingRevPhotoDataUrl = '';
@@ -848,18 +867,25 @@
             ★ ${Number(p.rating || 5).toFixed(1)} (${p.reviewCount || 1} đánh giá) &nbsp;·&nbsp; Đã bán ${p.sold || 0} &nbsp;·&nbsp; Kho: <strong id="detail-stock-val">${initialStock}</strong> chiếc
           </div>
 
-          <div style="background:var(--rose-50); border:1px solid var(--rose-200); padding:13px 16px; border-radius:16px; margin-bottom:16px; display:flex; align-items:baseline; gap:10px;">
-            <span class="prod-price" id="detail-price-val" style="font-size:1.5rem;">${vnd(initialPrice)}</span>
-            ${p.originalPrice > initialPrice ? `<span class="prod-orig-price" style="font-size:0.9rem;">${vnd(p.originalPrice)}</span>` : ''}
+          <div style="background:var(--rose-50); border:1px solid var(--rose-200); padding:13px 16px; border-radius:16px; margin-bottom:16px; display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:baseline; gap:10px;">
+              <span class="prod-price" id="detail-price-val" style="font-size:1.5rem;">${vnd(initialPrice)}</span>
+              ${p.originalPrice > Math.max(initialPrice, maxVarPrice) ? `<span class="prod-orig-price" style="font-size:0.9rem;">${vnd(p.originalPrice)}</span>` : ''}
+            </div>
+            ${
+              hasVarPriceDiff || maxVarPrice > minVarPrice
+                ? `<span style="font-size:0.74rem; font-weight:700; color:var(--ink-soft); background:#fff; padding:3px 9px; border-radius:999px; border:1px solid var(--rose-200);">Khoảng giá: ${vnd(minVarPrice)} – ${vnd(maxVarPrice)}</span>`
+                : ''
+            }
           </div>
 
           ${
             hasRichVariants
               ? `
             <div style="margin-bottom:15px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:7px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:7px; flex-wrap:wrap; gap:4px;">
                 <span class="field-lbl" style="margin-bottom:0;">${escapeHtml(varGroupTitle)} (${pVariants.length} phân hệ):</span>
-                <span id="selected-var-hint" style="font-size:0.75rem; font-weight:700; color:var(--cherry);">${chosenVariant ? `Đang chọn: ${escapeHtml(chosenVariant.label)}` : ''}</span>
+                <span id="selected-var-hint" style="font-size:0.75rem; font-weight:700; color:var(--cherry);">${chosenVariant ? `Đang chọn: ${escapeHtml(chosenVariant.label)} • ${vnd(chosenVariant.price || initialPrice)}` : ''}</span>
               </div>
               <div class="variant-grid-rich" id="detail-rich-variants">
                 ${pVariants
@@ -875,6 +901,7 @@
                       >
                         ${v.image ? `<img src="${escapeAttr(v.image)}" alt="${escapeAttr(v.label)}" loading="lazy" />` : ''}
                         <span>${escapeHtml(v.label)}${soldOut ? ' (Hết)' : ''}</span>
+                        ${hasVarPriceDiff && Number(v.price) > 0 ? `<span class="var-chip-price">${vnd(v.price)}</span>` : ''}
                       </button>
                     `;
                   })
@@ -882,7 +909,8 @@
               </div>
             </div>
           `
-              : `
+              : colors.length > 0
+              ? `
             <div style="margin-bottom:13px;">
               <div class="field-lbl">Màu sắc:</div>
               <div style="display:flex; gap:8px; flex-wrap:wrap;" id="detail-colors">
@@ -890,8 +918,12 @@
               </div>
             </div>
           `
+              : ''
           }
 
+          ${
+            sizes.length > 0
+              ? `
           <div style="margin-bottom:15px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
               <span class="field-lbl" style="margin-bottom:0;">Kích cỡ (Size):</span>
@@ -901,6 +933,9 @@
               ${sizes.map((s, i) => `<button type="button" class="variant-pill ${i === 0 ? 'selected' : ''}" data-val="${escapeAttr(s)}">${escapeHtml(s)}</button>`).join('')}
             </div>
           </div>
+          `
+              : ''
+          }
 
           <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
             <span class="field-lbl" style="margin-bottom:0;">Số lượng:</span>
@@ -1065,7 +1100,8 @@
         btn.classList.add('selected');
 
         const hintEl = content.querySelector('#selected-var-hint');
-        if (hintEl) hintEl.textContent = `Đang chọn: ${v.label}`;
+        const activePrice = Number(v.price) > 0 ? Number(v.price) : Number(p.price);
+        if (hintEl) hintEl.textContent = `Đang chọn: ${v.label} • ${vnd(activePrice)}`;
 
         if (v.image) {
           content.querySelector('#detail-main-img').src = v.image;
@@ -1074,7 +1110,7 @@
           });
         }
         const priceEl = content.querySelector('#detail-price-val');
-        if (priceEl && Number(v.price) > 0) priceEl.textContent = vnd(v.price);
+        if (priceEl) priceEl.textContent = vnd(activePrice);
 
         const stockEl = content.querySelector('#detail-stock-val');
         if (stockEl) stockEl.textContent = Number(v.stock ?? 1);
@@ -1359,12 +1395,17 @@
     } else {
       listEl.innerHTML = cart
         .map(
-          (it, idx) => `
+          (it, idx) => {
+            const metaLine = [it.color, it.size]
+              .map((x) => String(x || '').trim())
+              .filter((x) => x && x !== 'Theo hình' && x !== 'Mặc định')
+              .join(' · ');
+            return `
           <div style="display:flex; gap:11px; padding:10px; border-radius:14px; background:#fff; border:1px solid var(--line); margin-bottom:9px;">
             <img src="${escapeAttr(it.image)}" style="width:56px; height:66px; object-fit:cover; border-radius:10px;" />
             <div style="flex:1; min-width:0;">
               <div style="font-size:0.81rem; font-weight:700; line-height:1.3;">${escapeHtml(it.name)}</div>
-              <div style="font-size:0.72rem; color:var(--ink-muted); margin:2px 0 6px;">${escapeHtml(it.color)} · ${escapeHtml(it.size)}</div>
+              ${metaLine ? `<div style="font-size:0.72rem; color:var(--ink-muted); margin:2px 0 6px;">${escapeHtml(metaLine)}</div>` : '<div style="margin-bottom:6px;"></div>'}
               <div style="display:flex; align-items:center; justify-content:space-between;">
                 <strong style="color:var(--cherry); font-size:0.85rem;">${vnd(it.price * it.qty)}</strong>
                 <div style="display:inline-flex; align-items:center; gap:6px;">
@@ -1376,7 +1417,8 @@
               </div>
             </div>
           </div>
-        `
+        `;
+          }
         )
         .join('');
 

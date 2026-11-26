@@ -33,6 +33,20 @@
       overflow-x: clip;
     }
 
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; margin-block: 6px; }
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(217, 107, 139, 0.34), rgba(184, 77, 109, 0.5));
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, rgba(217, 107, 139, 0.65), rgba(184, 77, 109, 0.82));
+    }
+    ::-webkit-scrollbar-corner { background: transparent; }
+    @supports not selector(::-webkit-scrollbar) {
+      * { scrollbar-width: thin; scrollbar-color: rgba(184, 77, 109, 0.36) transparent; }
+    }
+
     body {
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--adm-bg);
@@ -1183,7 +1197,8 @@
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label">🔒 Chữ ký cuối trang (Cố định không chỉnh sửa)</label>
-              <input type="text" id="seo-footer" class="form-input" value="Made with ♡ by My Love" readonly disabled style="background: #f8eff3; color: #8a6d78; cursor: not-allowed;" />
+              <input type="text" id="seo-footer" class="form-input" value="Made with ♡ by My Love" readonly disabled
+                style="background: #f8eff3; color: #8a6d78; cursor: not-allowed;" />
             </div>
             <div class="form-group" style="display: flex; align-items: center; padding-top: 22px;">
               <label class="switch-label">

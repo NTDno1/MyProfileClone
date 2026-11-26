@@ -513,8 +513,8 @@
     document.getElementById('pf-name').value = '';
     document.getElementById('pf-price').value = '';
     document.getElementById('pf-orig-price').value = '';
-    document.getElementById('pf-sizes').value = 'S, M, L, Freesize';
-    document.getElementById('pf-colors').value = 'Hồng Phấn, Trắng Kem';
+    document.getElementById('pf-sizes').value = '';
+    document.getElementById('pf-colors').value = '';
     document.getElementById('pf-stock').value = '15';
     document.getElementById('pf-source-url').value = '';
     document.getElementById('pf-images').value = '';
@@ -523,9 +523,11 @@
     if (vg) vg.value = 'Mẫu';
     editingVariants = [];
     renderVariantEditorRows();
-    document.getElementById('pf-flash').checked = true;
+    document.getElementById('pf-flash').checked = false;
     document.getElementById('pf-enabled').checked = true;
-    document.getElementById('prod-form-heading').textContent = '➕ Thêm Sản Phẩm Mới';
+    const lockChk = document.getElementById('pf-locked');
+    if (lockChk) lockChk.checked = false;
+    document.getElementById('prod-form-heading').textContent = '➕ Thêm Sản Phẩm Mới (SP Ngoài Sàn)';
   }
 
   document.getElementById('btn-reset-prod-form')?.addEventListener('click', resetProductForm);
@@ -582,7 +584,8 @@
         .filter(Boolean),
       description: document.getElementById('pf-desc').value.trim(),
       isFlashSale: document.getElementById('pf-flash').checked,
-      enabled: document.getElementById('pf-enabled').checked
+      enabled: document.getElementById('pf-enabled').checked,
+      isLocked: Boolean(document.getElementById('pf-locked')?.checked)
     };
 
     try {
@@ -606,6 +609,41 @@
     }
   });
 
+  function isClonedFromPlatform(p) {
+    if (!p) return false;
+    if (p.originType === 'local') return false;
+    if (p.originType === 'cloned') return true;
+    const plat = String(p.sourcePlatform || '').toLowerCase();
+    const url = String(p.sourceUrl || '').toLowerCase();
+    return plat === 'shopee' || plat === 'tiktok' || /-i\.\d+\.\d+|\/product\/\d+\/\d+|\/view\/product\//.test(url);
+  }
+
+  document.getElementById('btn-lock-all-local')?.addEventListener('click', async () => {
+    try {
+      const res = await apiFetch('/api/shop/admin/products/lock-local', {
+        method: 'POST',
+        body: JSON.stringify({ locked: true })
+      });
+      showToast(res.message || 'Đã khóa toàn bộ SP sẵn trên web! 🔒');
+      await loadOverview();
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  });
+
+  document.getElementById('btn-unlock-all-local')?.addEventListener('click', async () => {
+    try {
+      const res = await apiFetch('/api/shop/admin/products/lock-local', {
+        method: 'POST',
+        body: JSON.stringify({ locked: false })
+      });
+      showToast(res.message || 'Đã mở khóa các SP sẵn trên web! 🔓');
+      await loadOverview();
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  });
+
   function renderProductsTable() {
     const tbody = document.getElementById('products-tbody');
     if (!tbody || !shopData) return;
@@ -621,35 +659,51 @@
     tbody.innerHTML = pagedProds
       .map((p) => {
         const img = (p.images && p.images[0]) || '/media/bio-link/girlfriend-1.jpg';
-        const srcBadge =
-          p.sourcePlatform === 'shopee'
-            ? `<span class="badge" style="background:#ffedd5; color:#c2410c;">🧡 Shopee</span>`
-            : p.sourcePlatform === 'tiktok'
-            ? `<span class="badge" style="background:#f3e8ff; color:#6b21a8;">🎵 TikTok</span>`
-            : `<span class="badge" style="background:#fce7f3; color:#be185d;">🎀 Tự đăng</span>`;
+        const cloned = isClonedFromPlatform(p);
+        const locked = Boolean(p.isLocked);
+        const srcBadge = cloned
+          ? p.sourcePlatform === 'tiktok'
+            ? `<span class="badge" style="background:#f3e8ff; color:#6b21a8;">🔄 Đồng bộ 1-1 TikTok</span>`
+            : `<span class="badge" style="background:#ffedd5; color:#c2410c;">🔄 Đồng bộ 1-1 Shopee</span>`
+          : `<span class="badge" style="background:#fce7f3; color:#be185d;">🛡️ SP sẵn trên web</span>`;
+
+        const sizesInfo =
+          Array.isArray(p.sizes) && p.sizes.length > 0
+            ? ` • Size: ${escapeHtml(p.sizes.join(', '))}`
+            : ` • <span style="color:#64748b;">Không phân size</span>`;
+
+        const maxP = Number(p.maxPrice || 0);
+        const priceHtml =
+          maxP > Number(p.price || 0)
+            ? `${formatVnd(p.price)} – ${formatVnd(maxP)}`
+            : formatVnd(p.price);
 
         return `
-          <tr>
+          <tr style="${locked ? 'background:#fff5f7; opacity:0.86;' : ''}">
             <td>
               <img src="${escapeHtml(img)}" style="width:48px; height:48px; border-radius:11px; object-fit:cover; border:1px solid var(--border);" />
             </td>
             <td>
-              <div style="font-weight:700;">${escapeHtml(p.name)}</div>
+              <div style="font-weight:700; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                <span>${escapeHtml(p.name)}</span>
+                ${locked ? `<span class="badge" style="background:#ffe4e6; color:#be123c; border:1px solid #fda4af;">🔒 Đã khóa (Ẩn trên web)</span>` : ''}
+              </div>
               <div style="font-size:0.72rem; color:var(--muted); margin-top:2px;">
                 ${p.isFlashSale ? '⚡ DEAL XINH • ' : ''}
-                ${p.enabled === false ? '🙈 Đang ẩn' : '👁️ Đang hiện'}
+                ${locked ? '🔒 Đang khóa bảo vệ' : p.enabled === false ? '🙈 Đang ẩn' : '👁️ Đang hiện'}
+                ${sizesInfo}
                 ${
                   Array.isArray(p.variants) && p.variants.length > 0
                     ? ` • <span style="color:#15803d; font-weight:700;">🧩 ${p.variants.length} phân hệ (${p.variants.filter((v) => Number(v.stock ?? 1) > 0).length} còn)</span>`
-                    : p.sourcePlatform === 'shopee' || p.sourcePlatform === 'tiktok'
-                    ? ` • <span style="color:#b45309;">⚪ Chưa kéo phân hệ con</span>`
+                    : cloned
+                    ? ` • <span style="color:#b45309;">⚪ 1 mẫu đơn</span>`
                     : ''
                 }
               </div>
             </td>
             <td>
-              <div style="font-weight:800; color:var(--pri);">${formatVnd(p.price)}</div>
-              ${p.originalPrice > p.price ? `<div style="font-size:0.72rem; text-decoration:line-through; color:var(--muted);">${formatVnd(p.originalPrice)}</div>` : ''}
+              <div style="font-weight:800; color:var(--pri);">${priceHtml}</div>
+              ${p.originalPrice > Math.max(p.price, maxP) ? `<div style="font-size:0.72rem; text-decoration:line-through; color:var(--muted);">${formatVnd(p.originalPrice)}</div>` : ''}
             </td>
             <td>
               <div>Kho: <strong>${p.stock ?? 0}</strong></div>
@@ -657,13 +711,16 @@
             </td>
             <td>
               ${srcBadge}
-              ${p.sourceUrl ? `<div style="margin-top:3px;"><a href="${escapeHtml(p.sourceUrl)}" target="_blank" style="font-size:0.7rem; color:var(--pri);">Xem link gốc ↗</a></div>` : ''}
+              ${p.sourceUrl ? `<div style="margin-top:3px;"><a href="${escapeHtml(p.sourceUrl)}" target="_blank" style="font-size:0.7rem; color:var(--pri);">Mở đúng link SP ↗</a></div>` : ''}
             </td>
             <td>
               <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                <button type="button" class="btn btn-sm btn-edit-prod" data-id="${escapeHtml(p.id)}">Sửa</button>
+                <button type="button" class="btn btn-sm btn-toggle-lock" data-id="${escapeHtml(p.id)}" data-locked="${locked ? '1' : '0'}" style="${locked ? 'background:#ecfdf5;color:#047857;border-color:#a7f3d0;' : 'background:#fff1f2;color:#be123c;border-color:#fda4af;'}">
+                  ${locked ? '🔓 Mở khóa' : '🔒 Khóa'}
+                </button>
+                <button type="button" class="btn btn-sm btn-edit-prod" data-id="${escapeHtml(p.id)}" ${locked ? 'disabled style="opacity:0.45;cursor:not-allowed;" title="Mở khóa trước khi sửa"' : ''}>Sửa</button>
                 <button type="button" class="btn btn-sm btn-dup-prod" data-id="${escapeHtml(p.id)}">Nhân bản</button>
-                <button type="button" class="btn btn-sm btn-danger btn-del-prod" data-id="${escapeHtml(p.id)}">Xóa</button>
+                <button type="button" class="btn btn-sm btn-danger btn-del-prod" data-id="${escapeHtml(p.id)}" ${locked ? 'disabled style="opacity:0.45;cursor:not-allowed;" title="Mở khóa trước khi xóa"' : ''}>Xóa</button>
               </div>
             </td>
           </tr>
@@ -671,10 +728,30 @@
       })
       .join('');
 
+    tbody.querySelectorAll('.btn-toggle-lock').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const nextLocked = btn.dataset.locked !== '1';
+        try {
+          const res = await apiFetch(`/api/shop/admin/products/${btn.dataset.id}/toggle-lock`, {
+            method: 'POST',
+            body: JSON.stringify({ isLocked: nextLocked })
+          });
+          showToast(res.message || (nextLocked ? 'Đã khóa sản phẩm! 🔒' : 'Đã mở khóa sản phẩm! 🔓'));
+          await loadOverview();
+        } catch (err) {
+          showToast(err.message, true);
+        }
+      });
+    });
+
     tbody.querySelectorAll('.btn-edit-prod').forEach((btn) => {
       btn.addEventListener('click', () => {
         const prod = (shopData.products || []).find((x) => x.id === btn.dataset.id);
         if (!prod) return;
+        if (prod.isLocked) {
+          showToast('Sản phẩm đang khóa bảo vệ — bấm Mở khóa trước khi chỉnh sửa nhé!', true);
+          return;
+        }
         document.getElementById('pf-id').value = prod.id;
         document.getElementById('pf-name').value = prod.name || '';
         document.getElementById('pf-category').value = prod.category || '';
@@ -692,6 +769,8 @@
         renderVariantEditorRows();
         document.getElementById('pf-flash').checked = !!prod.isFlashSale;
         document.getElementById('pf-enabled').checked = prod.enabled !== false;
+        const lockChk = document.getElementById('pf-locked');
+        if (lockChk) lockChk.checked = !!prod.isLocked;
         document.getElementById('prod-form-heading').textContent = `✏️ Đang sửa: ${prod.name}`;
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
@@ -743,22 +822,20 @@
       const hud = document.createElement('div');
       hud.id = 'na2hand-deep-hud';
       hud.style.cssText =
-        'position:fixed;right:18px;bottom:18px;width:350px;z-index:2147483647;background:#fff;border:2px solid #e14b85;border-radius:18px;padding:14px;box-shadow:0 20px 50px rgba(120,25,65,0.3);font-family:sans-serif;color:#3d1a29;font-size:13px;line-height:1.45;';
+        'position:fixed;right:18px;bottom:18px;width:360px;z-index:2147483647;background:#fff;border:2px solid #e14b85;border-radius:20px;padding:15px;box-shadow:0 20px 50px rgba(120,25,65,0.3);font-family:sans-serif;color:#3d1a29;font-size:13px;line-height:1.48;';
       hud.innerHTML =
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
-        '<strong style="color:#d63874;font-size:14px;">🎀 NA 2HAND — Kéo Sâu Phân Hệ</strong>' +
+        '<strong style="color:#d63874;font-size:14px;">🎀 NA 2HAND — Đồng Bộ 1-1 Chuẩn Sàn</strong>' +
         '<button id="na2h-stop" style="border:1px solid #f3b8d2;background:#fff0f6;color:#be123c;border-radius:8px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;">Đóng ✕</button>' +
         '</div>' +
-        '<div id="na2h-status" style="margin-bottom:8px;font-weight:600;color:#54283b;">Đang chuẩn bị quét dữ liệu...</div>' +
-        '<div style="height:8px;background:#fce7f3;border-radius:99px;overflow:hidden;margin-bottom:8px;">' +
+        '<div id="na2h-status" style="margin-bottom:8px;font-weight:600;color:#54283b;">Đang chuẩn bị đồng bộ 1-1...</div>' +
+        '<div style="height:8px;background:#fce7f3;border-radius:99px;overflow:hidden;margin-bottom:4px;">' +
         '<div id="na2h-bar" style="height:100%;width:4%;background:linear-gradient(90deg,#f4669d,#d63874);transition:width 0.3s;"></div>' +
-        '</div>' +
-        '<div id="na2h-stage" style="display:none;width:318px;height:195px;overflow:hidden;border-radius:10px;border:1px solid #f3cada;background:#fdf7fa;position:relative;"></div>';
+        '</div>';
       document.body.appendChild(hud);
 
       const statusEl = hud.querySelector('#na2h-status');
       const barEl = hud.querySelector('#na2h-bar');
-      const stageEl = hud.querySelector('#na2h-stage');
       let workerWin = null;
 
       hud.querySelector('#na2h-stop').onclick = function () {
@@ -779,36 +856,83 @@
       const cleanUrl = (u) => {
         const s = String(u || '').trim().replace(/&amp;/g, '&');
         const m = s.match(/^(https?:\/\/(?:www\.)?shopee\.vn\/[^?#]+-i\.\d+\.\d+)/i);
-        return m ? m[1] : s;
+        if (m) return m[1];
+        const m2 = s.match(/^(https?:\/\/(?:www\.)?shopee\.vn\/product\/\d+\/\d+)/i);
+        if (m2) return m2[1];
+        return s.split('?')[0];
       };
 
-      const parseVnd = (txt) => {
-        const s = String(txt || '').split('-')[0].replace(/[^\d]/g, '');
-        return s ? parseInt(s, 10) : 0;
+      const extractItemKey = (u) => {
+        const s = String(u || '');
+        const m1 = s.match(/-i\.(\d+\.\d+)/i);
+        if (m1) return m1[1];
+        const m2 = s.match(/\/product\/(\d+)\/(\d+)/i);
+        if (m2) return m2[1] + '.' + m2[2];
+        const m3 = s.match(/\/view\/product\/(\d+)/i);
+        if (m3) return m3[1];
+        return '';
       };
 
-      const readPrice = (doc) => {
-        let best = 0;
+      const toPlatformItemId = (plat, key) => {
+        if (!key) return '';
+        return plat + '_' + key.replace(/\./g, '_');
+      };
+
+      const normApiPrice = (n) => {
+        const v = Number(n || 0);
+        if (!v || v <= 0) return 0;
+        return v > 100000000 ? Math.round(v / 100000) : Math.round(v);
+      };
+
+      const extractVndList = (txt) => {
+        const out = [];
+        const re = /\d{1,3}(?:[.,]\d{3})+/g;
+        let m;
+        while ((m = re.exec(String(txt || ''))) !== null) {
+          const val = parseInt(m[0].replace(/[^\d]/g, ''), 10);
+          if (val >= 1000 && val <= 500000000) out.push(val);
+        }
+        return out;
+      };
+
+      const readPriceInfo = (doc) => {
+        let bestNums = [];
         let bestSize = 0;
+        let origPrice = 0;
         const nodes = doc.querySelectorAll('div, span');
         for (let i = 0; i < nodes.length; i++) {
           const el = nodes[i];
-          if (el.children.length > 1) continue;
-          const t = (el.textContent || '').trim();
-          if (t.length > 28) continue;
-          if (!/(\d{2,3}(?:[.,]\d{3})+)\s*[₫đ]|[₫đ]\s*(\d{2,3}(?:[.,]\d{3})+)/.test(t)) continue;
+          if (el.children.length > 4) continue;
+          const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+          if (!t || t.length > 46) continue;
+          if (!/[₫đ]/i.test(t)) continue;
           const r = el.getBoundingClientRect();
-          if (r.top < 80 || r.top > 720 || r.width === 0) continue;
+          if (r.top < 80 || r.top > 720 || r.width === 0 || r.height === 0) continue;
           const cs = doc.defaultView.getComputedStyle(el);
-          if (cs.textDecorationLine && cs.textDecorationLine.indexOf('line-through') > -1) continue;
+          const pcs = el.parentElement ? doc.defaultView.getComputedStyle(el.parentElement) : null;
+          const isStrike =
+            (cs.textDecorationLine && cs.textDecorationLine.indexOf('line-through') > -1) ||
+            (pcs && pcs.textDecorationLine && pcs.textDecorationLine.indexOf('line-through') > -1);
+          const nums = extractVndList(t);
+          if (nums.length === 0) continue;
+          if (isStrike) {
+            const maxStrike = Math.max.apply(null, nums);
+            if (maxStrike > origPrice) origPrice = maxStrike;
+            continue;
+          }
           const fs = parseFloat(cs.fontSize || '14');
-          const val = parseVnd(t);
-          if (val >= 1000 && fs >= bestSize) {
+          if (fs < 18) continue;
+          if (fs > bestSize || (fs === bestSize && nums.length >= bestNums.length)) {
             bestSize = fs;
-            best = val;
+            bestNums = nums;
           }
         }
-        return best || 110000;
+        if (bestNums.length === 0) return { min: 0, max: 0, orig: origPrice };
+        return {
+          min: Math.min.apply(null, bestNums),
+          max: Math.max.apply(null, bestNums),
+          orig: origPrice
+        };
       };
 
       const readStock = (doc) => {
@@ -836,118 +960,270 @@
         return bestSrc;
       };
 
-      const extractProductDeep = async (doc, pageUrl) => {
-        const plat = pageUrl.indexOf('tiktok') > -1 ? 'tiktok' : 'shopee';
+      /* Inspect Shopee React Fiber tree for exact item models & tier_variations (0ms, 100% exact per-variant prices & sizes) */
+      const findShopeeReactItem = (doc, expectedKey) => {
+        const expectedItemId = expectedKey && expectedKey.indexOf('.') > -1 ? expectedKey.split('.')[1] : '';
+        const seen = new WeakSet();
+        const scanObj = (obj, depth) => {
+          if (!obj || typeof obj !== 'object' || depth > 5) return null;
+          if (seen.has(obj)) return null;
+          seen.add(obj);
+          if (Array.isArray(obj.models) && obj.models.length > 0 && Array.isArray(obj.tier_variations)) {
+            const cid = String(obj.itemid || obj.item_id || obj.models[0]?.itemid || '');
+            if (!expectedItemId || !cid || cid === expectedItemId) {
+              return obj;
+            }
+          }
+          const keys = Object.keys(obj);
+          for (let i = 0; i < Math.min(keys.length, 32); i++) {
+            const k = keys[i];
+            if (k === 'children' || k === 'owner' || k === '_owner' || k === 'stateNode' || k === 'return') continue;
+            try {
+              const v = obj[k];
+              if (v && typeof v === 'object') {
+                const hit = scanObj(v, depth + 1);
+                if (hit) return hit;
+              }
+            } catch (e) {}
+          }
+          return null;
+        };
+
+        const probes = doc.querySelectorAll('button, h1, [class*="WBVL"], main');
+        for (let p = 0; p < Math.min(probes.length, 45); p++) {
+          const el = probes[p];
+          const fk = Object.keys(el).find((k) => k.indexOf('__reactFiber$') === 0 || k.indexOf('__reactInternalInstance$') === 0);
+          if (!fk) continue;
+          let cur = el[fk];
+          let steps = 0;
+          while (cur && steps < 40) {
+            const hit1 = scanObj(cur.memoizedProps, 0);
+            if (hit1) return hit1;
+            if (cur.memoizedState && cur.memoizedState.memoizedState) {
+              const hit2 = scanObj(cur.memoizedState.memoizedState, 0);
+              if (hit2) return hit2;
+            }
+            cur = cur.return;
+            steps++;
+          }
+        }
+        return null;
+      };
+
+      const extractProductDeep = async (doc, expectedUrl, expectedKey) => {
+        const liveHref = (doc.location && doc.location.href) ? doc.location.href : expectedUrl;
+        const finalUrl = cleanUrl(liveHref || expectedUrl);
+        const finalKey = extractItemKey(finalUrl) || expectedKey;
+        const plat = finalUrl.indexOf('tiktok') > -1 ? 'tiktok' : 'shopee';
+        const platformItemId = toPlatformItemId(plat, finalKey);
+
         let title =
           (doc.querySelector('[class*="WBVL"] span, h1') &&
             doc.querySelector('[class*="WBVL"] span, h1').innerText.trim()) ||
           doc.title.replace(/\s*\|\s*Shopee.*$/i, '').replace(/\s*-\s*TikTok.*$/i, '').trim();
 
-        const basePrice = readPrice(doc);
+        const domPrice = readPriceInfo(doc);
+        let basePrice = domPrice.min || 110000;
+        let maxPrice = domPrice.max || basePrice;
+        let origPrice = domPrice.orig || 0;
         const baseMainImg = readMainImg(doc);
-
-        /* Group option buttons inside the top product brief by parentElement */
-        const groupMap = new Map();
-        const allBtns = doc.querySelectorAll('button');
-        for (let i = 0; i < allBtns.length; i++) {
-          const b = allBtns[i];
-          const r = b.getBoundingClientRect();
-          if (r.top < 110 || r.top > 880 || r.width < 26 || r.height < 22) continue;
-          const lbl = (b.innerText || b.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
-          if (!lbl || lbl.length > 42) continue;
-          if (
-            /^(add to cart|buy now|thêm vào giỏ.*|mua ngay|chat now|chat ngay|view shop|xem shop|follow|theo dõi|report|tố cáo|share|chia sẻ|favorite.*|yêu thích.*|size chart.*|bảng quy đổi.*|\+|-|×|✕)$/i.test(
-              lbl
-            )
-          ) {
-            continue;
-          }
-          const p = b.parentElement;
-          if (!p) continue;
-          if (!groupMap.has(p)) groupMap.set(p, []);
-          groupMap.get(p).push(b);
-        }
-
-        const tiers = [];
-        groupMap.forEach((btns, parentEl) => {
-          if (btns.length === 0) return;
-          const hasImg = btns.some((b) => !!b.querySelector('img'));
-          const hasVarAttr = btns.some(
-            (b) => /variation|sApkZm|sku|option/i.test(b.className || '') || b.hasAttribute('aria-label')
-          );
-          if (!hasImg && !hasVarAttr && btns.length < 2) return;
-          let tierName = 'Mẫu';
-          const row = parentEl.parentElement;
-          if (row && row.firstElementChild && !row.firstElementChild.contains(btns[0])) {
-            const cand = (row.firstElementChild.innerText || '').trim();
-            if (cand && cand.length <= 26) tierName = cand;
-          }
-          tiers.push({ tierName, btns, hasImg });
-        });
 
         let variantGroupName = 'Mẫu';
         const variants = [];
-        const sizes = [];
+        let sizes = [];
+        let usedReactModels = false;
 
-        if (tiers.length > 0) {
-          /* Prefer tier with images (e.g. Mẫu LS1..LS15) or first tier as primary variants */
-          const primaryIdx = tiers.findIndex((t) => t.hasImg) >= 0 ? tiers.findIndex((t) => t.hasImg) : 0;
-          const primary = tiers[primaryIdx];
-          variantGroupName = primary.tierName || 'Mẫu';
+        /* 1. Try exact React Fiber item models + tier_variations first */
+        const reactItem = plat === 'shopee' ? findShopeeReactItem(doc, finalKey) : null;
+        if (reactItem && Array.isArray(reactItem.tier_variations) && reactItem.tier_variations.length > 0) {
+          if (reactItem.name && String(reactItem.name).trim().length >= 4) {
+            title = String(reactItem.name).trim();
+          }
+          const rMin = normApiPrice(reactItem.price_min || reactItem.price);
+          const rMax = normApiPrice(reactItem.price_max || reactItem.price);
+          const rOrig = normApiPrice(reactItem.price_before_discount);
+          if (rMin > 0) basePrice = rMin;
+          if (rMax > 0) maxPrice = Math.max(basePrice, rMax);
+          if (rOrig > maxPrice) origPrice = rOrig;
 
-          for (let k = 0; k < primary.btns.length; k++) {
-            if (stopped) break;
-            const btn = primary.btns[k];
-            const label = (btn.innerText || btn.getAttribute('aria-label') || 'Mẫu ' + (k + 1))
-              .replace(/\s+/g, ' ')
-              .trim();
-            const imEl = btn.querySelector('img');
-            const btnImg = imEl ? cleanImg(imEl.currentSrc || imEl.src || '') : '';
-            const cs = doc.defaultView.getComputedStyle(btn);
-            const isDisabled =
-              btn.disabled ||
-              btn.getAttribute('aria-disabled') === 'true' ||
-              /disabled|sold-?out/i.test(btn.className || '') ||
-              cs.cursor === 'not-allowed' ||
-              parseFloat(cs.opacity || '1') < 0.56;
+          const tv0 = reactItem.tier_variations[0];
+          const tv1 = reactItem.tier_variations[1];
+          const opts0 = Array.isArray(tv0.options) ? tv0.options : [];
+          const imgs0 = Array.isArray(tv0.images) ? tv0.images : [];
+          const isSingleSizeOnly =
+            !tv1 &&
+            imgs0.filter(Boolean).length === 0 &&
+            /^(size|kích cỡ|kích thước)$/i.test(String(tv0.name || '').trim()) &&
+            basePrice === maxPrice;
 
-            if (isDisabled) {
-              variants.push({
-                id: 'var_' + (k + 1),
-                label,
-                image: btnImg || baseMainImg,
-                price: basePrice,
-                stock: 0
-              });
-            } else {
-              const alreadySel =
-                btn.getAttribute('aria-checked') === 'true' ||
-                /selected|active/i.test(btn.className || '') ||
-                !!btn.querySelector('svg, [class*="tick"]');
-              if (!alreadySel && primary.btns.length <= 40) {
-                try { btn.click(); } catch (e) {}
-                await sleep(130);
-              }
-              const vPrice = readPrice(doc) || basePrice;
-              const vStock = readStock(doc);
-              const activeImg = readMainImg(doc);
-              variants.push({
-                id: 'var_' + (k + 1),
-                label,
-                image: btnImg || activeImg || baseMainImg,
-                price: vPrice,
-                stock: vStock > 0 ? vStock : 1
-              });
+          if (isSingleSizeOnly) {
+            sizes = opts0.map((s) => String(s || '').trim()).filter(Boolean);
+          } else {
+            variantGroupName = String(tv0.name || 'Mẫu').trim();
+            if (tv1 && Array.isArray(tv1.options)) {
+              sizes = tv1.options.map((s) => String(s || '').trim()).filter(Boolean);
             }
+            opts0.forEach((optLabel, idx) => {
+              const matching = (reactItem.models || []).filter((md) => {
+                if (Array.isArray(md.tier_index)) return md.tier_index[0] === idx;
+                if (md.extinfo && Array.isArray(md.extinfo.tier_index)) return md.extinfo.tier_index[0] === idx;
+                return String(md.name || '').split(',')[0].trim() === String(optLabel || '').trim();
+              });
+              const inStockM = matching.filter((md) => Number(md.stock ?? md.normal_stock ?? 0) > 0);
+              const pool = inStockM.length > 0 ? inStockM : matching;
+              const mPrices = pool.map((md) => normApiPrice(md.price)).filter((p) => p > 0);
+              const optStock = matching.length > 0
+                ? matching.reduce((acc, md) => acc + Math.max(0, Number(md.stock ?? md.normal_stock ?? 0)), 0)
+                : 1;
+              const rawImg = imgs0[idx] || '';
+              const fullVarImg = rawImg
+                ? String(rawImg).indexOf('http') === 0
+                  ? cleanImg(rawImg)
+                  : 'https://down-vn.img.susercontent.com/file/' + rawImg
+                : baseMainImg;
+              variants.push({
+                id: 'var_' + (idx + 1),
+                label: String(optLabel || '').trim(),
+                image: fullVarImg,
+                price: mPrices.length > 0 ? Math.min.apply(null, mPrices) : basePrice,
+                stock: optStock
+              });
+            });
+          }
+          usedReactModels = true;
+        }
+
+        /* 2. Fallback to DOM Variation Clicker (strictly using innerText, NEVER aria-label!) */
+        if (!usedReactModels) {
+          const groupMap = new Map();
+          const allBtns = doc.querySelectorAll('button');
+          for (let i = 0; i < allBtns.length; i++) {
+            const b = allBtns[i];
+            const r = b.getBoundingClientRect();
+            if (r.top < 110 || r.top > 880 || r.width < 28 || r.height < 22) continue;
+            const lbl = (b.innerText || '').replace(/\s+/g, ' ').trim();
+            if (!lbl || lbl.length > 42) continue;
+            if (
+              /^(add to cart|buy now|thêm vào giỏ.*|mua ngay|chat now|chat ngay|view shop|xem shop|follow|theo dõi|report|tố cáo|share|chia sẻ|favorite.*|yêu thích.*|size chart.*|bảng quy đổi.*|decrease|increase|giảm|tăng|\+|-|×|✕)$/i.test(
+                lbl
+              )
+            ) {
+              continue;
+            }
+            const p = b.parentElement;
+            if (!p) continue;
+            if (!groupMap.has(p)) groupMap.set(p, []);
+            groupMap.get(p).push(b);
           }
 
-          tiers.forEach((t, idx) => {
-            if (idx === primaryIdx) return;
-            t.btns.forEach((b) => {
-              const s = (b.innerText || '').trim();
-              if (s && s.length <= 20 && sizes.indexOf(s) === -1) sizes.push(s);
-            });
+          const tiers = [];
+          groupMap.forEach((btns, parentEl) => {
+            if (btns.length === 0) return;
+            const hasImg = btns.some((b) => !!b.querySelector('img'));
+            const hasVarAttr = btns.some((b) => /variation|sApkZm|sku|option/i.test(b.className || ''));
+            if (!hasImg && !hasVarAttr && btns.length < 2) return;
+            let tierName = 'Mẫu';
+            const row = parentEl.parentElement;
+            if (row && row.firstElementChild && !row.firstElementChild.contains(btns[0])) {
+              const cand = (row.firstElementChild.innerText || '').trim();
+              if (cand && cand.length <= 26) tierName = cand;
+            }
+            tiers.push({ tierName, btns, hasImg });
           });
+
+          if (tiers.length > 0) {
+            const primaryIdx = tiers.findIndex((t) => t.hasImg) >= 0 ? tiers.findIndex((t) => t.hasImg) : 0;
+            const primary = tiers[primaryIdx];
+            const isBtnDisabled = (b) => {
+              const cs = doc.defaultView.getComputedStyle(b);
+              return (
+                b.disabled ||
+                b.getAttribute('aria-disabled') === 'true' ||
+                /disabled|sold-?out/i.test(b.className || '') ||
+                cs.cursor === 'not-allowed' ||
+                parseFloat(cs.opacity || '1') < 0.56
+              );
+            };
+            const isBtnSelected = (b) =>
+              b.getAttribute('aria-checked') === 'true' ||
+              /selected|active/i.test(b.className || '') ||
+              !!b.querySelector('svg, [class*="tick"]');
+
+            /* If there is a secondary tier (e.g. Size), pre-select its first active button so Shopee shows exact SKU prices! */
+            tiers.forEach((t, idx) => {
+              if (idx === primaryIdx) return;
+              t.btns.forEach((b) => {
+                const s = (b.innerText || '').replace(/\s+/g, ' ').trim();
+                if (s && s.length <= 20 && sizes.indexOf(s) === -1) sizes.push(s);
+              });
+              const anySel = t.btns.some(isBtnSelected);
+              if (!anySel) {
+                const firstActive = t.btns.find((b) => !isBtnDisabled(b));
+                if (firstActive) {
+                  try { firstActive.click(); } catch (e) {}
+                }
+              }
+            });
+            if (tiers.length > 1) await sleep(200);
+
+            const isSingleSizeOnlyDom =
+              tiers.length === 1 &&
+              !primary.hasImg &&
+              /^(size|kích cỡ|kích thước)$/i.test(primary.tierName || '') &&
+              basePrice === maxPrice;
+
+            if (isSingleSizeOnlyDom) {
+              primary.btns.forEach((b) => {
+                const s = (b.innerText || '').replace(/\s+/g, ' ').trim();
+                if (s && s.length <= 20 && sizes.indexOf(s) === -1) sizes.push(s);
+              });
+            } else {
+              variantGroupName = primary.tierName || 'Mẫu';
+              for (let k = 0; k < primary.btns.length; k++) {
+                if (stopped) break;
+                const btn = primary.btns[k];
+                const label = (btn.innerText || 'Mẫu ' + (k + 1)).replace(/\s+/g, ' ').trim();
+                const imEl = btn.querySelector('img');
+                const btnImg = imEl ? cleanImg(imEl.currentSrc || imEl.src || '') : '';
+
+                if (isBtnDisabled(btn)) {
+                  variants.push({
+                    id: 'var_' + (k + 1),
+                    label,
+                    image: btnImg || baseMainImg,
+                    price: basePrice,
+                    stock: 0
+                  });
+                } else {
+                  if (!isBtnSelected(btn) && primary.btns.length <= 45) {
+                    try { btn.click(); } catch (e) {}
+                    await sleep(240);
+                  }
+                  const pNow = readPriceInfo(doc);
+                  const vPrice = pNow.min || basePrice;
+                  const vStock = readStock(doc);
+                  const activeImg = readMainImg(doc);
+                  variants.push({
+                    id: 'var_' + (k + 1),
+                    label,
+                    image: btnImg || activeImg || baseMainImg,
+                    price: vPrice,
+                    stock: vStock > 0 ? vStock : 1
+                  });
+                }
+              }
+            }
+          }
+        }
+
+        if (variants.length > 0) {
+          const inStockPrices = variants.filter((v) => v.stock > 0 && v.price > 0).map((v) => v.price);
+          const allPrices = variants.filter((v) => v.price > 0).map((v) => v.price);
+          const pool = inStockPrices.length > 0 ? inStockPrices : allPrices;
+          if (pool.length > 0) {
+            basePrice = Math.min.apply(null, pool);
+            maxPrice = Math.max.apply(null, allPrices);
+          }
         }
 
         /* Scroll down slightly to ensure gallery & description are rendered */
@@ -959,6 +1235,11 @@
           const cu = cleanImg(u);
           if (cu && cu.indexOf('http') === 0 && gallery.indexOf(cu) === -1) gallery.push(cu);
         };
+        if (reactItem && Array.isArray(reactItem.images)) {
+          reactItem.images.forEach((h) => {
+            addG(String(h).indexOf('http') === 0 ? h : 'https://down-vn.img.susercontent.com/file/' + h);
+          });
+        }
         if (baseMainImg) addG(baseMainImg);
         const allImgs = doc.querySelectorAll('img');
         for (let i = 0; i < allImgs.length && gallery.length < 25; i++) {
@@ -971,32 +1252,40 @@
         }
         variants.forEach((v) => { if (v.image) addG(v.image); });
 
-        let desc = '';
+        let desc = reactItem && reactItem.description ? String(reactItem.description).trim() : '';
         const fullTxt = doc.body ? doc.body.innerText : '';
-        const dm = fullTxt.match(
-          /(?:Product Description|Mô tả sản phẩm)\s*\n([\s\S]{15,1600}?)(?:Product Ratings|Đánh giá sản phẩm|From The Same Shop|Sản phẩm khác của Shop|$)/i
-        );
-        if (dm) desc = dm[1].trim();
+        if (!desc) {
+          const dm = fullTxt.match(
+            /(?:Product Description|Mô tả sản phẩm)\s*\n([\s\S]{15,1600}?)(?:Product Ratings|Đánh giá sản phẩm|From The Same Shop|Sản phẩm khác của Shop|$)/i
+          );
+          if (dm) desc = dm[1].trim();
+        }
 
         const soldM = fullTxt.match(/(\d+)\s*Sold|Đã bán\s*(\d+)/i);
-        const sold = soldM ? parseInt(soldM[1] || soldM[2] || '0', 10) : 0;
+        const sold = reactItem && (reactItem.historical_sold !== undefined || reactItem.sold !== undefined)
+          ? Number(reactItem.historical_sold || reactItem.sold || 0)
+          : (soldM ? parseInt(soldM[1] || soldM[2] || '0', 10) : 0);
 
         return {
+          platformItemId,
           name: title,
           price: basePrice,
+          maxPrice,
+          originalPrice: origPrice > maxPrice ? origPrice : maxPrice,
           images: gallery,
-          sizes: sizes.length > 0 ? sizes : undefined,
+          sizes,
           variantGroupName,
           variants,
           sold,
           description: desc,
           sourcePlatform: plat,
-          sourceUrl: cleanUrl(pageUrl)
+          sourceUrl: finalUrl
         };
       };
 
+      const endpoint = serverUrl + '/api/shop/import?syncKey=' + encodeURIComponent(syncKey);
+
       const pushToServer = async (prod) => {
-        const endpoint = serverUrl + '/api/shop/import?syncKey=' + encodeURIComponent(syncKey);
         const r = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
@@ -1008,34 +1297,41 @@
       const isSingleProductPage = /-i\.\d+\.\d+|\/product\/\d+\/\d+|\/view\/product\//i.test(location.href);
 
       if (isSingleProductPage) {
-        statusEl.textContent = 'Đang quét toàn bộ các phân hệ của sản phẩm hiện tại...';
+        statusEl.textContent = 'Đang đồng bộ 1-1 sản phẩm & giá từng phân hệ...';
         barEl.style.width = '45%';
-        const prod = await extractProductDeep(document, location.href);
+        const prod = await extractProductDeep(document, location.href, extractItemKey(location.href));
         barEl.style.width = '85%';
         await pushToServer(prod);
         barEl.style.width = '100%';
         statusEl.innerHTML =
-          '🎉 <span style="color:#15803d;">Đã kéo xong sản phẩm kèm <strong>' +
+          '🎉 <span style="color:#15803d;">Đã đồng bộ 1-1 xong SP kèm <strong>' +
           prod.variants.length +
-          ' phân hệ con</strong> về Shop NA 2HAND!</span>';
+          ' phân hệ con</strong> (' +
+          (prod.sizes.length > 0 ? 'Size: ' + prod.sizes.join(', ') : 'Không phân size') +
+          ')!</span>';
         return;
       }
 
-      /* Shop Listing Mode: Auto-scroll to collect all product URLs, then visit each one deeply */
+      /* Shop Listing Mode: Auto-scroll to collect all product URLs, then visit each one with strict URL-key verification */
       statusEl.textContent = 'Đang cuộn trang Shop để gom toàn bộ danh sách sản phẩm...';
-      for (let y = 500; y <= 2500; y += 650) {
+      for (let y = 500; y <= 2800; y += 650) {
         window.scrollTo(0, y);
-        await sleep(280);
+        await sleep(300);
       }
       window.scrollTo(0, 0);
 
       const urlSet = [];
+      const seenItemKeys = new Set();
       document.querySelectorAll('a[href]').forEach((a) => {
         const raw = a.getAttribute('href') || '';
         if (!/-i\.\d+\.\d+|\/product\/\d+\/\d+|\/view\/product\//i.test(raw)) return;
         try {
           const abs = cleanUrl(new URL(raw, location.origin).toString());
-          if (urlSet.indexOf(abs) === -1) urlSet.push(abs);
+          const ik = extractItemKey(abs) || abs;
+          if (!seenItemKeys.has(ik)) {
+            seenItemKeys.add(ik);
+            urlSet.push(abs);
+          }
         } catch (e) {}
       });
 
@@ -1045,119 +1341,116 @@
         return;
       }
 
-      stageEl.style.display = 'block';
-      const iframe = document.createElement('iframe');
-      iframe.style.cssText =
-        'width:1180px;height:760px;border:0;transform:scale(0.27);transform-origin:top left;pointer-events:none;';
-      stageEl.appendChild(iframe);
-
-      let usePopup = false;
+      const shopPlat = location.hostname.indexOf('tiktok') > -1 ? 'tiktok' : 'shopee';
       let okCount = 0;
       let totalVars = 0;
+      const syncedPlatformIds = [];
 
       for (let i = 0; i < urlSet.length; i++) {
         if (stopped) break;
         const itemUrl = urlSet[i];
+        const expectedKey = extractItemKey(itemUrl);
         statusEl.textContent =
-          '⏳ Đang mở & quét phân hệ SP (' + (i + 1) + '/' + urlSet.length + ')...';
-        barEl.style.width = Math.round(((i + 0.3) / urlSet.length) * 100) + '%';
+          '⏳ Đang mở đúng link & đồng bộ 1-1 SP (' + (i + 1) + '/' + urlSet.length + ')...';
+        barEl.style.width = Math.round(((i + 0.25) / urlSet.length) * 100) + '%';
 
-        let targetDoc = null;
-        if (!usePopup) {
-          iframe.src = itemUrl;
-          for (let w = 0; w < 18; w++) {
-            await sleep(380);
-            try {
-              const d = iframe.contentDocument;
-              if (
-                d &&
-                d.body &&
-                /add to cart|buy now|thêm vào giỏ|mua ngay|pieces?\s*available|sản phẩm có sẵn/i.test(
-                  d.body.innerText || ''
-                )
-              ) {
-                targetDoc = d;
-                break;
-              }
-            } catch (e) {
-              break;
-            }
-          }
-          if (!targetDoc && i === 0) {
-            usePopup = true;
-            stageEl.style.display = 'none';
-          }
+        if (!workerWin || workerWin.closed) {
+          workerWin = window.open(itemUrl, 'na2hand_worker', 'width=1100,height=800,left=40,top=40');
+        } else {
+          try { workerWin.document.title = '__NA2HAND_LOADING__'; } catch (e) {}
+          workerWin.location.href = itemUrl;
         }
 
-        if (usePopup) {
-          if (!workerWin || workerWin.closed) {
-            workerWin = window.open(itemUrl, 'na2hand_worker', 'width=1080,height=780,left=40,top=40');
-          } else {
-            workerWin.location.href = itemUrl;
-          }
-          if (!workerWin) {
-            statusEl.innerHTML =
-              '<span style="color:#be123c;">Trình duyệt chặn cửa sổ phụ — hãy cho phép Pop-up trên Shopee rồi bấm lại nhé!</span>';
-            break;
-          }
-          for (let w = 0; w < 22; w++) {
-            await sleep(400);
-            try {
-              const d = workerWin.document;
-              if (
-                d &&
-                d.location.href.indexOf('-i.') > -1 &&
-                d.body &&
-                /add to cart|buy now|thêm vào giỏ|mua ngay|pieces?\s*available|sản phẩm có sẵn/i.test(
-                  d.body.innerText || ''
-                )
-              ) {
-                targetDoc = d;
-                break;
-              }
-            } catch (e) {}
-          }
+        if (!workerWin) {
+          statusEl.innerHTML =
+            '<span style="color:#be123c;">Trình duyệt chặn cửa sổ phụ — hãy cho phép Pop-up trên Shopee rồi bấm lại nhé!</span>';
+          break;
+        }
+
+        let targetDoc = null;
+        for (let w = 0; w < 34; w++) {
+          await sleep(380);
+          try {
+            const d = workerWin.document;
+            const curHref = (d && d.location && d.location.href) ? d.location.href : '';
+            const keyMatched = !expectedKey || curHref.indexOf(expectedKey) > -1;
+            if (
+              d &&
+              keyMatched &&
+              d.readyState === 'complete' &&
+              d.title !== '__NA2HAND_LOADING__' &&
+              d.body &&
+              /add to cart|buy now|thêm vào giỏ|mua ngay|pieces?\s*available|sản phẩm có sẵn/i.test(
+                d.body.innerText || ''
+              )
+            ) {
+              targetDoc = d;
+              break;
+            }
+          } catch (e) {}
         }
 
         if (targetDoc) {
-          await sleep(420);
+          await sleep(650);
           try {
-            const prod = await extractProductDeep(targetDoc, itemUrl);
+            const prod = await extractProductDeep(targetDoc, itemUrl, expectedKey);
             if (prod && prod.name) {
               await pushToServer(prod);
               okCount++;
               totalVars += (prod.variants || []).length;
+              if (prod.platformItemId) syncedPlatformIds.push(prod.platformItemId);
               statusEl.textContent =
                 '✅ (' +
                 (i + 1) +
                 '/' +
                 urlSet.length +
                 ') ' +
-                prod.name.slice(0, 28) +
+                prod.name.slice(0, 26) +
                 '... (' +
                 (prod.variants || []).length +
-                ' phân hệ)';
+                ' mẫu)';
             }
           } catch (e) {}
         }
 
         barEl.style.width = Math.round(((i + 1) / urlSet.length) * 100) + '%';
-        await sleep(300);
+        await sleep(260);
       }
 
       if (workerWin && !workerWin.closed) {
         try { workerWin.close(); } catch (e) {}
       }
-      stageEl.style.display = 'none';
+
+      let prunedNote = '';
+      if (!stopped && okCount === urlSet.length && syncedPlatformIds.length > 0) {
+        try {
+          const recRes = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+            body: JSON.stringify({
+              reconcilePlatform: shopPlat,
+              activePlatformItemIds: syncedPlatformIds
+            })
+          });
+          const recJson = await recRes.json();
+          const rmCnt = Number(recJson && (recJson.prunedCount || recJson.removedCount || 0));
+          if (rmCnt > 0) {
+            prunedNote = ' (Đã tự dọn ' + rmCnt + ' SP cũ đã gỡ trên sàn)';
+          }
+        } catch (e) {}
+      }
+
       if (!stopped) {
         statusEl.innerHTML =
-          '🎉 <span style="color:#15803d;">HOÀN TẤT! Đã kéo sâu <strong>' +
+          '🎉 <span style="color:#15803d;">ĐỒNG BỘ 1-1 HOÀN TẤT! Đã khớp chuẩn <strong>' +
           okCount +
           '/' +
           urlSet.length +
-          ' sản phẩm</strong> kèm <strong>' +
+          ' sản phẩm</strong> &amp; <strong>' +
           totalVars +
-          ' phân hệ con</strong> về Shop NA 2HAND!</span>';
+          ' phân hệ con</strong> về NA 2HAND!' +
+          prunedNote +
+          '</span>';
       }
     })();
   }

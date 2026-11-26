@@ -5,13 +5,14 @@ const { rewriteLegacyBioUrls } = require('./file-storage-client');
 const DEFAULT_AFFILIATE_PROFILE = {
   handle: 'na2hand',
   title: 'NA 2HAND Closet',
-  subtitle: 'Search khung tìm kiếm phía dưới là siêu nhanh 👇',
+  subtitle: 'Tủ đồ xinh & link chính hãng tuyển chọn — nàng gõ mã số ở dưới là thấy ngay nhé ♡',
   avatar: '/media/bio-link/girlfriend-1.jpg',
   layoutMode: 'zigzag', // 'zigzag' (chuẩn Passio so le trái-phải) | 'grid' (lưới 2 cột)
-  themeTone: 'oatmeal', // 'oatmeal' | 'blush' | 'ivory'
+  themeTone: 'blush', // 'blush' (Đồng bộ màu Shop NA 2HAND) | 'ivory' | 'oatmeal'
   showPrice: false,
-  showPlatformBadge: false,
-  itemsPerCategory: 12
+  showPlatformBadge: true,
+  itemsPerCategory: 12,
+  _toneSyncedV2: true
 };
 
 const DEFAULT_AFFILIATE_CATEGORIES = [
@@ -216,9 +217,18 @@ function registerAffiliateRoutes(app, { dataDir, getMongoDb, requireAuth, record
           totalViews: Number(remote.store.totalViews ?? local.totalViews ?? 0),
           totalClicks: Number(remote.store.totalClicks ?? local.totalClicks ?? 0)
         };
+        let upgradedTone = false;
+        if (!remote.store.profile?._toneSyncedV2) {
+          merged.profile.themeTone = 'blush';
+          merged.profile._toneSyncedV2 = true;
+          if (merged.profile.subtitle === 'Search khung tìm kiếm phía dưới là siêu nhanh 👇') {
+            merged.profile.subtitle = DEFAULT_AFFILIATE_PROFILE.subtitle;
+          }
+          upgradedTone = true;
+        }
         const migrated = rewriteLegacyBioUrls(merged);
         saveLocalAffiliateStore(migrated.data);
-        if (migrated.changed) {
+        if (migrated.changed || upgradedTone) {
           await col.updateOne(
             { _id: 'na2hand_affiliate_main' },
             { $set: { store: migrated.data, updatedAt: new Date() } }

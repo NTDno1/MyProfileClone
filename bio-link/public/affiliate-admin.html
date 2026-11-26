@@ -22,6 +22,19 @@
       max-width: 100%;
       overflow-x: clip;
     }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; margin-block: 6px; }
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(217, 70, 126, 0.34), rgba(200, 55, 103, 0.5));
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, rgba(217, 70, 126, 0.65), rgba(200, 55, 103, 0.82));
+    }
+    ::-webkit-scrollbar-corner { background: transparent; }
+    @supports not selector(::-webkit-scrollbar) {
+      * { scrollbar-width: thin; scrollbar-color: rgba(200, 55, 103, 0.36) transparent; }
+    }
     body {
       font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
       background: var(--bg);
@@ -384,9 +397,9 @@
           <div>
             <label class="label">Tông màu nền trang Affiliate</label>
             <select id="pf-aff-tone" class="select">
-              <option value="oatmeal">🥛 Kem Yến Mạch Trầm (Chuẩn Passio)</option>
-              <option value="blush">🌸 Hồng Phấn Nữ Tính</option>
-              <option value="ivory">🤍 Trắng Kem Tinh Khôi</option>
+              <option value="blush">🌸 Hồng Lụa Tiểu Thư (Đồng bộ màu Shop NA 2HAND)</option>
+              <option value="ivory">🤍 Trắng Kem Lụa Ấm</option>
+              <option value="oatmeal">🥛 Kem Phấn Nhẹ Nhàng</option>
             </select>
           </div>
         </div>

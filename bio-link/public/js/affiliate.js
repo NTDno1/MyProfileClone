@@ -1,4 +1,4 @@
-// Trang Hiển Thị Danh Sách Sản Phẩm Affiliate (/affiliate) — Chuẩn Passio Creator Showcase
+// Trang Hiển Thị Danh Sách Sản Phẩm Affiliate (/affiliate) — Đồng Bộ Giao Diện Nữ Tính Với /shop
 (function () {
   let profile = {};
   let categories = [];
@@ -13,6 +13,28 @@
   const expandCatsBtn = document.getElementById('btn-expand-cats');
   const rootEl = document.getElementById('aff-sections-root');
   const toastEl = document.getElementById('aff-toast');
+
+  function initSparkles() {
+    const wrap = document.getElementById('aff-sparkles');
+    if (!wrap) return;
+    const spots = [
+      { left: '6%', top: '12%', size: 15, dur: '4.4s', delay: '0s' },
+      { left: '91%', top: '10%', size: 18, dur: '5.2s', delay: '0.9s' },
+      { left: '11%', top: '42%', size: 13, dur: '4.8s', delay: '1.6s' },
+      { left: '89%', top: '46%', size: 16, dur: '5.6s', delay: '0.4s' },
+      { left: '7%', top: '76%', size: 14, dur: '5.0s', delay: '2.1s' },
+      { left: '92%', top: '80%', size: 15, dur: '4.6s', delay: '1.2s' }
+    ];
+    wrap.innerHTML = spots
+      .map(
+        (s) => `
+        <svg class="aff-star" width="${s.size}" height="${s.size}" style="left:${s.left}; top:${s.top}; animation-duration:${s.dur}; animation-delay:${s.delay};">
+          <use href="#ico-star4"></use>
+        </svg>
+      `
+      )
+      .join('');
+  }
 
   function showToast(msg) {
     if (!toastEl) return;
@@ -46,7 +68,14 @@
     if (plat === 'shopee') return 'Shopee';
     if (plat === 'tiktok') return 'TikTok Shop';
     if (plat === 'lazada') return 'Lazada';
-    return 'Xem ngay';
+    return 'Chính hãng';
+  }
+
+  function platformCta(plat) {
+    if (plat === 'shopee') return 'Xem trên Shopee ↗';
+    if (plat === 'tiktok') return 'Xem trên TikTok ↗';
+    if (plat === 'lazada') return 'Xem trên Lazada ↗';
+    return 'Xem sản phẩm ↗';
   }
 
   function trackAffiliateClick(id) {
@@ -96,17 +125,36 @@
   }
 
   function renderItemCard(item, idxInSec, layoutMode) {
-    const displayTitle = item.code ? `${item.code}. ${item.name}` : item.name;
+    const cleanTitle = String(item.name || '').trim();
+    const codeHtml = item.code
+      ? `<span class="aff-item-code-pill">Mã #${escapeHtml(item.code)}</span>`
+      : '';
     const priceHtml =
       profile.showPrice && Number(item.price) > 0
         ? `<div class="aff-item-price">${formatVnd(item.price)}</div>`
         : '';
-    const platHtml = profile.showPlatformBadge
+    const platHtml = profile.showPlatformBadge !== false
       ? `<span class="aff-item-plat">${escapeHtml(platformLabel(item.platform))}</span>`
       : '';
     const badgeHtml = item.badge
       ? `<span class="aff-item-badge">${escapeHtml(item.badge)}</span>`
       : '';
+
+    const cardBodyHtml = `
+      <div class="aff-item-media">
+        <img src="${escapeHtml(item.image || '/media/bio-link/girlfriend-1.jpg')}" alt="${escapeHtml(cleanTitle)}" loading="lazy" />
+        ${badgeHtml}
+      </div>
+      <div class="aff-item-info">
+        ${codeHtml}
+        <div class="aff-item-title">${escapeHtml(cleanTitle)}</div>
+        ${priceHtml}
+        <div class="aff-item-meta-pills">
+          ${platHtml}
+          <span class="aff-item-cta">${escapeHtml(platformCta(item.platform))}</span>
+        </div>
+      </div>
+    `;
 
     if (layoutMode === 'grid') {
       return `
@@ -117,20 +165,11 @@
           class="aff-grid-item aff-track-link"
           data-id="${escapeHtml(item.id)}"
         >
-          <div class="aff-item-media">
-            <img src="${escapeHtml(item.image || '/media/bio-link/girlfriend-1.jpg')}" alt="${escapeHtml(displayTitle)}" loading="lazy" />
-            ${badgeHtml}
-          </div>
-          <div class="aff-item-info">
-            <div class="aff-item-title">${escapeHtml(displayTitle)}</div>
-            ${priceHtml}
-            ${platHtml}
-          </div>
+          ${cardBodyHtml}
         </a>
       `;
     }
 
-    // Default Passio Signature Alternating Zig-Zag Layout
     const oddClass = idxInSec % 2 === 1 ? 'is-odd' : '';
     return `
       <a
@@ -140,15 +179,7 @@
         class="aff-zigzag-item ${oddClass} aff-track-link"
         data-id="${escapeHtml(item.id)}"
       >
-        <div class="aff-item-media">
-          <img src="${escapeHtml(item.image || '/media/bio-link/girlfriend-1.jpg')}" alt="${escapeHtml(displayTitle)}" loading="lazy" />
-          ${badgeHtml}
-        </div>
-        <div class="aff-item-info">
-          <div class="aff-item-title">${escapeHtml(displayTitle)}</div>
-          ${priceHtml}
-          ${platHtml}
-        </div>
+        ${cardBodyHtml}
       </a>
     `;
   }
@@ -177,14 +208,13 @@
     }
 
     if (filtered.length === 0) {
-      rootEl.innerHTML = `<div class="aff-empty">Không tìm thấy sản phẩm nào khớp từ khóa <strong>"${escapeHtml(searchQuery)}"</strong>.</div>`;
+      rootEl.innerHTML = `<div class="aff-empty">Chưa tìm thấy mẫu nào khớp từ khóa <strong>"${escapeHtml(searchQuery)}"</strong> nàng ơi ♡</div>`;
       return;
     }
 
     const layoutMode = profile.layoutMode === 'grid' ? 'grid' : 'zigzag';
     const basePageSize = Number(profile.itemsPerCategory || 12);
 
-    // Group by categories in order
     const catsToShow =
       activeCatId === 'all'
         ? categories
@@ -201,7 +231,7 @@
         items: filtered.filter((it) => it.categoryId === c.id)
       })),
       ...(uncategorized.length > 0
-        ? [{ id: '_other', name: 'Sản phẩm khác', items: uncategorized }]
+        ? [{ id: '_other', name: 'Thiết kế khác', items: uncategorized }]
         : [])
     ].filter((g) => g.items.length > 0);
 
@@ -217,13 +247,19 @@
 
       sectionsHtml.push(`
         <div class="aff-cat-section" id="sec-${escapeHtml(grp.id)}">
-          <h2 class="aff-cat-heading">${escapeHtml(grp.name)}</h2>
+          <div class="aff-cat-heading-row">
+            <h2 class="aff-cat-heading">
+              <svg width="14" height="14"><use href="#ico-star4"></use></svg>
+              <span>${escapeHtml(grp.name)}</span>
+            </h2>
+            <span class="aff-cat-divider" aria-hidden="true"></span>
+          </div>
           <div class="${listClass}">
             ${cardsHtml}
           </div>
           ${
             remaining > 0
-              ? `<button type="button" class="aff-see-more-btn" data-sec="${escapeHtml(grp.id)}">Xem thêm (${remaining} sản phẩm)</button>`
+              ? `<button type="button" class="aff-see-more-btn" data-sec="${escapeHtml(grp.id)}">Xem thêm ${remaining} mẫu xinh nữa ♡</button>`
               : ''
           }
         </div>
@@ -279,13 +315,14 @@
     }
     try {
       await navigator.clipboard.writeText(shareUrl);
-      showToast('Đã sao chép đường dẫn trang Affiliate!');
+      showToast('Đã sao chép đường dẫn Tủ đồ Affiliate! ♡');
     } catch {
       prompt('Sao chép đường dẫn dưới đây:', shareUrl);
     }
   });
 
   async function initAffiliateShowcase() {
+    initSparkles();
     try {
       const params = new URLSearchParams(window.location.search);
       const qParam = params.get('q') || '';
@@ -303,11 +340,11 @@
       categories = data.categories || [];
       allItems = data.items || [];
 
-      document.body.setAttribute('data-tone', profile.themeTone || 'oatmeal');
+      document.body.setAttribute('data-tone', profile.themeTone || 'blush');
       if (profile.handle) document.getElementById('aff-handle').textContent = profile.handle;
       if (profile.title) {
         document.getElementById('aff-title').textContent = profile.title;
-        document.title = `${profile.title} — Link Đồ Xinh & Affiliate`;
+        document.title = `${profile.title} — Tủ Đồ Xinh & Link Chính Hãng`;
       }
       if (profile.subtitle) document.getElementById('aff-subtitle').textContent = profile.subtitle;
       if (profile.avatar) document.getElementById('aff-avatar').src = profile.avatar;
@@ -315,7 +352,7 @@
       renderCategoryPills();
       renderSections();
     } catch {
-      if (rootEl) rootEl.innerHTML = `<div class="aff-empty">Không thể tải danh sách sản phẩm, vui lòng thử tải lại trang!</div>`;
+      if (rootEl) rootEl.innerHTML = `<div class="aff-empty">Không thể tải danh sách sản phẩm, vui lòng thử tải lại trang nhé!</div>`;
     }
   }
 

@@ -22,6 +22,19 @@
       max-width: 100%;
       overflow-x: clip;
     }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; margin-block: 6px; }
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(225, 75, 133, 0.34), rgba(200, 55, 103, 0.5));
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, rgba(225, 75, 133, 0.65), rgba(200, 55, 103, 0.82));
+    }
+    ::-webkit-scrollbar-corner { background: transparent; }
+    @supports not selector(::-webkit-scrollbar) {
+      * { scrollbar-width: thin; scrollbar-color: rgba(200, 55, 103, 0.36) transparent; }
+    }
     body {
       font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
       background: var(--bg);
@@ -264,12 +277,12 @@
 
           <div class="grid-2">
             <div>
-              <label class="label">Các Kích cỡ (phân cách bằng dấu phẩy)</label>
-              <input type="text" id="pf-sizes" class="input" value="S, M, L, Freesize" />
+              <label class="label">Các Kích cỡ (để trống nếu sản phẩm không có phân loại Size)</label>
+              <input type="text" id="pf-sizes" class="input" value="" placeholder="Để trống nếu không có size, hoặc nhập S, M, L" />
             </div>
             <div>
               <label class="label">Các Màu sắc (phân cách bằng dấu phẩy)</label>
-              <input type="text" id="pf-colors" class="input" value="Hồng Phấn, Trắng Kem" />
+              <input type="text" id="pf-colors" class="input" value="" placeholder="Để trống hoặc nhập Hồng Phấn, Trắng Kem" />
             </div>
           </div>
 
@@ -314,9 +327,10 @@
             <textarea id="pf-desc" rows="2" class="textarea" placeholder="Chất liệu mềm mát, form chuẩn tiểu thư..."></textarea>
           </div>
 
-          <div style="display:flex; gap:18px; margin-bottom:14px; font-size:0.84rem; font-weight:700;">
-            <label><input type="checkbox" id="pf-flash" checked /> ⚡ Bật nhãn DEAL XINH (Flash Sale)</label>
+          <div style="display:flex; gap:18px; flex-wrap:wrap; margin-bottom:14px; font-size:0.84rem; font-weight:700;">
+            <label><input type="checkbox" id="pf-flash" /> ⚡ Bật nhãn DEAL XINH (Flash Sale)</label>
             <label><input type="checkbox" id="pf-enabled" checked /> 👁️ Hiển thị trên Shop</label>
+            <label style="color:#be123c;"><input type="checkbox" id="pf-locked" /> 🔒 Khóa sản phẩm này (Ẩn khỏi web &amp; chống sửa/xóa)</label>
           </div>
 
           <button type="submit" class="btn btn-primary">💾 Lưu Sản Phẩm Vào Cửa Hàng</button>
@@ -324,7 +338,22 @@
       </div>
 
       <div class="card">
-        <h3 style="font-size:1.05rem; margin-bottom:12px;">👗 Danh Sách Sản Phẩm Hiện Có</h3>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+          <div>
+            <h3 style="font-size:1.05rem; margin-bottom:4px;">👗 Danh Sách Sản Phẩm Hiện Có</h3>
+            <p style="font-size:0.77rem; color:var(--muted); line-height:1.5;">
+              🛡️ <strong>SP sẵn trên web (Ngoài sàn)</strong> tuyệt đối không bị ảnh hưởng khi đồng bộ Shopee/TikTok. Bạn có thể bấm <strong>🔒 Khóa</strong> từng mẫu hoặc khóa toàn bộ SP sẵn trên web chỉ với 1 chạm.
+            </p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-sm" id="btn-lock-all-local" style="background:#fff1f2; border-color:#fda4af; color:#be123c;">
+              🔒 Khóa tất cả SP sẵn trên web
+            </button>
+            <button type="button" class="btn btn-sm" id="btn-unlock-all-local" style="background:#ecfdf5; border-color:#a7f3d0; color:#047857;">
+              🔓 Mở khóa SP sẵn trên web
+            </button>
+          </div>
+        </div>
         <div style="overflow-x:auto;">
           <table>
             <thead>
@@ -544,6 +573,6 @@
 
   <div class="toast" id="toast">Đã lưu thành công!</div>
 
-  <script src="/js/shop-admin.js?v=5"></script>
+  <script src="/js/shop-admin.js?v=6"></script>
 </body>
 </html>

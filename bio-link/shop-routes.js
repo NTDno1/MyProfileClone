@@ -323,6 +323,9 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
 
   async function getShopStoreRaw() {
     const local = loadLocalShopData();
+    if (Array.isArray(local.products) && repairAndMigrateProductsStore(local.products)) {
+      saveLocalShopData(local);
+    }
     const db = getMongoDb();
     if (!db) return local;
 
@@ -348,12 +351,9 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
           settingsChanged = true;
         }
         if (Array.isArray(merged.products)) {
-          merged.products.forEach((pr) => {
-            if (pr && typeof pr.sourceUrl === 'string' && pr.sourceUrl.includes('&amp;')) {
-              pr.sourceUrl = cleanSourceUrl(pr.sourceUrl);
-              settingsChanged = true;
-            }
-          });
+          if (repairAndMigrateProductsStore(merged.products)) {
+            settingsChanged = true;
+          }
         }
         saveLocalShopData(merged);
         if (settingsChanged) {
@@ -361,6 +361,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
             { _id: 'na2hand_main_store' },
             { $set: { store: merged, updatedAt: new Date() } }
           );
+          await syncCollectionsForAtlasUI(db, merged);
         }
         return merged;
       } else {
@@ -502,7 +503,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       success: true,
       settings: publicSettings,
       categories: store.categories,
-      products: (store.products || []).filter((p) => p.enabled !== false),
+      products: (store.products || []).filter((p) => p.enabled !== false && !p.isLocked),
       coupons: (store.coupons || []).filter((c) => c.enabled !== false),
       reviews: (store.reviews || []).slice(0, 50)
     });
@@ -867,15 +868,18 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
   app.post('/api/shop/admin/products', requireAuth, async (req, res) => {
     const store = await getShopStore();
     const b = req.body || {};
+    const rawSrc = cleanSourceUrl(b.sourceUrl || '');
+    const platItemId = extractPlatformItemId(rawSrc);
     const newProd = {
       id: b.id || `prod_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
       name: String(b.name || 'Sản phẩm mới').trim(),
       category: String(b.category || 'vay-dam'),
       price: Math.max(0, Number(b.price || 0)),
+      maxPrice: Math.max(0, Number(b.maxPrice || b.price || 0)),
       originalPrice: Math.max(0, Number(b.originalPrice || b.price || 0)),
       images: Array.isArray(b.images) && b.images.length > 0 ? b.images.map(cleanCdnImageUrl) : ['/media/bio-link/girlfriend-1.jpg'],
-      sizes: Array.isArray(b.sizes) && b.sizes.length > 0 ? b.sizes : ['Freesize'],
-      colors: Array.isArray(b.colors) && b.colors.length > 0 ? b.colors : ['Mặc định'],
+      sizes: Array.isArray(b.sizes) ? b.sizes.filter(Boolean) : [],
+      colors: Array.isArray(b.colors) ? b.colors.filter(Boolean) : [],
       variantGroupName: String(b.variantGroupName || 'Mẫu').trim(),
       variants: normalizeVariantsList(b.variants, b.price),
       stock: Math.max(0, Number(b.stock ?? 10)),
@@ -885,8 +889,11 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       isFlashSale: !!b.isFlashSale,
       isFeatured: b.isFeatured !== false,
       isNew: b.isNew !== false,
-      sourcePlatform: b.sourcePlatform || 'manual',
-      sourceUrl: cleanSourceUrl(b.sourceUrl || ''),
+      isLocked: Boolean(b.isLocked),
+      originType: platItemId ? 'cloned' : 'local',
+      platformItemId: platItemId || '',
+      sourcePlatform: platItemId ? (rawSrc.includes('tiktok') ? 'tiktok' : 'shopee') : (b.sourcePlatform || 'manual'),
+      sourceUrl: rawSrc,
       description: String(b.description || ''),
       enabled: b.enabled !== false,
       createdAt: new Date().toISOString()
@@ -922,9 +929,56 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
     res.json({ success: true, product: store.products[idx], message: 'Đã cập nhật sản phẩm!' });
   });
 
+  // Toggle Lock on a Single Product
+  app.post('/api/shop/admin/products/:id/toggle-lock', requireAuth, async (req, res) => {
+    const store = await getShopStore();
+    const prod = (store.products || []).find((p) => p.id === req.params.id);
+    if (!prod) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm.' });
+
+    prod.isLocked = !prod.isLocked;
+    prod.updatedAt = new Date().toISOString();
+    await saveShopStore(store);
+    res.json({
+      success: true,
+      isLocked: prod.isLocked,
+      product: prod,
+      message: prod.isLocked
+        ? `🔒 Đã khóa "${prod.name.slice(0, 32)}..." (Ẩn trên web & bảo vệ không cho sửa/xóa)!`
+        : `🔓 Đã mở khóa "${prod.name.slice(0, 32)}..." (Hiển thị trở lại trên web)!`
+    });
+  });
+
+  // Bulk Lock / Unlock All Non-Platform-Cloned Local Web Products ("các sản phẩm sẵn trên web")
+  app.post('/api/shop/admin/products/lock-local', requireAuth, async (req, res) => {
+    const store = await getShopStore();
+    const shouldLock = req.body?.locked !== false;
+    let count = 0;
+    (store.products || []).forEach((p) => {
+      if (!isPlatformClonedProduct(p)) {
+        p.isLocked = shouldLock;
+        count++;
+      }
+    });
+    await saveShopStore(store);
+    res.json({
+      success: true,
+      count,
+      message: shouldLock
+        ? `🔒 Đã khóa toàn bộ ${count} sản phẩm sẵn trên web (không phải clone từ sàn)!`
+        : `🔓 Đã mở khóa ${count} sản phẩm sẵn trên web!`
+    });
+  });
+
   // Delete Product
   app.delete('/api/shop/admin/products/:id', requireAuth, async (req, res) => {
     const store = await getShopStore();
+    const target = (store.products || []).find((p) => p.id === req.params.id);
+    if (target && target.isLocked) {
+      return res.status(400).json({
+        success: false,
+        message: 'Sản phẩm này đang được Khóa (🔒)! Hãy bấm Mở khóa trước nếu bạn thực sự muốn xóa.'
+      });
+    }
     store.products = (store.products || []).filter((p) => p.id !== req.params.id);
     await saveShopStore(store);
     res.json({ success: true, message: 'Đã xóa sản phẩm.' });
@@ -1051,12 +1105,19 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
 
       const cleanName = String(item.name).trim();
       const cleanedIncomingUrl = cleanSourceUrl(item.sourceUrl || '');
-      const incomingItemId = extractPlatformItemId(cleanedIncomingUrl);
+      const incomingItemId = item.platformItemId || extractPlatformItemId(cleanedIncomingUrl);
 
+      // STRICT 1-TO-1 ISOLATION: Match ONLY platform-cloned products (NEVER touch local/built-in web products!)
       const existingIdx = (store.products || []).findIndex((p) => {
+        if (!isPlatformClonedProduct(p)) return false;
+        if (p.isLocked) return false;
+
         const existingUrl = cleanSourceUrl(p.sourceUrl || '');
-        const existingItemId = extractPlatformItemId(existingUrl);
-        if (incomingItemId && existingItemId && incomingItemId === existingItemId) return true;
+        const existingItemId = p.platformItemId || extractPlatformItemId(existingUrl);
+
+        if (incomingItemId && existingItemId) {
+          return incomingItemId === existingItemId;
+        }
         if (
           cleanedIncomingUrl &&
           existingUrl &&
@@ -1065,29 +1126,43 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         ) {
           return true;
         }
-        return String(p.name || '').trim().toLowerCase() === cleanName.toLowerCase();
+        if (!incomingItemId && !existingItemId) {
+          return String(p.name || '').trim().toLowerCase() === cleanName.toLowerCase();
+        }
+        return false;
       });
 
       const prev = existingIdx >= 0 ? store.products[existingIdx] : null;
-      const cleanPrice = parsePriceVnd(item.price) || (prev ? prev.price : 199000);
-      const cleanOrig =
-        parsePriceVnd(item.originalPrice) ||
-        (prev && prev.originalPrice > cleanPrice ? prev.originalPrice : Math.round(cleanPrice * 1.25));
+      const baseIncomingPrice = parsePriceVnd(item.price) || (prev ? prev.price : 110000);
 
-      const incomingVariants = normalizeVariantsList(item.variants, cleanPrice);
-      const finalVariants =
-        incomingVariants.length > 0
-          ? incomingVariants
-          : prev && Array.isArray(prev.variants)
-          ? prev.variants
-          : [];
+      // 1-to-1 inner variants & per-variant prices
+      const incomingVariants = normalizeVariantsList(item.variants, baseIncomingPrice);
+      const finalVariants = Array.isArray(item.variants)
+        ? incomingVariants
+        : prev && Array.isArray(prev.variants)
+        ? prev.variants
+        : [];
 
-      if (incomingVariants.length > 0) {
-        totalVariantsSynced += incomingVariants.length;
+      if (finalVariants.length > 0) {
+        totalVariantsSynced += finalVariants.length;
       }
 
+      // Compute exact min price & maxPrice across variants so price ranges & per-variant prices match Shopee 1-1!
+      const inStockVarPrices = finalVariants
+        .filter((v) => Number(v.stock ?? 0) > 0 && Number(v.price) > 0)
+        .map((v) => Number(v.price));
+      const allVarPrices = finalVariants
+        .filter((v) => Number(v.price) > 0)
+        .map((v) => Number(v.price));
+      const pricePool = inStockVarPrices.length > 0 ? inStockVarPrices : allVarPrices;
+
+      const cleanPrice = pricePool.length > 0 ? Math.min(...pricePool) : baseIncomingPrice;
+      const maxVariantPrice = allVarPrices.length > 0 ? Math.max(...allVarPrices) : cleanPrice;
+      const cleanMaxPrice = Math.max(cleanPrice, parsePriceVnd(item.maxPrice) || 0, maxVariantPrice);
+      const rawOrig = parsePriceVnd(item.originalPrice);
+      const cleanOrig = rawOrig > cleanMaxPrice ? rawOrig : cleanMaxPrice;
+
       const rawImgs = Array.isArray(item.images) ? item.images : [];
-      // Merge gallery images + unique variant images in full HD
       const imgSet = [];
       const addImg = (u) => {
         const cu = cleanCdnImageUrl(u);
@@ -1103,7 +1178,6 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         prev.images.forEach(addImg);
       }
 
-      // Preserve specific product Shopee/TikTok URL if incoming sync only had generic shop URL
       let finalSourceUrl = cleanedIncomingUrl;
       if (prev && isSpecificProductUrl(prev.sourceUrl) && !isSpecificProductUrl(cleanedIncomingUrl)) {
         finalSourceUrl = cleanSourceUrl(prev.sourceUrl);
@@ -1120,32 +1194,36 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       const computedStock =
         finalVariants.length > 0
           ? finalVariants.reduce((sum, v) => sum + Math.max(0, Number(v.stock ?? 0)), 0)
-          : Number(item.stock ?? prev?.stock ?? 15);
+          : Number(item.stock ?? prev?.stock ?? 1);
 
       const derivedColors =
         finalVariants.length > 0
           ? finalVariants.map((v) => v.label)
-          : Array.isArray(item.colors) && item.colors.length > 0
-          ? item.colors
-          : prev?.colors || ['Theo hình'];
+          : Array.isArray(item.colors)
+          ? item.colors.filter(Boolean)
+          : [];
 
-      const derivedSizes =
-        Array.isArray(item.sizes) && item.sizes.length > 0
-          ? item.sizes
-          : prev?.sizes || inferSizesFromTitle(cleanName);
+      // STRICT 1-TO-1 SIZE SYNC: If Shopee has NO Size tier, sizes MUST be [] (NEVER invent S/M/L or Freesize!)
+      const derivedSizes = Array.isArray(item.sizes)
+        ? item.sizes.map((s) => String(s || '').trim()).filter(Boolean)
+        : [];
 
       const finalDesc =
-        item.description && String(item.description).trim().length > 15
+        item.description && String(item.description).trim().length > 10
           ? String(item.description).trim()
           : prev?.description ||
-            `Sản phẩm đồng bộ trực tiếp từ ${platform === 'tiktok' ? 'TikTok Shop' : 'Shopee'} chính hãng của NA 2HAND.`;
+            `Sản phẩm đồng bộ 1-1 trực tiếp từ ${platform === 'tiktok' ? 'TikTok Shop' : 'Shopee'} chính hãng của NA 2HAND.`;
 
       const productObj = {
         id: prev ? prev.id : `prod_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        originType: 'cloned',
+        platformItemId: incomingItemId || prev?.platformItemId || '',
+        isLocked: prev ? Boolean(prev.isLocked) : false,
         name: cleanName,
         category: item.category || prev?.category || inferCategoryFromName(cleanName, store.categories),
-        price: cleanPrice > 0 ? cleanPrice : 199000,
-        originalPrice: cleanOrig >= cleanPrice ? cleanOrig : cleanPrice,
+        price: cleanPrice > 0 ? cleanPrice : 110000,
+        maxPrice: cleanMaxPrice > cleanPrice ? cleanMaxPrice : cleanPrice,
+        originalPrice: cleanOrig >= cleanMaxPrice ? cleanOrig : cleanMaxPrice,
         images: imgSet.length > 0 ? imgSet.slice(0, 25) : ['/media/bio-link/girlfriend-1.jpg'],
         sizes: derivedSizes,
         colors: derivedColors,
@@ -1155,7 +1233,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         sold: Number(item.sold ?? prev?.sold ?? 0),
         rating: Number(item.rating || prev?.rating || 5.0),
         reviewCount: Number(item.reviewCount || prev?.reviewCount || 5),
-        isFlashSale: item.isFlashSale !== false,
+        isFlashSale: rawOrig > cleanMaxPrice,
         isFeatured: true,
         isNew: true,
         sourcePlatform: platform,
@@ -1258,7 +1336,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         .trim();
       if (!label || label.length > 42) continue;
       if (
-        /^(add to cart|buy now|thêm vào giỏ.*|mua ngay|chat now|chat ngay|view shop|xem shop|follow|theo dõi|report|tố cáo|share|chia sẻ|favorite.*|yêu thích.*|đăng nhập|login|sign up|search|\+|-|×|✕)$/i.test(
+        /^(add to cart|buy now|thêm vào giỏ.*|mua ngay|chat now|chat ngay|view shop|xem shop|follow|theo dõi|report|tố cáo|share|chia sẻ|favorite.*|yêu thích.*|đăng nhập|login|sign up|search|decrease|increase|giảm|tăng|\+|-|×|✕)$/i.test(
           label
         )
       ) {
@@ -1369,7 +1447,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
           name: pdpTitle,
           price: pdpPrice,
           images: galleryImgs,
-          sizes: detailSizes.length > 0 ? detailSizes : undefined,
+          sizes: detailSizes,
           variantGroupName: 'Mẫu',
           variants: detailVariants.map((v, idx) => ({
             id: `var_${idx + 1}`,
@@ -1443,16 +1521,29 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
             const itemId = obj.itemid || obj.item_id || '';
 
             const ssrVariants = [];
+            let ssrSizes = [];
             let groupTitle = 'Mẫu';
             if (Array.isArray(obj.tier_variations) && obj.tier_variations[0]) {
               const tv = obj.tier_variations[0];
               groupTitle = tv.name || 'Mẫu';
               const opts = Array.isArray(tv.options) ? tv.options : [];
               const tvImgs = Array.isArray(tv.images) ? tv.images : [];
+              if (obj.tier_variations[1] && Array.isArray(obj.tier_variations[1].options)) {
+                ssrSizes = obj.tier_variations[1].options.map((s) => String(s || '').trim()).filter(Boolean);
+              }
               opts.forEach((optName, idx) => {
-                const matchedModel = Array.isArray(obj.models)
-                  ? obj.models.find((md) => String(md.name || '').split(',')[0].trim() === String(optName).trim())
-                  : null;
+                const matchingModels = Array.isArray(obj.models)
+                  ? obj.models.filter((md) => {
+                      if (Array.isArray(md.extinfo?.tier_index)) return md.extinfo.tier_index[0] === idx;
+                      return String(md.name || '').split(',')[0].trim() === String(optName).trim();
+                    })
+                  : [];
+                const inStockModels = matchingModels.filter((md) => Number(md.stock ?? 0) > 0);
+                const chosenPool = inStockModels.length > 0 ? inStockModels : matchingModels;
+                const modelPrices = chosenPool.map((md) => parsePriceVnd(md.price)).filter((p) => p > 0);
+                const totalOptStock = matchingModels.length > 0
+                  ? matchingModels.reduce((acc, md) => acc + Math.max(0, Number(md.stock ?? 0)), 0)
+                  : 1;
                 ssrVariants.push({
                   id: `var_${idx + 1}`,
                   label: optName,
@@ -1461,17 +1552,19 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
                       ? cleanCdnImageUrl(tvImgs[idx])
                       : `https://down-vn.img.susercontent.com/file/${tvImgs[idx]}`
                     : fullImgs[0] || '',
-                  price: matchedModel?.price ? parsePriceVnd(matchedModel.price) : parsePriceVnd(obj.price || obj.price_min),
-                  stock: matchedModel?.stock !== undefined ? Number(matchedModel.stock) : 1
+                  price: modelPrices.length > 0 ? Math.min(...modelPrices) : parsePriceVnd(obj.price || obj.price_min),
+                  stock: totalOptStock
                 });
               });
             }
 
             pushCandidate({
               name: obj.name,
-              price: obj.price || obj.price_min,
-              originalPrice: obj.price_before_discount || obj.price_max || 0,
+              price: obj.price_min || obj.price,
+              maxPrice: obj.price_max || obj.price,
+              originalPrice: obj.price_before_discount || 0,
               images: fullImgs,
+              sizes: ssrSizes,
               variantGroupName: groupTitle,
               variants: ssrVariants,
               description: obj.description || '',
@@ -1741,7 +1834,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
   });
 
   // =========================================================================
-  // 4. DIRECT PRODUCT & DEEP VARIANT IMPORT ENDPOINT
+  // 4. DIRECT PRODUCT & STRICT 1-TO-1 RECONCILIATION ENDPOINT
   // =========================================================================
   app.post('/api/shop/import', requireAdminOrSyncKey, async (req, res) => {
     try {
@@ -1755,26 +1848,180 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         ? [bodyObj.product]
         : [];
 
-      if (rawProducts.length === 0) {
+      let saved = { addedCount: 0, updatedCount: 0, totalVariantsSynced: 0, importedItems: [] };
+      if (rawProducts.length > 0) {
+        saved = await saveImportedItemsToStore(rawProducts);
+      }
+
+      // Optional 1-to-1 Full Shop Reconciliation: removes stale/duplicate clones for `reconcilePlatform`
+      // while NEVER touching non-cloned local products or locked products!
+      let prunedCount = 0;
+      if (bodyObj.reconcilePlatform && Array.isArray(bodyObj.activePlatformItemIds) && bodyObj.activePlatformItemIds.length > 0) {
+        const targetPlat = bodyObj.reconcilePlatform;
+        const activeSet = new Set(bodyObj.activePlatformItemIds.filter(Boolean));
+        const seenKeptIds = new Set();
+        const store = await getShopStore();
+
+        const beforeLen = (store.products || []).length;
+        const keptClonesMap = new Map();
+        const untouchedProducts = [];
+
+        for (const p of store.products || []) {
+          // NEVER touch non-cloned local web products ("không đả động tới SP không phải clone từ sàn")
+          if (!isPlatformClonedProduct(p, targetPlat) || p.isLocked) {
+            untouchedProducts.push(p);
+            continue;
+          }
+          const pid = p.platformItemId || extractPlatformItemId(p.sourceUrl || '');
+          if (pid && activeSet.has(pid) && !seenKeptIds.has(pid)) {
+            seenKeptIds.add(pid);
+            keptClonesMap.set(pid, p);
+          }
+        }
+
+        // Preserve the exact 1-to-1 Shopee display order from activePlatformItemIds, followed by untouched local products
+        const orderedClones = bodyObj.activePlatformItemIds
+          .map((id) => keptClonesMap.get(id))
+          .filter(Boolean);
+
+        store.products = [...orderedClones, ...untouchedProducts];
+        prunedCount = Math.max(0, beforeLen - store.products.length);
+        await saveShopStore(store);
+      }
+
+      if (rawProducts.length === 0 && !bodyObj.reconcilePlatform) {
         return res.status(400).json({ success: false, message: 'Không có dữ liệu sản phẩm để nhập.' });
       }
 
-      const saved = await saveImportedItemsToStore(rawProducts);
       const varNote =
         saved.totalVariantsSynced > 0 ? ` (kèm ${saved.totalVariantsSynced} phân hệ con)` : '';
+      const pruneNote = prunedCount > 0 ? ` • Đã dọn ${prunedCount} bản ghi lệch/cũ để khớp chuẩn 1-1` : '';
       res.json({
         success: true,
         addedCount: saved.addedCount,
         updatedCount: saved.updatedCount,
+        prunedCount,
         totalVariantsSynced: saved.totalVariantsSynced,
         products: saved.importedItems,
-        message: `🎉 Đã đồng bộ ${saved.addedCount} SP mới & cập nhật ${saved.updatedCount} SP${varNote}!`
+        message: `🎉 Đồng bộ 1-1 thành công: +${saved.addedCount} mới, cập nhật ${saved.updatedCount} SP${varNote}${pruneNote}!`
       });
     } catch (err) {
       console.error('Import error:', err);
       res.status(500).json({ success: false, message: 'Lỗi khi lưu sản phẩm đồng bộ: ' + err.message });
     }
   });
+}
+
+function isPlatformClonedProduct(p, platformFilter = null) {
+  if (!p) return false;
+  if (p.originType === 'local' || /^prod-\d+$/.test(String(p.id || ''))) return false;
+  const pid = p.platformItemId || extractPlatformItemId(p.sourceUrl || '');
+  if (!pid && p.originType !== 'cloned') return false;
+  if (platformFilter) return p.sourcePlatform === platformFilter;
+  return p.sourcePlatform === 'shopee' || p.sourcePlatform === 'tiktok';
+}
+
+function normalizeSlugWords(str) {
+  return String(str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function extractSlugFromShopeeUrl(url) {
+  const m = String(url || '').match(/shopee\.vn\/([^/?#]+)-i\.(\d+)\.(\d+)/i);
+  if (!m) return null;
+  let decoded = m[1];
+  try {
+    decoded = decodeURIComponent(m[1]);
+  } catch {}
+  return {
+    cleanUrl: `https://shopee.vn/${m[1]}-i.${m[2]}.${m[3]}`,
+    platformItemId: `shopee_${m[2]}_${m[3]}`,
+    normTitle: normalizeSlugWords(decoded)
+  };
+}
+
+function repairAndMigrateProductsStore(products) {
+  let changed = false;
+
+  // 1. Collect pool of all real Shopee item URLs currently in store so any shifted URLs are reunited 1-to-1 with their true product
+  const shopeeUrlPool = [];
+  for (const p of products) {
+    if (!p) continue;
+    if (typeof p.sourceUrl === 'string' && p.sourceUrl.includes('&amp;')) {
+      p.sourceUrl = cleanSourceUrl(p.sourceUrl);
+      changed = true;
+    }
+    const parsed = extractSlugFromShopeeUrl(p.sourceUrl);
+    if (parsed && !shopeeUrlPool.some((x) => x.platformItemId === parsed.platformItemId)) {
+      shopeeUrlPool.push(parsed);
+    }
+  }
+
+  for (const p of products) {
+    if (!p) continue;
+
+    // Mark built-in sample web products (`prod-1`..`prod-6` or manual items without item IDs) as `originType: 'local'`
+    if (/^prod-\d+$/.test(String(p.id || '')) || (!extractPlatformItemId(p.sourceUrl || '') && !p.platformItemId)) {
+      if (p.originType !== 'local') {
+        p.originType = 'local';
+        changed = true;
+      }
+      continue;
+    }
+
+    if (p.originType !== 'cloned') {
+      p.originType = 'cloned';
+      changed = true;
+    }
+
+    // Reunite any shifted Shopee clone with its true Shopee URL by matching normalized product name against URL slug
+    if (p.sourcePlatform === 'shopee' && shopeeUrlPool.length > 0) {
+      const pNorm = normalizeSlugWords(p.name);
+      const curSlug = extractSlugFromShopeeUrl(p.sourceUrl);
+      if (!curSlug || curSlug.normTitle !== pNorm) {
+        const exactMatch =
+          shopeeUrlPool.find((u) => u.normTitle === pNorm) ||
+          shopeeUrlPool.find((u) => pNorm.startsWith(u.normTitle) || u.normTitle.startsWith(pNorm));
+        if (exactMatch && p.sourceUrl !== exactMatch.cleanUrl) {
+          p.sourceUrl = exactMatch.cleanUrl;
+          p.platformItemId = exactMatch.platformItemId;
+          changed = true;
+        }
+      }
+      if (!p.platformItemId) {
+        p.platformItemId = extractPlatformItemId(p.sourceUrl || '');
+        if (p.platformItemId) changed = true;
+      }
+    }
+
+    // Remove accidental quantity +/- ghost variants ("Decrease", "Increase")
+    if (Array.isArray(p.variants) && p.variants.length > 0) {
+      const cleanedVars = p.variants.filter(
+        (v) => v && !/^(decrease|increase|giảm|tăng|\+|-)$/i.test(String(v.label || '').trim())
+      );
+      if (cleanedVars.length !== p.variants.length) {
+        p.variants = cleanedVars;
+        changed = true;
+      }
+    }
+
+    // Clear fake default ['S', 'M', 'L'] sizes on Shopee clones that did not come from a real 2nd tier
+    if (
+      p.sourcePlatform === 'shopee' &&
+      Array.isArray(p.sizes) &&
+      p.sizes.join(',') === 'S,M,L'
+    ) {
+      p.sizes = [];
+      changed = true;
+    }
+  }
+
+  return changed;
 }
 
 function cleanCdnImageUrl(u) {
@@ -1789,7 +2036,6 @@ function cleanCdnImageUrl(u) {
 function cleanSourceUrl(u) {
   if (!u || typeof u !== 'string') return '';
   let s = u.trim().replace(/&amp;/g, '&');
-  // Strip noisy Shopee tracking query params on product links while keeping clean item URL
   const shopeeItemMatch = s.match(/^(https?:\/\/(?:www\.)?shopee\.vn\/[^?#]+-i\.\d+\.\d+)/i);
   if (shopeeItemMatch) {
     return shopeeItemMatch[1];
@@ -1812,19 +2058,19 @@ function extractPlatformItemId(u) {
   return '';
 }
 
-function normalizeVariantsList(rawVariants, fallbackPrice = 199000) {
+function normalizeVariantsList(rawVariants, fallbackPrice = 110000) {
   if (!Array.isArray(rawVariants)) return [];
   const out = [];
   const seen = new Set();
-  for (let i = 0; i < rawVariants.length && out.length < 60; i++) {
+  for (let i = 0; i < rawVariants.length && out.length < 80; i++) {
     const v = rawVariants[i];
     if (!v) continue;
     const label = String(v.label || v.name || '').trim();
-    if (!label) continue;
+    if (!label || /^(decrease|increase|giảm|tăng|\+|-|×|✕)$/i.test(label)) continue;
     const key = label.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    const vPrice = parsePriceVnd(v.price) || parsePriceVnd(fallbackPrice) || 199000;
+    const vPrice = parsePriceVnd(v.price) || parsePriceVnd(fallbackPrice) || 110000;
     out.push({
       id: v.id || `var_${i + 1}`,
       label: label.slice(0, 50),

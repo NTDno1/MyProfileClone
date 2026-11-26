@@ -1984,9 +1984,18 @@ function repairAndMigrateProductsStore(products) {
       const pNorm = normalizeSlugWords(p.name);
       const curSlug = extractSlugFromShopeeUrl(p.sourceUrl);
       if (!curSlug || curSlug.normTitle !== pNorm) {
+        const usedIds = new Set(
+          products
+            .filter((o) => o && o !== p)
+            .map((o) => o.platformItemId || extractPlatformItemId(o.sourceUrl || ''))
+            .filter(Boolean)
+        );
         const exactMatch =
+          shopeeUrlPool.find((u) => u.normTitle === pNorm && !usedIds.has(u.platformItemId)) ||
           shopeeUrlPool.find((u) => u.normTitle === pNorm) ||
-          shopeeUrlPool.find((u) => pNorm.startsWith(u.normTitle) || u.normTitle.startsWith(pNorm));
+          shopeeUrlPool.find(
+            (u) => (pNorm.startsWith(u.normTitle) || u.normTitle.startsWith(pNorm)) && !usedIds.has(u.platformItemId)
+          );
         if (exactMatch && p.sourceUrl !== exactMatch.cleanUrl) {
           p.sourceUrl = exactMatch.cleanUrl;
           p.platformItemId = exactMatch.platformItemId;
@@ -2018,6 +2027,29 @@ function repairAndMigrateProductsStore(products) {
     ) {
       p.sizes = [];
       changed = true;
+    }
+  }
+
+  // Deduplicate cloned products sharing the exact same platformItemId (keep the richer one with more variants)
+  const seenClonedPids = new Map();
+  for (let i = 0; i < products.length; i++) {
+    const p = products[i];
+    if (!p || p.originType !== 'cloned' || !p.platformItemId) continue;
+    const prevIdx = seenClonedPids.get(p.platformItemId);
+    if (prevIdx === undefined) {
+      seenClonedPids.set(p.platformItemId, i);
+    } else {
+      const prevP = products[prevIdx];
+      const prevVars = Array.isArray(prevP.variants) ? prevP.variants.length : 0;
+      const curVars = Array.isArray(p.variants) ? p.variants.length : 0;
+      if (curVars > prevVars) {
+        products.splice(prevIdx, 1);
+      } else {
+        products.splice(i, 1);
+      }
+      changed = true;
+      i = -1;
+      seenClonedPids.clear();
     }
   }
 

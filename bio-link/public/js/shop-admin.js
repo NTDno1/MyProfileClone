@@ -178,6 +178,7 @@
       renderOrders();
       renderCategoryOptions();
       renderProductSizeChartOptions();
+      populateBulkPriceControls();
       renderProductsTable();
       renderCategoriesAndCoupons();
       initSizeChartsManagerFromStore();
@@ -247,36 +248,613 @@
     renderOrders();
   });
 
-  function printPackingSlip(o) {
-    const win = window.open('', '_blank', 'width=520,height=680');
-    if (!win) return;
-    const rows = (o.items || [])
-      .map(
-        (it) =>
-          `<tr><td style="padding:6px 0;border-bottom:1px solid #eee;">${escapeHtml(it.name)} (${escapeHtml(it.color)} / ${escapeHtml(it.size)})</td><td style="text-align:right;padding:6px 0;border-bottom:1px solid #eee;">x${it.qty}</td></tr>`
-      )
+  // --- ORDER PRINT STUDIO (3 TEMPLATES: INVOICE A5/A4, SHIPPING LABEL A6, THERMAL K80 + BULK PRINT) ---
+  let selectedOrderIds = new Set();
+  let activePrintOrders = [];
+  let activePrintTemplate = 'invoice_a5'; // 'invoice_a5' | 'label_a6' | 'thermal_k80'
+  let isSamplePrintMode = false;
+
+  function updateSelectedOrdersCountUI() {
+    const cntEl = document.getElementById('sel-orders-count');
+    if (cntEl) cntEl.textContent = String(selectedOrderIds.size);
+  }
+
+  function renderBarcodeSvg(codeText, height = 38) {
+    const clean = String(codeText || 'NA000000').toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    const bars = [];
+    let x = 4;
+    // Start guard
+    [2, 1, 1, 2].forEach((w, idx) => {
+      if (idx % 2 === 0) bars.push(`<rect x="${x}" y="0" width="${w}" height="${height}" fill="#111"/>`);
+      x += w;
+    });
+    for (let i = 0; i < clean.length; i++) {
+      const ch = clean.charCodeAt(i);
+      const pattern = [
+        1 + (ch % 3),
+        1 + ((ch >> 1) % 2),
+        1 + ((ch >> 2) % 3),
+        1 + ((ch >> 3) % 2),
+        1 + ((ch >> 4) % 2),
+        1
+      ];
+      pattern.forEach((w, idx) => {
+        if (idx % 2 === 0) bars.push(`<rect x="${x}" y="0" width="${w}" height="${height}" fill="#111"/>`);
+        x += w;
+      });
+    }
+    // End guard
+    [2, 1, 2, 1, 2].forEach((w, idx) => {
+      if (idx % 2 === 0) bars.push(`<rect x="${x}" y="0" width="${w}" height="${height}" fill="#111"/>`);
+      x += w;
+    });
+    const totalW = x + 4;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${height}" width="${Math.min(210, totalW * 1.35)}" height="${height}" style="display:block;">${bars.join('')}</svg>`;
+  }
+
+  function getActiveSenderConfig() {
+    const s = shopData?.settings || {};
+    const livePhone = document.getElementById('ps-sender-phone')?.value?.trim();
+    const liveAddr = document.getElementById('ps-sender-addr')?.value?.trim();
+    const liveNote = document.getElementById('ps-thank-note')?.value?.trim();
+    return {
+      shopName: s.shopName || 'NA 2HAND Boutique',
+      senderPhone: livePhone || s.senderPhone || s.zaloPhone || '0359427135',
+      senderAddress: liveAddr || s.senderAddress || 'Kho NA 2HAND Boutique — Giao hàng toàn quốc',
+      thankYouNote:
+        liveNote ||
+        s.invoiceThankYouNote ||
+        'Cảm ơn nàng đã tin yêu NA 2HAND Boutique! Chúc nàng luôn xinh đẹp rạng rỡ trong thiết kế mới nhé ♡'
+    };
+  }
+
+  function buildSampleOrderForPreview() {
+    const sampleProd1 = (shopData?.products || [])[0];
+    const sampleProd2 = (shopData?.products || [])[1];
+    const p1Price = Number(sampleProd1?.price || 110000);
+    const p2Price = Number(sampleProd2?.price || 88000);
+    const sub = p1Price + p2Price;
+    const ship = 30000;
+    return {
+      id: 'sample_preview',
+      orderCode: 'NA886868',
+      customerName: 'Nguyễn Ngọc Ánh (Đơn xem thử)',
+      customerPhone: '0988.686.868',
+      province: 'Hà Nội',
+      district: 'Quận Cầu Giấy',
+      address: 'Số 18 Ngõ Hoa Đào, Phường Dịch Vọng',
+      shippingRegionLabel: 'Miền Bắc',
+      scentChoice: 'Hương Đào Trắng',
+      giftWrap: true,
+      giftCardMessage: 'Chúc cậu một ngày thật dịu dàng & xinh đẹp nhé!',
+      note: 'Giao giờ hành chính, gọi trước khi giao giúp em ạ',
+      items: [
+        {
+          name: sampleProd1?.name || 'Áo Hoodie 2hand Form Rộng Hàn Quốc',
+          color: sampleProd1?.variants?.[0]?.label ? `Mẫu: ${sampleProd1.variants[0].label}` : 'Kem Sữa',
+          size: (sampleProd1?.sizes && sampleProd1.sizes[0]) || 'M',
+          qty: 1,
+          price: p1Price
+        },
+        {
+          name: sampleProd2?.name || 'Quần Jeans Loe Nữ 2hand Dáng Tôn Chân',
+          color: sampleProd2?.variants?.[0]?.label ? `Mẫu: ${sampleProd2.variants[0].label}` : 'Xanh Vintage',
+          size: (sampleProd2?.sizes && sampleProd2.sizes[0]) || 'L',
+          qty: 1,
+          price: p2Price
+        }
+      ],
+      subtotal: sub,
+      discount: 0,
+      couponCode: '',
+      shippingFee: ship,
+      totalAmount: sub + ship,
+      paymentMethod: 'cod',
+      paymentStatus: 'pending',
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  function getPrintSheetCss(tpl) {
+    const pageRule =
+      tpl === 'label_a6'
+        ? '@page { size: 100mm 150mm; margin: 4mm; }'
+        : tpl === 'thermal_k80'
+        ? '@page { size: 80mm auto; margin: 3mm; }'
+        : '@page { size: A5 portrait; margin: 8mm; }';
+
+    return `
+      * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      ${pageRule}
+      .print-sheet {
+        background: #ffffff;
+        color: #181115;
+        font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+        margin: 0 auto;
+        box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+      }
+      .print-sheet.tpl-invoice_a5 {
+        width: 100%;
+        max-width: 680px;
+        padding: 24px 26px;
+        border: 1.5px solid #ead5de;
+        border-radius: 14px;
+      }
+      .print-sheet.tpl-label_a6 {
+        width: 378px;
+        min-height: 555px;
+        padding: 12px 13px;
+        border: 2px solid #111;
+        border-radius: 6px;
+        font-size: 12px;
+      }
+      .print-sheet.tpl-thermal_k80 {
+        width: 302px;
+        padding: 12px 10px;
+        border: 1px dashed #333;
+        font-size: 12px;
+      }
+      .p-table { width: 100%; border-collapse: collapse; }
+      .p-table th { background: #23141b; color: #fff; font-size: 11px; text-transform: uppercase; padding: 7px 8px; text-align: left; }
+      .p-table td { padding: 7px 8px; border-bottom: 1px solid #ead8e0; font-size: 12.5px; vertical-align: top; }
+      @media print {
+        body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+        .print-sheet { box-shadow: none !important; margin: 0 auto !important; border-radius: 0 !important; page-break-after: always; break-after: page; }
+        .print-sheet:last-child { page-break-after: auto; break-after: auto; }
+        .print-sheet.tpl-invoice_a5 { max-width: none; border: 1px solid #ddd; padding: 14px 16px; }
+        .print-sheet.tpl-label_a6 { width: 100%; min-height: auto; }
+        .print-sheet.tpl-thermal_k80 { width: 100%; border: none; }
+      }
+    `;
+  }
+
+  function renderSingleOrderSheetHtml(o, tpl, sender) {
+    const items = Array.isArray(o.items) ? o.items : [];
+    const totalQty = items.reduce((s, it) => s + Math.max(1, Number(it.qty || 1)), 0);
+    const subtotal =
+      o.subtotal !== undefined
+        ? Number(o.subtotal)
+        : items.reduce((s, it) => s + Number(it.price || 0) * Math.max(1, Number(it.qty || 1)), 0);
+    const discount = Number(o.discount || 0);
+    const shipFee = Number(o.shippingFee || 0);
+    const totalAmount = Number(o.totalAmount ?? Math.max(0, subtotal - discount + shipFee));
+    const isPaidQr = o.paymentStatus === 'paid';
+    const codCollect = isPaidQr ? 0 : totalAmount;
+    const createdStr = o.createdAt ? new Date(o.createdAt).toLocaleString('vi-VN') : new Date().toLocaleString('vi-VN');
+    const fullAddress = [o.address, o.district, o.province].filter(Boolean).join(', ');
+    const logoUrl = `${window.location.origin}/images/brand-logo.jpg`;
+
+    // TEMPLATE 2: TEM DÁN GÓI HÀNG SHIPPER (A6 100x150mm)
+    if (tpl === 'label_a6') {
+      const compactRows = items
+        .map((it, idx) => {
+          const variantMeta = [it.color, it.size]
+            .map((x) => String(x || '').trim())
+            .filter((x) => x && x !== 'Mặc định' && x !== 'Theo hình')
+            .join(' / ');
+          return `
+            <div style="display:flex; justify-content:space-between; gap:8px; padding:4px 0; border-bottom:1px dashed #ccc; font-size:11.5px;">
+              <div style="flex:1;">
+                <strong>${idx + 1}. ${escapeHtml(it.name)}</strong>
+                ${variantMeta ? `<div style="font-size:10.5px; color:#444;">Phân loại: ${escapeHtml(variantMeta)}</div>` : ''}
+              </div>
+              <div style="font-weight:800; font-size:12.5px; white-space:nowrap;">SL: x${it.qty}</div>
+            </div>
+          `;
+        })
+        .join('');
+
+      return `
+        <div class="print-sheet tpl-label_a6">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #111; padding-bottom:7px; margin-bottom:7px;">
+            <div>
+              <div style="font-weight:900; font-size:14px; letter-spacing:0.02em;">${escapeHtml(sender.shopName.toUpperCase())}</div>
+              <div style="font-size:10.5px; color:#333;">Ngày đơn: ${escapeHtml(createdStr)}</div>
+            </div>
+            <div style="background:#111; color:#fff; font-weight:800; font-size:11px; padding:4px 8px; border-radius:4px;">
+              ${escapeHtml((o.shippingRegionLabel || o.province || 'TOÀN QUỐC').toUpperCase())}
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; align-items:center; border-bottom:2px solid #111; padding-bottom:7px; margin-bottom:7px;">
+            ${renderBarcodeSvg(o.orderCode, 34)}
+            <div style="font-weight:900; font-size:14px; letter-spacing:2px; margin-top:3px;">MÃ ĐƠN: #${escapeHtml(o.orderCode)}</div>
+          </div>
+
+          <div style="border-bottom:1.5px dashed #111; padding-bottom:6px; margin-bottom:6px; font-size:11px;">
+            <div style="font-weight:800; text-transform:uppercase; color:#444;">TỪ (NGƯỜI GỬI):</div>
+            <div><strong>${escapeHtml(sender.shopName)}</strong> — SĐT: <strong>${escapeHtml(sender.senderPhone)}</strong></div>
+            <div>${escapeHtml(sender.senderAddress)}</div>
+          </div>
+
+          <div style="border:2px solid #111; padding:7px 9px; border-radius:5px; margin-bottom:7px; background:#fafafa;">
+            <div style="font-weight:800; font-size:10.5px; text-transform:uppercase;">ĐẾN (NGƯỜI NHẬN):</div>
+            <div style="font-weight:900; font-size:14.5px; margin:2px 0;">${escapeHtml(o.customerName)} — ${escapeHtml(o.customerPhone)}</div>
+            <div style="font-size:12px; font-weight:600; line-height:1.35;">${escapeHtml(fullAddress)}</div>
+          </div>
+
+          <div style="margin-bottom:7px;">
+            <div style="display:flex; justify-content:space-between; font-weight:800; font-size:11px; background:#eee; padding:4px 6px;">
+              <span>NỘI DUNG HÀNG HÓA (KIỂM ĐÓNG GÓI)</span>
+              <span>TỔNG SL: ${totalQty}</span>
+            </div>
+            <div style="padding:2px 2px 0;">${compactRows}</div>
+          </div>
+
+          ${
+            o.scentChoice || o.giftWrap || o.note
+              ? `<div style="border:1px dashed #555; padding:5px 7px; margin-bottom:8px; font-size:10.5px; line-height:1.4;">
+                  ${o.scentChoice ? `<div>• Hương giấy gói: <strong>${escapeHtml(o.scentChoice)}</strong></div>` : ''}
+                  ${o.giftWrap ? `<div>• <strong>GÓI HỘP QUÀ NƠ</strong> — Thiệp: "${escapeHtml(o.giftCardMessage || '')}"</div>` : ''}
+                  ${o.note ? `<div>• Ghi chú giao: <strong>${escapeHtml(o.note)}</strong></div>` : ''}
+                </div>`
+              : ''
+          }
+
+          <div style="display:grid; grid-template-columns:1.35fr 1fr; gap:8px; align-items:stretch; margin-top:auto;">
+            <div style="border:2.5px solid #111; padding:7px; text-align:center;">
+              <div style="font-size:10px; font-weight:800; text-transform:uppercase;">TIỀN THU HỘ (COD)</div>
+              <div style="font-size:20px; font-weight:900; margin-top:3px;">${codCollect > 0 ? formatVnd(codCollect) : '0đ'}</div>
+              <div style="font-size:9.5px; font-weight:700; margin-top:2px;">
+                ${isPaidQr ? '(KHÁCH ĐÃ CHUYỂN KHOẢN ĐỦ)' : o.paymentMethod === 'qr' ? '(CHỜ ĐỐI SOÁT QR / THU HỘ NẾU CHƯA CK)' : '(THU TIỀN MẶT KHI GIAO)'}
+              </div>
+            </div>
+            <div style="border:1px solid #111; padding:6px; text-align:center; display:flex; flex-direction:column; justify-content:space-between;">
+              <div style="font-size:9.5px; font-weight:800;">CHỮ KÝ NGƯỜI NHẬN</div>
+              <div style="font-size:8.5px; color:#555; margin-top:26px;">Xác nhận hàng nguyên vẹn</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // TEMPLATE 3: BILL NHIỆT THU NGÂN K80 (80mm)
+    if (tpl === 'thermal_k80') {
+      const k80Rows = items
+        .map((it) => {
+          const meta = [it.color, it.size]
+            .map((x) => String(x || '').trim())
+            .filter((x) => x && x !== 'Mặc định' && x !== 'Theo hình')
+            .join(' - ');
+          return `
+            <div style="padding:5px 0; border-bottom:1px dashed #aaa;">
+              <div style="font-weight:700;">${escapeHtml(it.name)}</div>
+              ${meta ? `<div style="font-size:11px; color:#444;">${escapeHtml(meta)}</div>` : ''}
+              <div style="display:flex; justify-content:space-between; font-size:11.5px; margin-top:2px;">
+                <span>${formatVnd(it.price)} × ${it.qty}</span>
+                <strong>${formatVnd(Number(it.price || 0) * Number(it.qty || 1))}</strong>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+
+      return `
+        <div class="print-sheet tpl-thermal_k80">
+          <div style="text-align:center; border-bottom:1.5px dashed #111; padding-bottom:8px; margin-bottom:8px;">
+            <div style="font-size:15px; font-weight:900;">${escapeHtml(sender.shopName.toUpperCase())}</div>
+            <div style="font-size:11px;">Hotline/Zalo: <strong>${escapeHtml(sender.senderPhone)}</strong></div>
+            <div style="font-size:10.5px; color:#333;">${escapeHtml(sender.senderAddress)}</div>
+            <div style="font-size:13px; font-weight:800; margin-top:6px;">HÓA ĐƠN BÁN HÀNG</div>
+            <div style="font-size:11.5px;">Mã: <strong>#${escapeHtml(o.orderCode)}</strong> • ${escapeHtml(createdStr)}</div>
+          </div>
+
+          <div style="border-bottom:1.5px dashed #111; padding-bottom:7px; margin-bottom:7px; font-size:11.5px; line-height:1.45;">
+            <div>Khách: <strong>${escapeHtml(o.customerName)}</strong></div>
+            <div>SĐT: <strong>${escapeHtml(o.customerPhone)}</strong></div>
+            <div>Đ/c: ${escapeHtml(fullAddress)}</div>
+            ${o.scentChoice ? `<div>Hương gói: ${escapeHtml(o.scentChoice)}</div>` : ''}
+            ${o.giftWrap ? `<div>Gói quà + Thiệp: "${escapeHtml(o.giftCardMessage || '')}"</div>` : ''}
+            ${o.note ? `<div>Ghi chú: ${escapeHtml(o.note)}</div>` : ''}
+          </div>
+
+          <div style="margin-bottom:8px;">${k80Rows}</div>
+
+          <div style="border-top:1.5px solid #111; padding-top:6px; font-size:12px; line-height:1.55;">
+            <div style="display:flex; justify-content:space-between;"><span>Tạm tính (${totalQty} món):</span><span>${formatVnd(subtotal)}</span></div>
+            ${discount > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Ưu đãi${o.couponCode ? ` (${escapeHtml(o.couponCode)})` : ''}:</span><span>-${formatVnd(discount)}</span></div>` : ''}
+            <div style="display:flex; justify-content:space-between;"><span>Phí vận chuyển:</span><span>${shipFee === 0 ? 'Miễn phí' : formatVnd(shipFee)}</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:14.5px; font-weight:900; border-top:1px dashed #111; margin-top:4px; padding-top:4px;">
+              <span>TỔNG CỘNG:</span><span>${formatVnd(totalAmount)}</span>
+            </div>
+            <div style="text-align:center; font-weight:800; font-size:11.5px; margin-top:6px; padding:4px; border:1px solid #111;">
+              ${isPaidQr ? 'ĐÃ THANH TOÁN QUA QR (THU HỘ: 0đ)' : `THU KHI GIAO (COD): ${formatVnd(codCollect)}`}
+            </div>
+          </div>
+
+          <div style="margin-top:10px; display:flex; flex-direction:column; align-items:center; text-align:center;">
+            ${renderBarcodeSvg(o.orderCode, 30)}
+            <div style="font-size:10.5px; margin-top:6px; line-height:1.4; color:#333;">${escapeHtml(sender.thankYouNote)}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // DEFAULT TEMPLATE 1: HÓA ĐƠN CHO KHÁCH HÀNG (A5 / A4 BOUTIQUE)
+    const tableRowsHtml = items
+      .map((it, idx) => {
+        const meta = [it.color, it.size]
+          .map((x) => String(x || '').trim())
+          .filter((x) => x && x !== 'Mặc định' && x !== 'Theo hình');
+        const lineTotal = Number(it.price || 0) * Math.max(1, Number(it.qty || 1));
+        return `
+          <tr>
+            <td style="text-align:center; width:36px; font-weight:700;">${idx + 1}</td>
+            <td>
+              <div style="font-weight:700; color:#23141b;">${escapeHtml(it.name)}</div>
+              ${meta.length > 0 ? `<div style="font-size:11px; color:#6b515d; margin-top:2px;">Phân loại: ${escapeHtml(meta.join(' • '))}</div>` : ''}
+            </td>
+            <td style="text-align:center; width:48px; font-weight:700;">${it.qty}</td>
+            <td style="text-align:right; width:96px;">${formatVnd(it.price)}</td>
+            <td style="text-align:right; width:105px; font-weight:800;">${formatVnd(lineTotal)}</td>
+          </tr>
+        `;
+      })
       .join('');
-    win.document.write(`
-      <html><head><title>Phiếu Gói Hàng #${escapeHtml(o.orderCode)}</title></head>
-      <body style="font-family:sans-serif; padding:24px; color:#2b151e;">
-        <h2 style="margin:0 0 4px;">NA 2HAND BOUTIQUE — PHIẾU GÓI HÀNG</h2>
-        <p style="margin:0 0 14px; font-size:13px; color:#666;">Mã đơn: <strong>#${escapeHtml(o.orderCode)}</strong> • ${new Date(o.createdAt).toLocaleString('vi-VN')}</p>
-        <div style="border:1px solid #ccc; border-radius:10px; padding:12px; margin-bottom:14px; font-size:14px; line-height:1.6;">
-          <div>Người nhận: <strong>${escapeHtml(o.customerName)}</strong> — SĐT: <strong>${escapeHtml(o.customerPhone)}</strong></div>
-          <div>Địa chỉ: ${escapeHtml(o.address)}, ${escapeHtml(o.district || '')}, ${escapeHtml(o.province || '')}</div>
-          <div>Hương giấy lụa: <strong>${escapeHtml(o.scentChoice || 'Hương Đào Trắng')}</strong></div>
-          ${o.giftWrap ? `<div>Quà tặng: <strong>Gói hộp nơ</strong> — Thiệp: "${escapeHtml(o.giftCardMessage || '')}"</div>` : ''}
-          ${o.note ? `<div>Ghi chú khách: "${escapeHtml(o.note)}"</div>` : ''}
+
+    return `
+      <div class="print-sheet tpl-invoice_a5">
+        <!-- Brand Header -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:14px; border-bottom:2px solid #e6c6d4; padding-bottom:14px; margin-bottom:14px;">
+          <div style="display:flex; gap:12px; align-items:center;">
+            <img src="${escapeHtml(logoUrl)}" alt="Logo" style="width:54px; height:54px; border-radius:50%; object-fit:cover; border:1.5px solid #e6c6d4;" onerror="this.style.display='none'" />
+            <div>
+              <div style="font-size:18px; font-weight:900; color:#2b151e; letter-spacing:0.01em;">${escapeHtml(sender.shopName)}</div>
+              <div style="font-size:11.5px; color:#5e424e; margin-top:2px;">Hotline / Zalo CSKH: <strong>${escapeHtml(sender.senderPhone)}</strong></div>
+              <div style="font-size:11.5px; color:#5e424e;">${escapeHtml(sender.senderAddress)}</div>
+            </div>
+          </div>
+          <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end;">
+            <div style="font-size:13px; font-weight:900; color:#be185d; text-transform:uppercase; letter-spacing:0.04em;">HÓA ĐƠN ĐẶT HÀNG</div>
+            <div style="font-size:12px; font-weight:800; margin:2px 0 4px;">Mã đơn: #${escapeHtml(o.orderCode)}</div>
+            ${renderBarcodeSvg(o.orderCode, 28)}
+            <div style="font-size:10.5px; color:#6b515d; margin-top:3px;">Ngày đặt: ${escapeHtml(createdStr)}</div>
+          </div>
         </div>
-        <table style="width:100%; border-collapse:collapse; font-size:14px; margin-bottom:14px;">${rows}</table>
-        <div style="text-align:right; font-size:16px;">
-          Thu hộ / Tổng đơn: <strong>${o.paymentMethod === 'cod' && o.paymentStatus !== 'paid' ? formatVnd(o.totalAmount) : '0đ (Đã TT QR)'}</strong>
+
+        <!-- Customer & Parcel Care Info -->
+        <div style="display:grid; grid-template-columns:1.25fr 1fr; gap:12px; margin-bottom:14px;">
+          <div style="background:#fdf8fa; border:1px solid #edd6e0; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.55;">
+            <div style="font-size:10.5px; font-weight:800; text-transform:uppercase; color:#9d174d; margin-bottom:3px;">THÔNG TIN KHÁCH HÀNG NHẬN ĐƠN</div>
+            <div>Người nhận: <strong style="font-size:13px;">${escapeHtml(o.customerName)}</strong></div>
+            <div>Điện thoại: <strong>${escapeHtml(o.customerPhone)}</strong></div>
+            <div>Địa chỉ giao: <strong>${escapeHtml(fullAddress)}</strong></div>
+          </div>
+          <div style="background:#fdf8fa; border:1px solid #edd6e0; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.55;">
+            <div style="font-size:10.5px; font-weight:800; text-transform:uppercase; color:#9d174d; margin-bottom:3px;">CHĂM SÓC GÓI HÀNG &amp; GHI CHÚ</div>
+            <div>Ướp hương giấy lụa: <strong>${escapeHtml(o.scentChoice || 'Hương Đào Trắng')}</strong></div>
+            <div>Quà tặng: <strong>${o.giftWrap ? 'Có gói hộp nơ tặng quà' : 'Đóng gói tiêu chuẩn'}</strong></div>
+            ${o.giftWrap && o.giftCardMessage ? `<div>Lời chúc thiệp: <em>"${escapeHtml(o.giftCardMessage)}"</em></div>` : ''}
+            ${o.note ? `<div>Lưu ý giao hàng: <strong>${escapeHtml(o.note)}</strong></div>` : ''}
+          </div>
         </div>
-        <script>window.print();<\/script>
-      </body></html>
-    `);
+
+        <!-- Items Table -->
+        <table class="p-table" style="margin-bottom:14px; border:1px solid #ead8e0;">
+          <thead>
+            <tr>
+              <th style="text-align:center;">STT</th>
+              <th>Tên sản phẩm &amp; Phân loại</th>
+              <th style="text-align:center;">SL</th>
+              <th style="text-align:right;">Đơn giá</th>
+              <th style="text-align:right;">Thành tiền</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRowsHtml}
+          </tbody>
+        </table>
+
+        <!-- Totals & Payment Box -->
+        <div style="display:grid; grid-template-columns:1fr 270px; gap:16px; align-items:start; margin-bottom:16px;">
+          <div style="border:1.5px dashed #e2bfd0; border-radius:10px; padding:10px 12px; background:#fffafb;">
+            <div style="font-size:11px; font-weight:800; text-transform:uppercase; color:#9d174d; margin-bottom:4px;">HÌNH THỨC &amp; TRẠNG THÁI THANH TOÁN</div>
+            <div style="font-size:12.5px; font-weight:700; color:#23141b;">
+              ${o.paymentMethod === 'qr' ? 'Chuyển khoản Quét mã QR' : 'Thanh toán khi nhận hàng (Ship COD)'}
+            </div>
+            <div style="margin-top:5px; display:inline-block; padding:4px 9px; border-radius:6px; font-size:12px; font-weight:800; background:${isPaidQr ? '#dcfce7' : '#ffe4e6'}; color:${isPaidQr ? '#166534' : '#be123c'};">
+              ${isPaidQr ? '✓ ĐÃ THANH TOÁN ĐỦ — CẦN THU KHI GIAO: 0đ' : `CẦN THU KHI GIAO HÀNG: ${formatVnd(codCollect)}`}
+            </div>
+          </div>
+
+          <div style="background:#fdf8fa; border:1px solid #ead5de; border-radius:10px; padding:10px 13px; font-size:12.5px; line-height:1.7;">
+            <div style="display:flex; justify-content:space-between;">
+              <span>Tạm tính (${totalQty} sản phẩm):</span>
+              <strong>${formatVnd(subtotal)}</strong>
+            </div>
+            ${
+              discount > 0
+                ? `<div style="display:flex; justify-content:space-between; color:#be185d;">
+                    <span>Ưu đãi Voucher${o.couponCode ? ` (${escapeHtml(o.couponCode)})` : ''}:</span>
+                    <strong>-${formatVnd(discount)}</strong>
+                  </div>`
+                : ''
+            }
+            <div style="display:flex; justify-content:space-between;">
+              <span>Phí vận chuyển:</span>
+              <strong>${shipFee === 0 ? 'Miễn phí' : formatVnd(shipFee)}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; border-top:1.5px solid #2b151e; margin-top:5px; padding-top:6px; font-size:15px; font-weight:900; color:#be185d;">
+              <span>TỔNG THANH TOÁN:</span>
+              <span>${formatVnd(totalAmount)}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Signatures -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; text-align:center; font-size:11.5px; margin:10px 0 38px;">
+          <div>
+            <strong>ĐẠI DIỆN CỬA HÀNG</strong>
+            <div style="font-size:10.5px; color:#777;">(Ký &amp; đóng dấu xác nhận)</div>
+          </div>
+          <div>
+            <strong>KHÁCH HÀNG / NGƯỜI NHẬN</strong>
+            <div style="font-size:10.5px; color:#777;">(Kiểm tra gói hàng &amp; ký nhận)</div>
+          </div>
+        </div>
+
+        <!-- Thank You & Care Note -->
+        <div style="border-top:1px dashed #dcc2ce; padding-top:9px; text-align:center; font-size:11.5px; color:#5e424e; line-height:1.5;">
+          <div style="font-weight:700; color:#9d174d;">${escapeHtml(sender.thankYouNote)}</div>
+          <div style="font-size:10.5px; color:#7c636e; margin-top:2px;">Mẹo bảo quản: Nên giặt tay nhẹ nhàng hoặc cho vào túi giặt để trang phục luôn giữ phom đẹp bền lâu nhất.</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderPrintStudioPreview() {
+    const stage = document.getElementById('print-studio-preview');
+    if (!stage) return;
+    const sender = getActiveSenderConfig();
+    const ordersToRender =
+      activePrintOrders.length > 0 ? activePrintOrders : [buildSampleOrderForPreview()];
+
+    const sheetsHtml = ordersToRender
+      .map((ord) => renderSingleOrderSheetHtml(ord, activePrintTemplate, sender))
+      .join('');
+
+    stage.innerHTML = `<style>${getPrintSheetCss(activePrintTemplate)}</style>${sheetsHtml}`;
+
+    document.querySelectorAll('.print-tpl-btn').forEach((btn) => {
+      btn.classList.toggle('btn-primary', btn.dataset.tpl === activePrintTemplate);
+    });
+  }
+
+  function openPrintStudioModal(ordersList, preferredTemplate = 'invoice_a5', sampleMode = false) {
+    isSamplePrintMode = sampleMode;
+    activePrintOrders = Array.isArray(ordersList) && ordersList.length > 0 ? ordersList : [buildSampleOrderForPreview()];
+    activePrintTemplate = preferredTemplate;
+
+    const s = shopData?.settings || {};
+    const phEl = document.getElementById('ps-sender-phone');
+    const adEl = document.getElementById('ps-sender-addr');
+    const ntEl = document.getElementById('ps-thank-note');
+    if (phEl) phEl.value = s.senderPhone || s.zaloPhone || '0359427135';
+    if (adEl) adEl.value = s.senderAddress || 'Kho NA 2HAND Boutique — Giao hàng toàn quốc';
+    if (ntEl) {
+      ntEl.value =
+        s.invoiceThankYouNote ||
+        'Cảm ơn nàng đã tin yêu NA 2HAND Boutique! Chúc nàng luôn xinh đẹp rạng rỡ trong thiết kế mới nhé ♡';
+    }
+
+    const titleEl = document.getElementById('print-studio-title');
+    if (titleEl) {
+      titleEl.textContent = sampleMode
+        ? '👁️ Xem Trước & Cấu Hình Mẫu Phiếu In Đơn Hàng (Đơn Mẫu)'
+        : activePrintOrders.length > 1
+        ? `🖨️ In Hàng Loạt ${activePrintOrders.length} Đơn Hàng Đã Chọn`
+        : `🖨️ In Đơn Hàng #${activePrintOrders[0].orderCode} — ${activePrintOrders[0].customerName}`;
+    }
+
+    renderPrintStudioPreview();
+    const modal = document.getElementById('print-studio-modal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  function executePrintWindow() {
+    const sender = getActiveSenderConfig();
+    const ordersToPrint =
+      activePrintOrders.length > 0 ? activePrintOrders : [buildSampleOrderForPreview()];
+    const sheetsHtml = ordersToPrint
+      .map((ord) => renderSingleOrderSheetHtml(ord, activePrintTemplate, sender))
+      .join('');
+
+    const win = window.open('', '_blank', 'width=860,height=780');
+    if (!win) {
+      showToast('Trình duyệt đang chặn cửa sổ bật lên — hãy cho phép Pop-up để in đơn nhé!', true);
+      return;
+    }
+    const docTitle =
+      ordersToPrint.length === 1
+        ? `Don-Hang-${ordersToPrint[0].orderCode}`
+        : `In-Hang-Loat-${ordersToPrint.length}-Don`;
+
+    win.document.write(`<!DOCTYPE html>
+      <html lang="vi">
+      <head>
+        <meta charset="UTF-8" />
+        <title>${escapeHtml(docTitle)}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+        <style>${getPrintSheetCss(activePrintTemplate)}</style>
+      </head>
+      <body style="margin:0; padding:12px; background:#fff;">
+        ${sheetsHtml}
+        <script>
+          window.onload = function () {
+            setTimeout(function () { window.focus(); window.print(); }, 250);
+          };
+        <\/script>
+      </body>
+      </html>`);
     win.document.close();
   }
+
+  document.querySelectorAll('.print-tpl-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      activePrintTemplate = btn.dataset.tpl || 'invoice_a5';
+      renderPrintStudioPreview();
+    });
+  });
+
+  document.getElementById('btn-toggle-print-sender-cfg')?.addEventListener('click', () => {
+    const box = document.getElementById('print-sender-quick-cfg');
+    if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  });
+
+  ['ps-sender-phone', 'ps-sender-addr', 'ps-thank-note'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('input', renderPrintStudioPreview);
+  });
+
+  document.getElementById('btn-save-print-sender-cfg')?.addEventListener('click', async () => {
+    const senderPhone = document.getElementById('ps-sender-phone')?.value.trim() || '0359427135';
+    const senderAddress = document.getElementById('ps-sender-addr')?.value.trim() || '';
+    const invoiceThankYouNote = document.getElementById('ps-thank-note')?.value.trim() || '';
+    try {
+      await apiFetch('/api/shop/admin/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ senderPhone, senderAddress, invoiceThankYouNote })
+      });
+      if (shopData && shopData.settings) {
+        shopData.settings.senderPhone = senderPhone;
+        shopData.settings.senderAddress = senderAddress;
+        shopData.settings.invoiceThankYouNote = invoiceThankYouNote;
+      }
+      populateSettingsForm();
+      renderPrintStudioPreview();
+      showToast('Đã lưu thông tin người gửi & lời cảm ơn trên phiếu in! 🖨️');
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  });
+
+  document.getElementById('btn-execute-print')?.addEventListener('click', executePrintWindow);
+  document.getElementById('btn-close-print-studio')?.addEventListener('click', () => {
+    const modal = document.getElementById('print-studio-modal');
+    if (modal) modal.style.display = 'none';
+  });
+  document.getElementById('print-studio-modal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'print-studio-modal') e.currentTarget.style.display = 'none';
+  });
+
+  document.getElementById('btn-preview-sample-invoice')?.addEventListener('click', () => {
+    const realFirst = (shopData?.orders || [])[0];
+    openPrintStudioModal(realFirst ? [realFirst] : [], 'invoice_a5', !realFirst);
+  });
+
+  document.getElementById('btn-print-selected-orders')?.addEventListener('click', () => {
+    const allOrders = shopData?.orders || [];
+    const chosen = allOrders.filter((o) => selectedOrderIds.has(o.id));
+    if (chosen.length === 0) {
+      if (allOrders.length === 0) {
+        openPrintStudioModal([], 'invoice_a5', true);
+        showToast('Hiện chưa có đơn đặt thật — đang mở Đơn Mẫu để bạn xem thử và in test nhé!');
+        return;
+      }
+      showToast('Hãy tích chọn ít nhất 1 đơn hàng ở cột đầu tiên để in hàng loạt nhé!', true);
+      return;
+    }
+    openPrintStudioModal(chosen, 'invoice_a5', false);
+  });
 
   function renderOrders() {
     const tbody = document.getElementById('orders-tbody');
@@ -295,15 +873,18 @@
       );
     }
 
+    const selectAllChk = document.getElementById('ord-select-all');
     if (orders.length === 0) {
+      if (selectAllChk) selectAllChk.checked = false;
       tbody.innerHTML = `
         <tr>
-          <td colspan="5" style="text-align:center; padding:32px; color:var(--muted);">
-            Chưa có đơn đặt hàng nào khớp bộ lọc. Hãy thử đặt 1 đơn mẫu trên trang <a href="/shop" target="_blank" style="color:var(--pri); font-weight:700;">/shop</a> nhé!
+          <td colspan="6" style="text-align:center; padding:32px; color:var(--muted);">
+            Chưa có đơn đặt hàng nào khớp bộ lọc. Bạn có thể bấm nút <strong>👁️ Mẫu In &amp; Cấu Hình Phiếu Đơn</strong> phía trên để xem trước &amp; in thử Hóa đơn khách hàng / Tem dán gói hàng nhé!
           </td>
         </tr>
       `;
       renderAdminPager('orders-pagination', 1, 0, () => {});
+      updateSelectedOrdersCountUI();
       return;
     }
 
@@ -316,9 +897,24 @@
       renderOrders();
     });
 
+    if (selectAllChk) {
+      selectAllChk.checked = pagedOrders.length > 0 && pagedOrders.every((o) => selectedOrderIds.has(o.id));
+      selectAllChk.onchange = () => {
+        if (selectAllChk.checked) {
+          pagedOrders.forEach((o) => selectedOrderIds.add(o.id));
+        } else {
+          pagedOrders.forEach((o) => selectedOrderIds.delete(o.id));
+        }
+        updateSelectedOrdersCountUI();
+        renderOrders();
+      };
+    }
+    updateSelectedOrdersCountUI();
+
     tbody.innerHTML = pagedOrders
       .map((o) => {
         const dt = o.createdAt ? new Date(o.createdAt).toLocaleString('vi-VN') : '';
+        const isSelected = selectedOrderIds.has(o.id);
         const itemsHtml = (o.items || [])
           .map(
             (it) => `
@@ -339,19 +935,24 @@
             : `<span class="badge" style="background:#fef3c7; color:#92400e;">COD nhận hàng</span>`;
 
         return `
-          <tr>
+          <tr style="${isSelected ? 'background:#fff5f9;' : ''}">
+            <td style="text-align:center;">
+              <input type="checkbox" class="ord-row-chk" data-id="${escapeHtml(o.id)}" ${isSelected ? 'checked' : ''} />
+            </td>
             <td>
               <div style="font-weight:800; color:var(--pri); font-size:0.88rem;">#${escapeHtml(o.orderCode)}</div>
               <div style="font-size:0.72rem; color:var(--muted); margin-top:2px;">${escapeHtml(dt)}</div>
               ${o.transferNote && o.paymentMethod === 'qr' ? `<div style="font-size:0.7rem; margin-top:4px; background:#fff5f9; padding:2px 6px; border-radius:6px; display:inline-block;">ND: <code>${escapeHtml(o.transferNote)}</code></div>` : ''}
-              <div style="margin-top:6px;">
-                <button type="button" class="btn btn-sm btn-print-slip" data-id="${escapeHtml(o.id)}">In Phiếu Gói</button>
+              <div style="margin-top:6px; display:flex; gap:5px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-sm btn-primary btn-print-invoice" data-id="${escapeHtml(o.id)}" style="padding:4px 8px; font-size:0.72rem;" title="In Hóa đơn bán lẻ gửi cho khách (A5/A4/K80)">🧾 In Hóa Đơn Khách</button>
+                <button type="button" class="btn btn-sm btn-print-label" data-id="${escapeHtml(o.id)}" style="padding:4px 8px; font-size:0.72rem;" title="In Tem vận đơn dán ngoài gói hàng (A6)">📦 In Tem Gói</button>
               </div>
             </td>
             <td>
               <div style="font-weight:700;">${escapeHtml(o.customerName)}</div>
               <div style="font-size:0.78rem; color:#0f766e; font-weight:700;">${escapeHtml(o.customerPhone)}</div>
               <div style="font-size:0.74rem; color:var(--muted); max-width:250px;">${escapeHtml(o.address)}${o.district ? `, ${escapeHtml(o.district)}` : ''}${o.province ? `, ${escapeHtml(o.province)}` : ''}</div>
+              ${o.shippingRegionLabel ? `<div style="font-size:0.71rem; color:#0f766e; font-weight:700; margin-top:2px;">🚚 ${escapeHtml(o.shippingRegionLabel)} • Ship khách trả: ${formatVnd(o.shippingFee || 0)}${Number(o.shippingShopSubsidy || 0) > 0 ? ` (Shop hỗ trợ ${formatVnd(o.shippingShopSubsidy)})` : ''}</div>` : ''}
               ${o.scentChoice ? `<div style="font-size:0.72rem; color:#9d174d; margin-top:3px;">Hương gói: <strong>${escapeHtml(o.scentChoice)}</strong></div>` : ''}
               ${o.giftWrap ? `<div style="font-size:0.72rem; color:#7e22ce; margin-top:2px;">Gói quà nơ • Thiệp: "${escapeHtml(o.giftCardMessage || '')}"</div>` : ''}
               ${o.note ? `<div style="font-size:0.72rem; color:#be185d; margin-top:2px;">Ghi chú: "${escapeHtml(o.note)}"</div>` : ''}
@@ -384,10 +985,26 @@
       })
       .join('');
 
-    tbody.querySelectorAll('.btn-print-slip').forEach((btn) => {
+    tbody.querySelectorAll('.ord-row-chk').forEach((chk) => {
+      chk.addEventListener('change', () => {
+        if (chk.checked) selectedOrderIds.add(chk.dataset.id);
+        else selectedOrderIds.delete(chk.dataset.id);
+        updateSelectedOrdersCountUI();
+        renderOrders();
+      });
+    });
+
+    tbody.querySelectorAll('.btn-print-invoice').forEach((btn) => {
       btn.addEventListener('click', () => {
         const ord = (shopData.orders || []).find((x) => x.id === btn.dataset.id);
-        if (ord) printPackingSlip(ord);
+        if (ord) openPrintStudioModal([ord], 'invoice_a5', false);
+      });
+    });
+
+    tbody.querySelectorAll('.btn-print-label').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const ord = (shopData.orders || []).find((x) => x.id === btn.dataset.id);
+        if (ord) openPrintStudioModal([ord], 'label_a6', false);
       });
     });
 
@@ -470,6 +1087,9 @@
     box.querySelectorAll('.var-inp-price').forEach((el) => {
       el.addEventListener('input', () => {
         editingVariants[Number(el.dataset.idx)].price = Number(el.value || 0);
+        const curTag = document.getElementById('pf-tag')?.value || 'manual';
+        const customLockEl = document.getElementById('pf-custom-price-lock');
+        if (curTag !== 'manual' && customLockEl) customLockEl.checked = true;
       });
     });
     const syncTotalStockInputFromVariants = () => {
@@ -493,6 +1113,55 @@
       });
     });
   }
+
+  let lastLoadedFormPrice = 0;
+
+  document.getElementById('pf-price')?.addEventListener('input', (e) => {
+    const newPrice = Number(e.target.value || 0);
+    const curTag = document.getElementById('pf-tag')?.value || 'manual';
+    const customLockEl = document.getElementById('pf-custom-price-lock');
+    if (curTag !== 'manual' && document.getElementById('pf-id')?.value && customLockEl) {
+      customLockEl.checked = true;
+    }
+    // If all existing variants share a uniform price matching lastLoadedFormPrice, keep them synced automatically
+    if (
+      editingVariants.length > 0 &&
+      newPrice > 0 &&
+      editingVariants.every((v) => Number(v.price || 0) === lastLoadedFormPrice)
+    ) {
+      editingVariants.forEach((v) => {
+        v.price = newPrice;
+      });
+      lastLoadedFormPrice = newPrice;
+      renderVariantEditorRows();
+    }
+  });
+
+  document.getElementById('btn-sync-price-to-vars')?.addEventListener('click', () => {
+    const basePrice = Number(document.getElementById('pf-price')?.value || 0);
+    if (basePrice <= 0) {
+      showToast('Hãy nhập Giá bán hiện tại trước nhé!', true);
+      return;
+    }
+    if (editingVariants.length === 0) {
+      showToast('Sản phẩm này chưa có phân hệ con nào.', true);
+      return;
+    }
+    editingVariants.forEach((v) => {
+      v.price = basePrice;
+      if (v.sizePrices && typeof v.sizePrices === 'object') {
+        Object.keys(v.sizePrices).forEach((sk) => {
+          v.sizePrices[sk] = basePrice;
+        });
+      }
+    });
+    lastLoadedFormPrice = basePrice;
+    const curTag = document.getElementById('pf-tag')?.value || 'manual';
+    const customLockEl = document.getElementById('pf-custom-price-lock');
+    if (curTag !== 'manual' && customLockEl) customLockEl.checked = true;
+    renderVariantEditorRows();
+    showToast(`Đã áp giá ${formatVnd(basePrice)} xuống toàn bộ ${editingVariants.length} phân hệ mẫu! ⚡`);
+  });
 
   document.getElementById('btn-add-variant-row')?.addEventListener('click', () => {
     const basePrice = Number(document.getElementById('pf-price')?.value || 110000);
@@ -667,6 +1336,9 @@
     document.getElementById('pf-enabled').checked = true;
     const lockChk = document.getElementById('pf-locked');
     if (lockChk) lockChk.checked = false;
+    const customPriceLock = document.getElementById('pf-custom-price-lock');
+    if (customPriceLock) customPriceLock.checked = false;
+    lastLoadedFormPrice = 0;
     document.getElementById('prod-form-heading').textContent = '➕ Thêm Sản Phẩm Mới (Mặc định: 1. Hàng tự đăng)';
   }
 
@@ -737,7 +1409,8 @@
       description: document.getElementById('pf-desc').value.trim(),
       isFlashSale: document.getElementById('pf-flash').checked,
       enabled: document.getElementById('pf-enabled').checked,
-      isLocked: Boolean(document.getElementById('pf-locked')?.checked)
+      isLocked: Boolean(document.getElementById('pf-locked')?.checked),
+      customPriceOverride: chosenTag === 'manual' ? false : Boolean(document.getElementById('pf-custom-price-lock')?.checked)
     };
 
     try {
@@ -852,6 +1525,102 @@
     }
   });
 
+  // --- BULK PERCENTAGE PRICE ADJUSTMENT CONTROLS ---
+  function updateBulkPricePreviewUI() {
+    const pct = Number(document.getElementById('bulk-adj-pct')?.value || 0);
+    const step = Math.max(1, Number(document.getElementById('bulk-adj-round')?.value || 1000));
+    const sampleBase = 110000;
+    const sampleOut =
+      pct === 0
+        ? sampleBase
+        : Math.max(1000, Math.round((sampleBase * (1 + pct / 100)) / step) * step);
+    const prevEl = document.getElementById('bulk-adj-preview-text');
+    if (prevEl) {
+      const diffTxt =
+        pct < 0
+          ? ` (giảm ${Math.abs(pct)}% so với giá sàn)`
+          : pct > 0
+          ? ` (tăng +${pct}% so với giá sàn)`
+          : ' (giữ đúng giá gốc trên sàn)';
+      prevEl.textContent = `Ví dụ minh họa: SP trên sàn ${formatVnd(sampleBase)} → Giá bán trên Web: ${formatVnd(sampleOut)}${diffTxt}`;
+    }
+    document.querySelectorAll('.bulk-pct-preset').forEach((btn) => {
+      btn.classList.toggle('btn-primary', Number(btn.dataset.pct) === pct);
+    });
+  }
+
+  function populateBulkPriceControls() {
+    const s = shopData?.settings || {};
+    const curPct = Number(s.shopeePriceAdjustPercent || 0);
+    const curRound = Number(s.shopeePriceRoundStep || 1000);
+    const pctInp = document.getElementById('bulk-adj-pct');
+    const roundSel = document.getElementById('bulk-adj-round');
+    const crossChk = document.getElementById('bulk-adj-cross');
+    const badgeEl = document.getElementById('bulk-adj-current-badge');
+
+    if (pctInp) pctInp.value = String(curPct);
+    if (roundSel) roundSel.value = String([1000, 500, 1].includes(curRound) ? curRound : 1000);
+    if (crossChk) crossChk.checked = s.showPlatformPriceCrossedOut !== false;
+    if (badgeEl) {
+      badgeEl.textContent =
+        curPct === 0
+          ? 'Đang áp dụng: 0% (Bằng giá sàn)'
+          : curPct < 0
+          ? `Đang áp dụng: Giảm ${Math.abs(curPct)}% so với sàn`
+          : `Đang áp dụng: Tăng +${curPct}% so với sàn`;
+    }
+    updateBulkPricePreviewUI();
+  }
+
+  document.querySelectorAll('.bulk-pct-preset').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const pctInp = document.getElementById('bulk-adj-pct');
+      if (pctInp) {
+        pctInp.value = btn.dataset.pct || '0';
+        updateBulkPricePreviewUI();
+      }
+    });
+  });
+
+  document.getElementById('bulk-adj-pct')?.addEventListener('input', updateBulkPricePreviewUI);
+  document.getElementById('bulk-adj-round')?.addEventListener('change', updateBulkPricePreviewUI);
+
+  document.getElementById('btn-apply-bulk-price')?.addEventListener('click', async () => {
+    const targetTag = document.getElementById('bulk-adj-target')?.value || 'shopee';
+    const adjustPercent = Number(document.getElementById('bulk-adj-pct')?.value || 0);
+    const roundStep = Number(document.getElementById('bulk-adj-round')?.value || 1000);
+    const showPlatformPriceCrossedOut = Boolean(document.getElementById('bulk-adj-cross')?.checked);
+    const respectManualOverrides = Boolean(document.getElementById('bulk-adj-respect-manual')?.checked);
+
+    const btn = document.getElementById('btn-apply-bulk-price');
+    const oldHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Đang cập nhật giá...';
+    }
+    try {
+      const res = await apiFetch('/api/shop/admin/products/bulk-price-adjust', {
+        method: 'POST',
+        body: JSON.stringify({
+          targetTag,
+          adjustPercent,
+          roundStep,
+          showPlatformPriceCrossedOut,
+          respectManualOverrides
+        })
+      });
+      showToast(res.message || 'Đã cập nhật giá hàng loạt thành công! 💰');
+      await loadOverview();
+    } catch (err) {
+      showToast(err.message, true);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+      }
+    }
+  });
+
   function renderProductsTable() {
     const tbody = document.getElementById('products-tbody');
     if (!tbody || !shopData) return;
@@ -936,6 +1705,8 @@
             <td>
               <div style="font-weight:800; color:var(--pri);">${priceHtml}</div>
               ${p.originalPrice > Math.max(p.price, maxP) ? `<div style="font-size:0.72rem; text-decoration:line-through; color:var(--muted);">${formatVnd(p.originalPrice)}</div>` : ''}
+              ${cloned && Number(p.platformBasePrice) > 0 && Number(p.platformBasePrice) !== Number(p.price) ? `<div style="font-size:0.69rem; color:#9a3412;">Giá sàn: ${formatVnd(p.platformBasePrice)}${Number(p.platformMaxPrice) > Number(p.platformBasePrice) ? ` – ${formatVnd(p.platformMaxPrice)}` : ''}</div>` : ''}
+              ${p.customPriceOverride ? `<div style="margin-top:2px;"><span class="badge" style="background:#fef3c7; color:#92400e; font-size:0.66rem; padding:2px 6px;">📌 Giá riêng</span></div>` : ''}
             </td>
             <td>
               <div>Kho: <strong>${p.stock ?? 0}</strong></div>
@@ -1010,7 +1781,10 @@
         document.getElementById('pf-name').value = prod.name || '';
         document.getElementById('pf-category').value = prod.category || '';
         document.getElementById('pf-price').value = prod.price || 0;
+        lastLoadedFormPrice = Number(prod.price || 0);
         document.getElementById('pf-orig-price').value = prod.originalPrice || 0;
+        const customPriceLock = document.getElementById('pf-custom-price-lock');
+        if (customPriceLock) customPriceLock.checked = Boolean(prod.customPriceOverride);
         document.getElementById('pf-sizes').value = (prod.sizes || []).join(', ');
         document.getElementById('pf-colors').value = (prod.colors || []).join(', ');
         document.getElementById('pf-stock').value = prod.stock ?? 10;
@@ -1993,6 +2767,71 @@
     renderLookbookSetsEditor();
   });
 
+  // --- 3-REGION SHIPPING & HIDDEN SELLER/BUYER SPLIT WIRING ---
+  function refreshShippingRegionSummaryUI() {
+    ['bac', 'trung', 'nam'].forEach((reg) => {
+      const fallbackFee = reg === 'bac' ? 30000 : reg === 'trung' ? 40000 : 50000;
+      const baseFee = Math.max(0, Number(document.getElementById(`st-ship-${reg}`)?.value ?? fallbackFee));
+      const shopPct = Math.min(100, Math.max(0, Number(document.getElementById(`st-split-shop-${reg}`)?.value ?? 0)));
+      const custPct = Math.max(0, 100 - shopPct);
+      const custFee = Math.max(0, Math.round((baseFee * custPct) / 100));
+      const shopSub = Math.max(0, baseFee - custFee);
+
+      const noteEl = document.getElementById(`st-ship-note-${reg}`);
+      if (noteEl) {
+        noteEl.textContent =
+          shopPct > 0
+            ? `Khách trả trên giỏ hàng: ${formatVnd(custFee)} (Shop chịu ${shopPct}% = ${formatVnd(shopSub)})`
+            : `Khách trả trên giỏ hàng: ${formatVnd(custFee)}`;
+      }
+      const sumEl = document.getElementById(`st-split-summary-${reg}`);
+      if (sumEl) {
+        sumEl.textContent = `👉 Khách trả: ${formatVnd(custFee)} (${custPct}%) • Shop hỗ trợ: ${formatVnd(shopSub)} (${shopPct}%)`;
+      }
+      document.querySelectorAll(`.ship-ratio-preset[data-reg="${reg}"]`).forEach((btn) => {
+        btn.classList.toggle('btn-primary', Number(btn.dataset.shop) === shopPct);
+      });
+    });
+  }
+
+  document.getElementById('btn-toggle-hidden-ship-split')?.addEventListener('click', (e) => {
+    const panel = document.getElementById('hidden-ship-split-panel');
+    if (!panel) return;
+    const willOpen = panel.style.display === 'none';
+    panel.style.display = willOpen ? 'block' : 'none';
+    e.currentTarget.textContent = willOpen
+      ? '🔓 Thu gọn cấu hình ẩn: Tỉ lệ chịu phí ship 2 bên'
+      : '🔒 Mở cấu hình ẩn: Tỉ lệ chịu phí ship 2 bên';
+  });
+
+  ['bac', 'trung', 'nam'].forEach((reg) => {
+    document.getElementById(`st-ship-${reg}`)?.addEventListener('input', refreshShippingRegionSummaryUI);
+    document.getElementById(`st-split-shop-${reg}`)?.addEventListener('input', (e) => {
+      const sPct = Math.min(100, Math.max(0, Number(e.target.value || 0)));
+      const cInp = document.getElementById(`st-split-cust-${reg}`);
+      if (cInp) cInp.value = String(Math.max(0, 100 - sPct));
+      refreshShippingRegionSummaryUI();
+    });
+    document.getElementById(`st-split-cust-${reg}`)?.addEventListener('input', (e) => {
+      const cPct = Math.min(100, Math.max(0, Number(e.target.value || 0)));
+      const sInp = document.getElementById(`st-split-shop-${reg}`);
+      if (sInp) sInp.value = String(Math.max(0, 100 - cPct));
+      refreshShippingRegionSummaryUI();
+    });
+  });
+
+  document.querySelectorAll('.ship-ratio-preset').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const reg = btn.dataset.reg;
+      const sPct = Math.min(100, Math.max(0, Number(btn.dataset.shop || 0)));
+      const sInp = document.getElementById(`st-split-shop-${reg}`);
+      const cInp = document.getElementById(`st-split-cust-${reg}`);
+      if (sInp) sInp.value = String(sPct);
+      if (cInp) cInp.value = String(100 - sPct);
+      refreshShippingRegionSummaryUI();
+    });
+  });
+
   function populateSettingsForm() {
     if (!shopData || !shopData.settings) return;
     const s = shopData.settings;
@@ -2021,7 +2860,7 @@
         : buildDefaultLookbookSetsSeed();
     renderLookbookSetsEditor();
 
-    // QR & Store Settings
+    // QR & Store Settings + 3-Region Shipping
     document.getElementById('st-qr-enabled').checked = s.qrEnabled !== false;
     document.getElementById('st-cod-enabled').checked = s.codEnabled !== false;
     document.getElementById('st-qr-mode').value = s.qrMode || 'custom_image';
@@ -2034,10 +2873,44 @@
     document.getElementById('st-bank-owner').value = s.bankAccountName || '';
     document.getElementById('st-shop-name').value = s.shopName || 'NA 2HAND Boutique';
     document.getElementById('st-announce').value = s.announcement || '';
-    document.getElementById('st-ship-fee').value = s.shippingFee ?? 25000;
+
+    const regs = s.shippingRegions || {};
+    const bacFee = Number(regs.bac?.baseFee ?? 30000);
+    const trungFee = Number(regs.trung?.baseFee ?? 40000);
+    const namFee = Number(regs.nam?.baseFee ?? 50000);
+    const bacShop = Math.min(100, Math.max(0, Number(regs.bac?.shopSharePercent ?? 0)));
+    const trungShop = Math.min(100, Math.max(0, Number(regs.trung?.shopSharePercent ?? 0)));
+    const namShop = Math.min(100, Math.max(0, Number(regs.nam?.shopSharePercent ?? 0)));
+
+    document.getElementById('st-ship-bac').value = bacFee;
+    document.getElementById('st-ship-trung').value = trungFee;
+    document.getElementById('st-ship-nam').value = namFee;
+    document.getElementById('st-split-shop-bac').value = bacShop;
+    document.getElementById('st-split-cust-bac').value = 100 - bacShop;
+    document.getElementById('st-split-shop-trung').value = trungShop;
+    document.getElementById('st-split-cust-trung').value = 100 - trungShop;
+    document.getElementById('st-split-shop-nam').value = namShop;
+    document.getElementById('st-split-cust-nam').value = 100 - namShop;
+
+    const defRegEl = document.getElementById('st-default-ship-region');
+    if (defRegEl) defRegEl.value = s.defaultShippingRegion || 'bac';
+    const fsEnEl = document.getElementById('st-freeship-enabled');
+    if (fsEnEl) fsEnEl.checked = s.freeShipEnabled !== false;
     document.getElementById('st-freeship').value = s.freeShipThreshold ?? 299000;
+    const senderPhEl = document.getElementById('st-sender-phone');
+    if (senderPhEl) senderPhEl.value = s.senderPhone || s.zaloPhone || '0359427135';
+    const senderAdEl = document.getElementById('st-sender-address');
+    if (senderAdEl) senderAdEl.value = s.senderAddress || 'Kho NA 2HAND Boutique — Giao hàng toàn quốc';
+    const invNoteEl = document.getElementById('st-invoice-note');
+    if (invNoteEl) {
+      invNoteEl.value =
+        s.invoiceThankYouNote ||
+        'Cảm ơn nàng đã tin yêu NA 2HAND Boutique! Chúc nàng luôn xinh đẹp rạng rỡ trong thiết kế mới nhé ♡';
+    }
     document.getElementById('st-tele-token').value = s.telegramBotToken || '';
     document.getElementById('st-tele-chat').value = s.telegramChatId || '';
+
+    refreshShippingRegionSummaryUI();
   }
 
   document.getElementById('st-hero-img1')?.addEventListener('input', (e) => {
@@ -2130,8 +3003,29 @@
       bankAccountName: document.getElementById('st-bank-owner').value.trim(),
       shopName: document.getElementById('st-shop-name').value.trim(),
       announcement: document.getElementById('st-announce').value.trim(),
-      shippingFee: Number(document.getElementById('st-ship-fee').value || 0),
+      shippingRegions: {
+        bac: {
+          label: 'Miền Bắc',
+          baseFee: Math.max(0, Number(document.getElementById('st-ship-bac')?.value ?? 30000)),
+          shopSharePercent: Math.min(100, Math.max(0, Number(document.getElementById('st-split-shop-bac')?.value ?? 0)))
+        },
+        trung: {
+          label: 'Miền Trung',
+          baseFee: Math.max(0, Number(document.getElementById('st-ship-trung')?.value ?? 40000)),
+          shopSharePercent: Math.min(100, Math.max(0, Number(document.getElementById('st-split-shop-trung')?.value ?? 0)))
+        },
+        nam: {
+          label: 'Miền Nam',
+          baseFee: Math.max(0, Number(document.getElementById('st-ship-nam')?.value ?? 50000)),
+          shopSharePercent: Math.min(100, Math.max(0, Number(document.getElementById('st-split-shop-nam')?.value ?? 0)))
+        }
+      },
+      defaultShippingRegion: document.getElementById('st-default-ship-region')?.value || 'bac',
+      freeShipEnabled: Boolean(document.getElementById('st-freeship-enabled')?.checked),
       freeShipThreshold: Number(document.getElementById('st-freeship').value || 0),
+      senderPhone: document.getElementById('st-sender-phone')?.value.trim() || '0359427135',
+      senderAddress: document.getElementById('st-sender-address')?.value.trim() || 'Kho NA 2HAND Boutique — Giao hàng toàn quốc',
+      invoiceThankYouNote: document.getElementById('st-invoice-note')?.value.trim() || '',
       telegramBotToken: document.getElementById('st-tele-token').value.trim(),
       telegramChatId: document.getElementById('st-tele-chat').value.trim()
     };

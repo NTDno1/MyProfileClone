@@ -18,7 +18,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,500;1,600;1,700&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="/css/shop.css?v=7" />
+  <link rel="stylesheet" href="/css/shop.css?v=8" />
 </head>
 
 <body>
@@ -562,7 +562,7 @@
         </div>
         <div class="summary-line">
           <span>Phí vận chuyển</span>
-          <strong id="cart-shipping">25.000đ</strong>
+          <strong id="cart-shipping">30.000đ</strong>
         </div>
         <div class="summary-total">
           <strong>Tổng thanh toán</strong>
@@ -604,11 +604,13 @@
 
           <div class="form-grid-2">
             <div>
-              <label class="field-lbl">Tỉnh / Thành phố *</label>
-              <input type="text" id="chk-province" class="cute-input" placeholder="Hà Nội / TP.HCM..." required />
+              <label class="field-lbl" for="chk-province">Tỉnh / Thành phố *</label>
+              <select id="chk-province" class="cute-input" required>
+                <option value="">-- Chọn Tỉnh / Thành phố --</option>
+              </select>
             </div>
             <div>
-              <label class="field-lbl">Quận / Huyện / Phường *</label>
+              <label class="field-lbl" for="chk-district">Quận / Huyện / Phường *</label>
               <input type="text" id="chk-district" class="cute-input" placeholder="Cầu Giấy / Quận 1..." required />
             </div>
           </div>
@@ -667,6 +669,25 @@
             <div class="qr-bank-meta" id="checkout-qr-bank-text"></div>
             <div class="qr-hint-sub">Sau khi bấm Đặt Hàng, hệ thống sẽ tạo Mã Đơn riêng kèm cú pháp chuyển khoản chính
               xác cho nàng.</div>
+          </div>
+
+          <div class="checkout-summary-card" id="checkout-summary-box">
+            <div class="summary-line">
+              <span>Tạm tính sản phẩm</span>
+              <strong id="chk-sum-subtotal">0đ</strong>
+            </div>
+            <div class="summary-line discount" id="chk-sum-discount-row" style="display:none;">
+              <span>Ưu đãi voucher</span>
+              <strong id="chk-sum-discount">-0đ</strong>
+            </div>
+            <div class="summary-line">
+              <span id="chk-sum-ship-label">Phí vận chuyển</span>
+              <strong id="chk-sum-shipping">30.000đ</strong>
+            </div>
+            <div class="summary-total" style="margin-bottom:0;">
+              <strong>Tổng thanh toán</strong>
+              <strong id="chk-sum-total">0đ</strong>
+            </div>
           </div>
 
           <button type="submit" id="btn-submit-order" class="cta-ribbon shimmer-sheen"
@@ -737,7 +758,7 @@
     </button>
   </nav>
 
-  <script src="/js/shop.js?v=9"></script>
+  <script src="/js/shop.js?v=11"></script>
 </body>
 
 </html>

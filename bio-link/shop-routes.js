@@ -295,6 +295,193 @@ function sanitizeSizeChartObj(c, fallbackIdx = 1) {
   };
 }
 
+function stripVnAccents(str) {
+  return String(str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const VN_REGION_KEYWORDS = {
+  nam: [
+    'ho chi minh', 'tphcm', 'tp hcm', 'hcm', 'sai gon', 'saigon',
+    'binh duong', 'dong nai', 'ba ria', 'vung tau', 'tay ninh', 'binh phuoc',
+    'long an', 'tien giang', 'ben tre', 'tra vinh', 'vinh long', 'dong thap',
+    'an giang', 'kien giang', 'phu quoc', 'can tho', 'hau giang', 'soc trang',
+    'bac lieu', 'ca mau'
+  ],
+  trung: [
+    'thanh hoa', 'nghe an', 'vinh', 'ha tinh', 'quang binh', 'quang tri',
+    'thua thien hue', 'tp hue', 'hue', 'da nang', 'danang', 'quang nam', 'hoi an',
+    'quang ngai', 'binh dinh', 'quy nhon', 'phu yen', 'khanh hoa', 'nha trang',
+    'ninh thuan', 'binh thuan', 'phan thiet', 'kon tum', 'gia lai', 'pleiku',
+    'dak lak', 'dac lac', 'buon ma thuot', 'dak nong', 'dac nong', 'lam dong', 'da lat', 'dalat'
+  ],
+  bac: [
+    'ha noi', 'hanoi', 'hai phong', 'quang ninh', 'ha long', 'bac ninh',
+    'hai duong', 'hung yen', 'vinh phuc', 'thai nguyen', 'bac giang', 'phu tho',
+    'nam dinh', 'thai binh', 'ninh binh', 'ha nam', 'hoa binh', 'lao cai', 'sapa',
+    'yen bai', 'tuyen quang', 'ha giang', 'cao bang', 'bac kan', 'bac can',
+    'lang son', 'dien bien', 'lai chau', 'son la'
+  ]
+};
+
+function detectVietnamRegion(provinceInput) {
+  const norm = stripVnAccents(provinceInput);
+  if (!norm) return '';
+  const padded = ` ${norm} `;
+  for (const reg of ['nam', 'trung', 'bac']) {
+    for (const kw of VN_REGION_KEYWORDS[reg]) {
+      if (padded.includes(` ${kw} `)) return reg;
+    }
+  }
+  return '';
+}
+
+const DEFAULT_SHIPPING_REGIONS = {
+  bac: { label: 'Miền Bắc', baseFee: 30000, shopSharePercent: 0 },
+  trung: { label: 'Miền Trung', baseFee: 40000, shopSharePercent: 0 },
+  nam: { label: 'Miền Nam', baseFee: 50000, shopSharePercent: 0 }
+};
+
+function sanitizeShippingRegions(raw) {
+  const src = raw && typeof raw === 'object' ? raw : {};
+  const clampPct = (v) => Math.min(100, Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0));
+  const cleanFee = (v, fb) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 ? Math.round(n) : fb;
+  };
+  return {
+    bac: {
+      label: 'Miền Bắc',
+      baseFee: cleanFee(src.bac?.baseFee, 30000),
+      shopSharePercent: clampPct(src.bac?.shopSharePercent ?? 0)
+    },
+    trung: {
+      label: 'Miền Trung',
+      baseFee: cleanFee(src.trung?.baseFee, 40000),
+      shopSharePercent: clampPct(src.trung?.shopSharePercent ?? 0)
+    },
+    nam: {
+      label: 'Miền Nam',
+      baseFee: cleanFee(src.nam?.baseFee, 50000),
+      shopSharePercent: clampPct(src.nam?.shopSharePercent ?? 0)
+    }
+  };
+}
+
+function computeEffectiveShippingMap(settingsObj) {
+  const regs = sanitizeShippingRegions(settingsObj?.shippingRegions);
+  const calcCustomerFee = (r) => {
+    const customerRatio = Math.max(0, Math.min(100, 100 - Number(r.shopSharePercent || 0))) / 100;
+    return Math.max(0, Math.round(Number(r.baseFee || 0) * customerRatio));
+  };
+  return {
+    bac: calcCustomerFee(regs.bac),
+    trung: calcCustomerFee(regs.trung),
+    nam: calcCustomerFee(regs.nam)
+  };
+}
+
+function toPublicOrder(ord) {
+  if (!ord || typeof ord !== 'object') return ord;
+  const clean = { ...ord };
+  delete clean.shippingBaseFee;
+  delete clean.shippingShopSharePercent;
+  delete clean.shippingShopSubsidy;
+  return clean;
+}
+
+function applyPercentToPrice(baseVal, adjustPercent, roundStep = 1000) {
+  const base = Math.max(0, Math.round(Number(baseVal || 0)));
+  if (base <= 0) return 0;
+  const pct = Number(adjustPercent || 0);
+  if (!Number.isFinite(pct) || pct === 0) return base;
+  const raw = base * (1 + pct / 100);
+  const step = Math.max(1, Math.round(Number(roundStep || 1000)));
+  return Math.max(1000, Math.round(raw / step) * step);
+}
+
+function snapshotProductPlatformPrices(prod) {
+  if (!prod) return;
+  if (!(Number(prod.platformBasePrice) > 0)) {
+    prod.platformBasePrice = Math.max(0, Number(prod.price || 0));
+  }
+  if (!(Number(prod.platformMaxPrice) > 0)) {
+    prod.platformMaxPrice = Math.max(prod.platformBasePrice, Number(prod.maxPrice || prod.price || 0));
+  }
+  if (!(Number(prod.platformOrigPrice) > 0)) {
+    prod.platformOrigPrice = Math.max(prod.platformMaxPrice, Number(prod.originalPrice || prod.maxPrice || prod.price || 0));
+  }
+  if (Array.isArray(prod.variants)) {
+    prod.variants.forEach((v) => {
+      if (!v) return;
+      if (!(Number(v.platformBasePrice) > 0)) {
+        v.platformBasePrice = Math.max(0, Number(v.price || prod.platformBasePrice || 0));
+      }
+      if (v.sizePrices && typeof v.sizePrices === 'object' && !v.platformSizePrices) {
+        v.platformSizePrices = { ...v.sizePrices };
+      }
+    });
+  }
+}
+
+function applyBulkAdjustToProduct(prod, adjustPercent, roundStep = 1000, showPlatformPriceCrossedOut = true) {
+  if (!prod) return prod;
+  snapshotProductPlatformPrices(prod);
+  const pct = Number(adjustPercent || 0);
+  const step = Math.max(1, Math.round(Number(roundStep || 1000)));
+
+  if (Array.isArray(prod.variants) && prod.variants.length > 0) {
+    prod.variants.forEach((v) => {
+      if (!v) return;
+      const baseV = Number(v.platformBasePrice) > 0 ? Number(v.platformBasePrice) : Number(v.price || prod.platformBasePrice || 0);
+      v.platformBasePrice = baseV;
+      v.price = applyPercentToPrice(baseV, pct, step);
+      if (v.platformSizePrices && typeof v.platformSizePrices === 'object') {
+        const nextSp = {};
+        for (const [sk, spVal] of Object.entries(v.platformSizePrices)) {
+          const bSp = Number(spVal || 0);
+          if (bSp > 0) nextSp[sk] = applyPercentToPrice(bSp, pct, step);
+        }
+        v.sizePrices = nextSp;
+      }
+    });
+    const inStockPrices = prod.variants.filter((v) => Number(v.stock ?? 0) > 0 && Number(v.price) > 0).map((v) => Number(v.price));
+    const allPrices = prod.variants.filter((v) => Number(v.price) > 0).map((v) => Number(v.price));
+    const pool = inStockPrices.length > 0 ? inStockPrices : allPrices;
+    prod.price = pool.length > 0 ? Math.min(...pool) : applyPercentToPrice(prod.platformBasePrice, pct, step);
+    prod.maxPrice = allPrices.length > 0 ? Math.max(prod.price, ...allPrices) : prod.price;
+  } else {
+    prod.price = applyPercentToPrice(prod.platformBasePrice, pct, step);
+    prod.maxPrice = Math.max(prod.price, applyPercentToPrice(prod.platformMaxPrice || prod.platformBasePrice, pct, step));
+  }
+
+  const rawPlatCeil = Math.max(
+    Number(prod.platformOrigPrice || 0),
+    Number(prod.platformMaxPrice || 0),
+    Number(prod.platformBasePrice || 0)
+  );
+
+  if (pct < 0 && showPlatformPriceCrossedOut !== false) {
+    prod.originalPrice = Math.max(prod.maxPrice, rawPlatCeil);
+  } else if (pct === 0) {
+    prod.originalPrice = Math.max(prod.maxPrice, Number(prod.platformOrigPrice || prod.maxPrice));
+  } else {
+    const scaledOrig = Number(prod.platformOrigPrice || 0) > Number(prod.platformMaxPrice || 0)
+      ? applyPercentToPrice(prod.platformOrigPrice, pct, step)
+      : prod.maxPrice;
+    prod.originalPrice = Math.max(prod.maxPrice, scaledOrig);
+  }
+
+  prod.appliedBulkPercent = pct;
+  return prod;
+}
+
 const DEFAULT_SHOP_SETTINGS = {
   shopName: 'NA 2HAND Boutique',
   tagline: 'Atelier & Curated Vintage',
@@ -315,8 +502,14 @@ const DEFAULT_SHOP_SETTINGS = {
   lookbookSubheading: 'Chạm vào các chấm ngọc trai phát sáng trên ảnh để xem từng món trong set đồ',
   lookbookSets: [],
   _heroV2Initialized: true,
-  shippingFee: 25000,
+  shippingFee: 30000,
+  shippingRegions: JSON.parse(JSON.stringify(DEFAULT_SHIPPING_REGIONS)),
+  defaultShippingRegion: 'bac',
+  freeShipEnabled: true,
   freeShipThreshold: 299000,
+  shopeePriceAdjustPercent: 0,
+  shopeePriceRoundStep: 1000,
+  showPlatformPriceCrossedOut: true,
   codEnabled: true,
   qrEnabled: true,
   // 'custom_image' = hiển thị ảnh QR tự tải lên / ảnh mặc định; 'vietqr' = tự sinh QR theo số tài khoản + số tiền đơn hàng
@@ -328,6 +521,10 @@ const DEFAULT_SHOP_SETTINGS = {
   bankAccountName: 'NA 2HAND SHOP',
   qrNotePrefix: 'NA2HAND',
   zaloPhone: '0359427135',
+  senderPhone: '0359427135',
+  senderAddress: 'Kho NA 2HAND Boutique — Giao hàng toàn quốc',
+  invoiceThankYouNote:
+    'Cảm ơn nàng đã tin yêu NA 2HAND Boutique! Chúc nàng luôn xinh đẹp rạng rỡ trong thiết kế mới nhé ♡',
   messengerUrl: 'https://www.facebook.com/anganh.764617',
   shopeeShopUrl: 'https://s.shopee.vn/8VAfrswNOG',
   tiktokShopUrl: 'https://www.tiktok.com/@na2hand3',
@@ -356,8 +553,10 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         return JSON.parse(JSON.stringify(initial));
       }
       const parsed = JSON.parse(fs.readFileSync(SHOP_FILE, 'utf8'));
+      const mergedLocalSettings = { ...DEFAULT_SHOP_SETTINGS, ...(parsed.settings || {}) };
+      mergedLocalSettings.shippingRegions = sanitizeShippingRegions(parsed.settings?.shippingRegions);
       return {
-        settings: { ...DEFAULT_SHOP_SETTINGS, ...(parsed.settings || {}) },
+        settings: mergedLocalSettings,
         sizeCharts:
           Array.isArray(parsed.sizeCharts) && parsed.sizeCharts.length > 0
             ? parsed.sizeCharts
@@ -442,6 +641,11 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
             merged.settings.heroSubtitle = DEFAULT_SHOP_SETTINGS.heroSubtitle;
           }
           merged.settings._heroV2Initialized = true;
+          settingsChanged = true;
+        }
+        merged.settings.shippingRegions = sanitizeShippingRegions(remote.store.settings?.shippingRegions);
+        if (!remote.store.settings?.shippingRegions) {
+          merged.settings.shippingFee = 30000;
           settingsChanged = true;
         }
         if (!Array.isArray(remote.store.sizeCharts) || remote.store.sizeCharts.length === 0) {
@@ -536,7 +740,8 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         `🧾 <b>Mã đơn:</b> <code>${order.orderCode}</code>`,
         `👧 <b>Khách hàng:</b> ${order.customerName}`,
         `📞 <b>SĐT:</b> <code>${order.customerPhone}</code>`,
-        `📍 <b>Địa chỉ:</b> ${order.address}, ${order.district || ''}, ${order.province || ''}`,
+        `📍 <b>Địa chỉ:</b> ${order.address}, ${order.district || ''}, ${order.province || ''}${order.shippingRegionLabel ? ` (${order.shippingRegionLabel})` : ''}`,
+        `🚚 <b>Phí vận chuyển khách trả:</b> ${Number(order.shippingFee || 0).toLocaleString('vi-VN')}đ${Number(order.shippingShopSubsidy || 0) > 0 ? ` (Shop hỗ trợ ${Number(order.shippingShopSubsidy).toLocaleString('vi-VN')}đ)` : ''}`,
         `💳 <b>Thanh toán:</b> ${order.paymentMethod === 'qr' ? '📱 Quét mã QR trực tiếp' : '💵 Nhận hàng thanh toán (COD)'}`,
         `📦 <b>Sản phẩm:</b>\n${itemsText}`,
         `💰 <b>Tổng thanh toán:</b> <b>${Number(order.totalAmount).toLocaleString('vi-VN')}đ</b>`,
@@ -603,6 +808,11 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
     const publicSettings = { ...store.settings };
     delete publicSettings.telegramBotToken;
     delete publicSettings.syncApiKey;
+    // Keep internal seller/customer split ratio hidden; expose only final customer shipping fees per region
+    delete publicSettings.shippingRegions;
+    publicSettings.effectiveShippingByRegion = computeEffectiveShippingMap(store.settings);
+    publicSettings.defaultShippingRegion = store.settings?.defaultShippingRegion || 'bac';
+    publicSettings.freeShipEnabled = store.settings?.freeShipEnabled !== false;
 
     res.json({
       success: true,
@@ -680,8 +890,15 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
               )
             : null;
 
-        const unitPrice = matchedVar && Number(matchedVar.price) > 0
-          ? Number(matchedVar.price)
+        const szLookup = String(cartItem.size || '').trim();
+        const unitPrice = matchedVar
+          ? szLookup && matchedVar.sizePrices && Number(matchedVar.sizePrices[szLookup]) > 0
+            ? Number(matchedVar.sizePrices[szLookup])
+            : Number(matchedVar.price) > 0
+            ? Number(matchedVar.price)
+            : prod
+            ? Number(prod.price)
+            : Number(cartItem.price || 0)
           : prod
           ? Number(prod.price)
           : Number(cartItem.price || 0);
@@ -765,9 +982,20 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         }
       }
 
-      const freeThreshold = Number(store.settings.freeShipThreshold || 299000);
-      const baseShip = Number(store.settings.shippingFee || 25000);
-      const shippingFee = subtotal >= freeThreshold ? 0 : baseShip;
+      const detectedRegion =
+        detectVietnamRegion(`${body.province || ''} ${body.address || ''}`) ||
+        store.settings.defaultShippingRegion ||
+        'bac';
+      const sanitizedRegions = sanitizeShippingRegions(store.settings.shippingRegions);
+      const effShipMap = computeEffectiveShippingMap(store.settings);
+      const regionCfg = sanitizedRegions[detectedRegion] || sanitizedRegions.bac;
+      const baseRegionFee = Number(regionCfg?.baseFee ?? 30000);
+      const customerSplitFee = Number(effShipMap[detectedRegion] ?? 30000);
+      const freeShipOn = store.settings.freeShipEnabled !== false;
+      const freeThreshold = Number(store.settings.freeShipThreshold ?? 299000);
+      const isFreeShipped = freeShipOn && freeThreshold > 0 && subtotal >= freeThreshold;
+      const shippingFee = isFreeShipped ? 0 : customerSplitFee;
+      const shippingShopSubsidy = isFreeShipped ? baseRegionFee : Math.max(0, baseRegionFee - customerSplitFee);
       const totalAmount = Math.max(0, subtotal - discount + shippingFee);
 
       const orderCode = `NA${String(Date.now()).slice(-6)}`;
@@ -799,6 +1027,11 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         province: String(body.province || '').trim(),
         district: String(body.district || '').trim(),
         address: String(body.address).trim(),
+        shippingRegion: detectedRegion,
+        shippingRegionLabel: regionCfg?.label || 'Miền Bắc',
+        shippingBaseFee: baseRegionFee,
+        shippingShopSharePercent: Number(regionCfg?.shopSharePercent || 0),
+        shippingShopSubsidy,
         note: String(body.note || '').trim(),
         scentChoice: String(body.scentChoice || 'Hương Đào Trắng').trim(),
         giftWrap: Boolean(body.giftWrap),
@@ -831,7 +1064,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       res.status(201).json({
         success: true,
         message: 'Đặt hàng thành công! Cảm ơn nàng đã ủng hộ tiệm nhé 💖',
-        order: newOrder,
+        order: toPublicOrder(newOrder),
         paymentInfo: {
           method: paymentMethod,
           qrDisplayUrl,
@@ -876,7 +1109,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
     res.json({
       success: true,
       message: 'Tiệm đã nhận được xác nhận chuyển khoản của nàng! Tụi mình sẽ kiểm tra và gói hàng ướp hương ngay nhé.',
-      order
+      order: toPublicOrder(order)
     });
   });
 
@@ -927,7 +1160,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       }
     }
     await saveShopStore(store);
-    res.json({ success: true, order, message: `Đã hủy đơn #${order.orderCode} thành công.` });
+    res.json({ success: true, order: toPublicOrder(order), message: `Đã hủy đơn #${order.orderCode} thành công.` });
   });
 
   // Order Tracking Lookup by Phone or Order Code
@@ -944,7 +1177,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
     );
     res.json({
       success: true,
-      orders: matched.slice(0, 20)
+      orders: matched.slice(0, 20).map(toPublicOrder)
     });
   });
 
@@ -1078,6 +1311,68 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
     res.json({ success: true, product: newProd, message: 'Đã thêm sản phẩm mới vào cửa hàng! ✨' });
   });
 
+  // Bulk Adjust Prices (+/- %) for Shopee / Platform Products (while preserving individual manual overrides)
+  app.post('/api/shop/admin/products/bulk-price-adjust', requireAuth, async (req, res) => {
+    const store = await getShopStore();
+    const b = req.body || {};
+    const targetTag = String(b.targetTag || 'shopee').trim().toLowerCase();
+    const rawPct = Number(b.adjustPercent ?? 0);
+    if (!Number.isFinite(rawPct) || rawPct < -90 || rawPct > 300) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tỉ lệ điều chỉnh giá phải nằm trong khoảng từ -90% đến +300%!'
+      });
+    }
+    const roundStep = Math.max(1, Math.round(Number(b.roundStep || 1000)));
+    const showPlatformPriceCrossedOut = b.showPlatformPriceCrossedOut !== false;
+    const respectManualOverrides = b.respectManualOverrides !== false;
+
+    store.settings = {
+      ...store.settings,
+      shopeePriceAdjustPercent: rawPct,
+      shopeePriceRoundStep: roundStep,
+      showPlatformPriceCrossedOut
+    };
+
+    let updatedCount = 0;
+    let skippedManualCount = 0;
+
+    for (const p of store.products || []) {
+      if (!p) continue;
+      const pTag = getProductTag(p);
+      if (pTag === 'manual') continue;
+      if (targetTag !== 'all_platform' && pTag !== targetTag) continue;
+
+      if (p.customPriceOverride) {
+        if (respectManualOverrides) {
+          skippedManualCount++;
+          continue;
+        }
+        p.customPriceOverride = false;
+      }
+
+      applyBulkAdjustToProduct(p, rawPct, roundStep, showPlatformPriceCrossedOut);
+      p.updatedAt = new Date().toISOString();
+      updatedCount++;
+    }
+
+    await saveShopStore(store);
+
+    const signStr = rawPct > 0 ? `+${rawPct}%` : `${rawPct}%`;
+    const skippedMsg =
+      skippedManualCount > 0 ? ` (giữ nguyên ${skippedManualCount} SP đã khóa giá chỉnh tay riêng)` : '';
+    res.json({
+      success: true,
+      updatedCount,
+      skippedManualCount,
+      settings: store.settings,
+      message:
+        rawPct === 0
+          ? `Đã khôi phục giá gốc sàn cho ${updatedCount} sản phẩm${skippedMsg}! ✨`
+          : `Đã điều chỉnh giá hàng loạt (${signStr}) cho ${updatedCount} sản phẩm${skippedMsg}! 💰`
+    });
+  });
+
   // Update Product
   app.put('/api/shop/admin/products/:id', requireAuth, async (req, res) => {
     const store = await getShopStore();
@@ -1093,8 +1388,26 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         ? normalizeProductTag(b.productTag, nextUrl, b.productTag === 'manual' ? 'local' : 'cloned', prev.id)
         : getProductTag(prev);
 
+    // Ensure platform baseline prices are snapshotted before manual price modifications
+    if (nextTag !== 'manual') {
+      snapshotProductPlatformPrices(prev);
+    }
+
     const updatedVariants = Array.isArray(b.variants)
-      ? normalizeVariantsList(b.variants, b.price ?? prev.price)
+      ? normalizeVariantsList(b.variants, b.price ?? prev.price).map((nv) => {
+          const oldMatch = Array.isArray(prev.variants)
+            ? prev.variants.find((ov) => String(ov?.label || '').toLowerCase() === String(nv.label || '').toLowerCase())
+            : null;
+          if (oldMatch) {
+            if (!(Number(nv.platformBasePrice) > 0) && Number(oldMatch.platformBasePrice) > 0) {
+              nv.platformBasePrice = oldMatch.platformBasePrice;
+            }
+            if (!nv.platformSizePrices && oldMatch.platformSizePrices) {
+              nv.platformSizePrices = { ...oldMatch.platformSizePrices };
+            }
+          }
+          return nv;
+        })
       : prev.variants;
     const updatedSizes = Array.isArray(b.sizes)
       ? b.sizes.filter((s) => Boolean(s) && !isExtensionJunkLabel(s))
@@ -1105,6 +1418,32 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         : b.stock !== undefined
         ? Number(b.stock)
         : prev.stock;
+
+    const varAllPrices = Array.isArray(updatedVariants)
+      ? updatedVariants.filter((v) => Number(v.price) > 0).map((v) => Number(v.price))
+      : [];
+    const nextPrice = b.price !== undefined ? Number(b.price) : prev.price;
+    const nextMaxPrice =
+      varAllPrices.length > 0 ? Math.max(nextPrice, ...varAllPrices) : nextPrice;
+
+    const priceChangedManually =
+      nextTag !== 'manual' &&
+      ((b.price !== undefined && Number(b.price) !== Number(prev.price)) ||
+        (Array.isArray(b.variants) &&
+          Array.isArray(prev.variants) &&
+          updatedVariants.some((nv) => {
+            const ov = prev.variants.find((x) => String(x?.label || '').toLowerCase() === String(nv.label || '').toLowerCase());
+            return ov && Number(nv.price) !== Number(ov.price);
+          })));
+
+    const nextCustomOverride =
+      nextTag === 'manual'
+        ? false
+        : b.customPriceOverride !== undefined
+        ? Boolean(b.customPriceOverride)
+        : priceChangedManually
+        ? true
+        : Boolean(prev.customPriceOverride);
 
     store.products[idx] = {
       ...prev,
@@ -1117,8 +1456,10 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       images: Array.isArray(b.images) ? b.images.map(cleanCdnImageUrl) : prev.images,
       sizes: updatedSizes,
       variants: updatedVariants,
-      price: b.price !== undefined ? Number(b.price) : prev.price,
+      price: nextPrice,
+      maxPrice: nextMaxPrice,
       originalPrice: b.originalPrice !== undefined ? Number(b.originalPrice) : prev.originalPrice,
+      customPriceOverride: nextCustomOverride,
       stock: updatedStock,
       stockVerifiedV6: true,
       sizeChartId: b.sizeChartId !== undefined ? String(b.sizeChartId || 'auto').trim() : prev.sizeChartId || 'auto',
@@ -1131,6 +1472,16 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       description: b.description !== undefined ? cleanProductDescription(b.description) : prev.description,
       updatedAt: new Date().toISOString()
     };
+
+    // If Admin explicitly unchecked manual price override on a Shopee product, sync it back to current bulk % setting
+    if (prev.customPriceOverride && b.customPriceOverride === false && nextTag === 'shopee') {
+      applyBulkAdjustToProduct(
+        store.products[idx],
+        Number(store.settings?.shopeePriceAdjustPercent || 0),
+        Number(store.settings?.shopeePriceRoundStep || 1000),
+        store.settings?.showPlatformPriceCrossedOut !== false
+      );
+    }
 
     await saveShopStore(store);
     res.json({ success: true, product: store.products[idx], message: 'Đã cập nhật sản phẩm!' });
@@ -1406,15 +1757,26 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
   app.put('/api/shop/admin/settings', requireAuth, async (req, res) => {
     const store = await getShopStore();
     const incoming = req.body || {};
+    const nextShippingRegions = incoming.shippingRegions
+      ? sanitizeShippingRegions(incoming.shippingRegions)
+      : sanitizeShippingRegions(store.settings.shippingRegions);
+    const nextDefaultRegion = ['bac', 'trung', 'nam'].includes(String(incoming.defaultShippingRegion || ''))
+      ? String(incoming.defaultShippingRegion)
+      : store.settings.defaultShippingRegion || 'bac';
+
     store.settings = {
       ...store.settings,
       ...incoming,
-      shippingFee: Number(incoming.shippingFee ?? store.settings.shippingFee),
-      freeShipThreshold: Number(incoming.freeShipThreshold ?? store.settings.freeShipThreshold),
+      shippingRegions: nextShippingRegions,
+      defaultShippingRegion: nextDefaultRegion,
+      shippingFee: Number(nextShippingRegions[nextDefaultRegion]?.baseFee ?? incoming.shippingFee ?? store.settings.shippingFee ?? 30000),
+      freeShipEnabled:
+        incoming.freeShipEnabled !== undefined ? Boolean(incoming.freeShipEnabled) : store.settings.freeShipEnabled !== false,
+      freeShipThreshold: Number(incoming.freeShipThreshold ?? store.settings.freeShipThreshold ?? 299000),
       syncApiKey: store.settings.syncApiKey // preserve sync key unless regenerated
     };
     await saveShopStore(store);
-    res.json({ success: true, settings: store.settings, message: 'Đã lưu cài đặt cửa hàng & thanh toán QR!' });
+    res.json({ success: true, settings: store.settings, message: 'Đã lưu cài đặt cửa hàng, phí vận chuyển 3 miền & thanh toán QR!' });
   });
 
   // =========================================================================
@@ -1637,6 +1999,35 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
           ? cleanProductDescription(prev.description)
           : `Sản phẩm đồng bộ 1-1 trực tiếp từ ${getProductTagLabel(incomingTag)} chính hãng của NA 2HAND.`;
 
+      // Snapshot raw Shopee/platform baseline prices BEFORE applying manual overrides or bulk % adjustment
+      const rawPlatBasePrice = cleanPrice > 0 ? cleanPrice : 110000;
+      const rawPlatMaxPrice = cleanMaxPrice > rawPlatBasePrice ? cleanMaxPrice : rawPlatBasePrice;
+      const rawPlatOrigPrice = cleanOrig >= rawPlatMaxPrice ? cleanOrig : rawPlatMaxPrice;
+
+      finalVariants.forEach((v) => {
+        if (!v) return;
+        v.platformBasePrice = Math.max(0, Number(v.price || rawPlatBasePrice));
+        if (v.sizePrices && typeof v.sizePrices === 'object') {
+          v.platformSizePrices = { ...v.sizePrices };
+        }
+      });
+
+      // Preserve custom manually-tuned prices if Admin locked individual price on this product
+      const keepManualPrice = Boolean(prev && prev.customPriceOverride);
+      if (keepManualPrice && Array.isArray(prev.variants) && finalVariants.length > 0) {
+        finalVariants.forEach((v) => {
+          const oldV = prev.variants.find(
+            (ov) => String(ov?.label || '').trim().toLowerCase() === String(v.label || '').trim().toLowerCase()
+          );
+          if (oldV && Number(oldV.price) > 0) {
+            v.price = Number(oldV.price);
+            if (oldV.sizePrices && typeof oldV.sizePrices === 'object') {
+              v.sizePrices = { ...oldV.sizePrices };
+            }
+          }
+        });
+      }
+
       const productObj = {
         id: prev ? prev.id : `prod_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         productTag: incomingTag,
@@ -1645,11 +2036,15 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         stockVerifiedV6: Boolean(isV6Verified || finalVariants.length > 0 || (prev && prev.stockVerifiedV6)),
         platformItemId: incomingItemId || prev?.platformItemId || '',
         isLocked: prev ? Boolean(prev.isLocked) : false,
+        customPriceOverride: keepManualPrice,
+        platformBasePrice: rawPlatBasePrice,
+        platformMaxPrice: rawPlatMaxPrice,
+        platformOrigPrice: rawPlatOrigPrice,
         name: cleanName,
         category: item.category || inferCategoryFromName(cleanName, store.categories),
-        price: cleanPrice > 0 ? cleanPrice : 110000,
-        maxPrice: cleanMaxPrice > cleanPrice ? cleanMaxPrice : cleanPrice,
-        originalPrice: cleanOrig >= cleanMaxPrice ? cleanOrig : cleanMaxPrice,
+        price: keepManualPrice && Number(prev.price) > 0 ? Number(prev.price) : rawPlatBasePrice,
+        maxPrice: keepManualPrice && Number(prev.maxPrice) > 0 ? Number(prev.maxPrice) : rawPlatMaxPrice,
+        originalPrice: keepManualPrice && Number(prev.originalPrice) > 0 ? Number(prev.originalPrice) : rawPlatOrigPrice,
         images: imgSet.length > 0 ? imgSet.slice(0, 25) : ['/media/bio-link/girlfriend-1.jpg'],
         sizes: derivedSizes,
         colors: derivedColors,
@@ -1671,6 +2066,20 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         createdAt: prev ? prev.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
+
+      // Auto-apply active Shopee bulk % adjustment for non-overridden Shopee products
+      if (
+        !keepManualPrice &&
+        incomingTag === 'shopee' &&
+        Number(store.settings?.shopeePriceAdjustPercent || 0) !== 0
+      ) {
+        applyBulkAdjustToProduct(
+          productObj,
+          Number(store.settings.shopeePriceAdjustPercent),
+          Number(store.settings.shopeePriceRoundStep || 1000),
+          store.settings.showPlatformPriceCrossedOut !== false
+        );
+      }
 
       if (existingIdx >= 0) {
         store.products[existingIdx] = productObj;
@@ -2822,6 +3231,12 @@ function normalizeVariantsList(rawVariants, fallbackPrice = 110000) {
       if (Object.keys(cleanSizePrices).length > 0) {
         entry.sizePrices = cleanSizePrices;
       }
+    }
+    if (Number(v.platformBasePrice) > 0) {
+      entry.platformBasePrice = Math.round(Number(v.platformBasePrice));
+    }
+    if (v.platformSizePrices && typeof v.platformSizePrices === 'object' && !Array.isArray(v.platformSizePrices)) {
+      entry.platformSizePrices = { ...v.platformSizePrices };
     }
     out.push(entry);
   }

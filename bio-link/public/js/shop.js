@@ -27,6 +27,120 @@
   let wishlist = JSON.parse(localStorage.getItem('na2hand_wishlist') || '[]');
   let recentlyViewed = JSON.parse(localStorage.getItem('na2hand_recent') || '[]');
   let savedOrders = JSON.parse(localStorage.getItem('na2hand_my_orders') || '[]');
+  let selectedProvince = localStorage.getItem('na2hand_customer_province') || '';
+
+  // Complete 63 Vietnam Provinces / Cities -> Automatic Internal 3-Region Mapping (Bắc / Trung / Nam)
+  const VN_PROVINCES = [
+    { name: 'Hà Nội', region: 'bac' },
+    { name: 'TP. Hồ Chí Minh', region: 'nam' },
+    { name: 'Đà Nẵng', region: 'trung' },
+    { name: 'Hải Phòng', region: 'bac' },
+    { name: 'Cần Thơ', region: 'nam' },
+    { name: 'An Giang', region: 'nam' },
+    { name: 'Bà Rịa - Vũng Tàu', region: 'nam' },
+    { name: 'Bắc Giang', region: 'bac' },
+    { name: 'Bắc Kạn', region: 'bac' },
+    { name: 'Bạc Liêu', region: 'nam' },
+    { name: 'Bắc Ninh', region: 'bac' },
+    { name: 'Bến Tre', region: 'nam' },
+    { name: 'Bình Định', region: 'trung' },
+    { name: 'Bình Dương', region: 'nam' },
+    { name: 'Bình Phước', region: 'nam' },
+    { name: 'Bình Thuận', region: 'trung' },
+    { name: 'Cà Mau', region: 'nam' },
+    { name: 'Cao Bằng', region: 'bac' },
+    { name: 'Đắk Lắk', region: 'trung' },
+    { name: 'Đắk Nông', region: 'trung' },
+    { name: 'Điện Biên', region: 'bac' },
+    { name: 'Đồng Nai', region: 'nam' },
+    { name: 'Đồng Tháp', region: 'nam' },
+    { name: 'Gia Lai', region: 'trung' },
+    { name: 'Hà Giang', region: 'bac' },
+    { name: 'Hà Nam', region: 'bac' },
+    { name: 'Hà Tĩnh', region: 'trung' },
+    { name: 'Hải Dương', region: 'bac' },
+    { name: 'Hậu Giang', region: 'nam' },
+    { name: 'Hòa Bình', region: 'bac' },
+    { name: 'Hưng Yên', region: 'bac' },
+    { name: 'Khánh Hòa', region: 'trung' },
+    { name: 'Kiên Giang', region: 'nam' },
+    { name: 'Kon Tum', region: 'trung' },
+    { name: 'Lai Châu', region: 'bac' },
+    { name: 'Lâm Đồng', region: 'trung' },
+    { name: 'Lạng Sơn', region: 'bac' },
+    { name: 'Lào Cai', region: 'bac' },
+    { name: 'Long An', region: 'nam' },
+    { name: 'Nam Định', region: 'bac' },
+    { name: 'Nghệ An', region: 'trung' },
+    { name: 'Ninh Bình', region: 'bac' },
+    { name: 'Ninh Thuận', region: 'trung' },
+    { name: 'Phú Thọ', region: 'bac' },
+    { name: 'Phú Yên', region: 'trung' },
+    { name: 'Quảng Bình', region: 'trung' },
+    { name: 'Quảng Nam', region: 'trung' },
+    { name: 'Quảng Ngãi', region: 'trung' },
+    { name: 'Quảng Ninh', region: 'bac' },
+    { name: 'Quảng Trị', region: 'trung' },
+    { name: 'Sóc Trăng', region: 'nam' },
+    { name: 'Sơn La', region: 'bac' },
+    { name: 'Tây Ninh', region: 'nam' },
+    { name: 'Thái Bình', region: 'bac' },
+    { name: 'Thái Nguyên', region: 'bac' },
+    { name: 'Thanh Hóa', region: 'trung' },
+    { name: 'Thừa Thiên Huế', region: 'trung' },
+    { name: 'Tiền Giang', region: 'nam' },
+    { name: 'Trà Vinh', region: 'nam' },
+    { name: 'Tuyên Quang', region: 'bac' },
+    { name: 'Vĩnh Long', region: 'nam' },
+    { name: 'Vĩnh Phúc', region: 'bac' },
+    { name: 'Yên Bái', region: 'bac' }
+  ];
+
+  function normalizeVnText(str) {
+    return String(str || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function detectRegionFromProvince(provStr) {
+    const clean = normalizeVnText(provStr);
+    if (!clean) return '';
+    for (const item of VN_PROVINCES) {
+      const target = normalizeVnText(item.name);
+      if (clean === target || clean.includes(target) || target.includes(clean)) {
+        return item.region;
+      }
+    }
+    if (/\b(tphcm|hcm|sai gon|saigon|phu quoc|vung tau)\b/.test(clean)) return 'nam';
+    if (/\b(hue|da lat|dalat|nha trang|hoi an|quy nhon|phan thiet|pleiku|buon ma thuot)\b/.test(clean)) return 'trung';
+    if (/\b(hanoi|ha long|sapa)\b/.test(clean)) return 'bac';
+    return '';
+  }
+
+  function initProvinceDropdown() {
+    const sel = document.getElementById('chk-province');
+    if (!sel) return;
+    sel.innerHTML =
+      `<option value="">-- Chọn Tỉnh / Thành phố --</option>` +
+      VN_PROVINCES.map((p) => `<option value="${escapeAttr(p.name)}">${escapeHtml(p.name)}</option>`).join('');
+    if (selectedProvince && VN_PROVINCES.some((p) => p.name === selectedProvince)) {
+      sel.value = selectedProvince;
+    }
+    sel.addEventListener('change', () => {
+      selectedProvince = sel.value.trim();
+      if (selectedProvince) {
+        localStorage.setItem('na2hand_customer_province', selectedProvince);
+      } else {
+        localStorage.removeItem('na2hand_customer_province');
+      }
+      updateBadgesAndCart();
+    });
+  }
 
   const vnd = (n) => `${Number(n || 0).toLocaleString('vi-VN')}đ`;
 
@@ -696,7 +810,13 @@
               ${pVariants.length > 5 ? `<span class="card-var-more">+${pVariants.length - 5} mẫu</span>` : `<span class="card-var-more">${pVariants.length} mẫu</span>`}
             </div>
           `
-            : '';
+            : `
+            <div class="card-variant-strip">
+              <span class="card-var-more" style="background:var(--paper); color:var(--ink-muted); font-weight:600;">${
+                sizes.length > 0 ? `Size: ${escapeHtml(sizes.slice(0, 4).join(', '))}` : 'Phom tuyển chọn • Sẵn hàng'
+              }</span>
+            </div>
+          `;
 
         const priceDisplayText = hasRange ? `${vnd(p.price)} – ${vnd(maxP)}` : vnd(p.price);
 
@@ -733,7 +853,7 @@
               <span>Đã bán ${Number(p.sold || 0)}</span>
             </div>
             <div class="prod-price-row">
-              <div>
+              <div class="prod-price-line">
                 <span class="prod-price" data-default-price="${escapeAttr(priceDisplayText)}">${priceDisplayText}</span>
                 ${!hasRange && p.originalPrice > p.price ? `<span class="prod-orig-price">${vnd(p.originalPrice)}</span>` : ''}
               </div>
@@ -1845,14 +1965,34 @@
     updateBadgesAndCart();
   }
 
+  function getActiveShippingInfo() {
+    const provVal = document.getElementById('chk-province')?.value?.trim() || selectedProvince || '';
+    const detectedReg = detectRegionFromProvince(provVal);
+    const activeReg = detectedReg || settings.defaultShippingRegion || 'bac';
+    const fallbackByReg = { bac: 30000, trung: 40000, nam: 50000 };
+    const effMap = settings.effectiveShippingByRegion && typeof settings.effectiveShippingByRegion === 'object'
+      ? settings.effectiveShippingByRegion
+      : fallbackByReg;
+    const customerRegionFee =
+      effMap[activeReg] !== undefined ? Math.max(0, Number(effMap[activeReg])) : fallbackByReg[activeReg] || 30000;
+    return {
+      province: provVal,
+      hasChosenProvince: Boolean(detectedReg && provVal),
+      region: activeReg,
+      customerRegionFee
+    };
+  }
+
   function getCartTotals() {
     const subtotal = cart.reduce((s, it) => s + Number(it.price) * Number(it.qty), 0);
-    const freeThreshold = Number(settings.freeShipThreshold || 299000);
-    const baseShip = Number(settings.shippingFee ?? 25000);
-    const shipping = subtotal === 0 || subtotal >= freeThreshold ? 0 : baseShip;
+    const freeShipEnabled = settings.freeShipEnabled !== false;
+    const freeThreshold = Number(settings.freeShipThreshold ?? 299000);
+    const shipInfo = getActiveShippingInfo();
+    const isFreeShipped = freeShipEnabled && freeThreshold > 0 && subtotal >= freeThreshold;
+    const shipping = subtotal === 0 ? 0 : isFreeShipped ? 0 : shipInfo.customerRegionFee;
     const discount = appliedCoupon ? Math.min(Number(appliedCoupon.discount || 0), subtotal) : 0;
     const total = Math.max(0, subtotal - discount + shipping);
-    return { subtotal, freeThreshold, shipping, discount, total };
+    return { subtotal, freeShipEnabled, freeThreshold, isFreeShipped, shipping, shipInfo, discount, total };
   }
 
   function revalidateAppliedCoupon() {
@@ -1875,14 +2015,20 @@
     document.getElementById('cart-count').textContent = totalQty;
     document.getElementById('wishlist-count').textContent = wishlist.length;
 
-    const { subtotal, freeThreshold, shipping, discount, total } = getCartTotals();
+    const { subtotal, freeShipEnabled, freeThreshold, isFreeShipped, shipping, shipInfo, discount, total } = getCartTotals();
 
-    const pct = Math.min(100, Math.round((subtotal / freeThreshold) * 100));
-    document.getElementById('freeship-fill').style.width = `${pct}%`;
-    document.getElementById('freeship-msg').innerHTML =
-      subtotal >= freeThreshold
-        ? `Tuyệt vời! Đơn của nàng đã được <strong>Miễn phí vận chuyển</strong>`
-        : `Mua thêm <strong>${vnd(freeThreshold - subtotal)}</strong> để được <strong>Freeship</strong> nhé!`;
+    const fsWrap = document.querySelector('.freeship-bar-wrap');
+    if (fsWrap) {
+      fsWrap.style.display = freeShipEnabled && freeThreshold > 0 ? 'block' : 'none';
+    }
+    if (freeShipEnabled && freeThreshold > 0) {
+      const pct = Math.min(100, Math.round((subtotal / freeThreshold) * 100));
+      document.getElementById('freeship-fill').style.width = `${pct}%`;
+      document.getElementById('freeship-msg').innerHTML =
+        subtotal >= freeThreshold
+          ? `Tuyệt vời! Đơn của nàng đã được <strong>Miễn phí vận chuyển</strong>`
+          : `Mua thêm <strong>${vnd(freeThreshold - subtotal)}</strong> để được <strong>Freeship</strong> nhé!`;
+    }
 
     const listEl = document.getElementById('cart-items-list');
     if (cart.length === 0) {
@@ -1964,10 +2110,36 @@
 
     document.getElementById('cart-subtotal').textContent = vnd(subtotal);
     document.getElementById('cart-discount').textContent = `-${vnd(discount)}`;
-    document.getElementById('cart-shipping').textContent = shipping === 0 && subtotal > 0 ? 'Miễn phí' : vnd(shipping);
+    const shipDisplayStr =
+      subtotal === 0
+        ? vnd(shipInfo.customerRegionFee)
+        : isFreeShipped || shipping === 0
+        ? 'Miễn phí'
+        : vnd(shipping);
+    document.getElementById('cart-shipping').textContent = shipDisplayStr;
     document.getElementById('cart-total').textContent = vnd(total);
     const chkTotal = document.getElementById('chk-btn-total');
     if (chkTotal) chkTotal.textContent = vnd(total);
+
+    // Live Checkout Summary Box
+    const chkSub = document.getElementById('chk-sum-subtotal');
+    const chkDiscRow = document.getElementById('chk-sum-discount-row');
+    const chkDisc = document.getElementById('chk-sum-discount');
+    const chkShipLbl = document.getElementById('chk-sum-ship-label');
+    const chkShipVal = document.getElementById('chk-sum-shipping');
+    const chkSumTot = document.getElementById('chk-sum-total');
+    if (chkSub) chkSub.textContent = vnd(subtotal);
+    if (chkDiscRow && chkDisc) {
+      chkDiscRow.style.display = discount > 0 ? 'flex' : 'none';
+      chkDisc.textContent = `-${vnd(discount)}`;
+    }
+    if (chkShipLbl) {
+      chkShipLbl.textContent = shipInfo.hasChosenProvince
+        ? `Phí vận chuyển (${shipInfo.province})`
+        : 'Phí vận chuyển';
+    }
+    if (chkShipVal) chkShipVal.textContent = shipDisplayStr;
+    if (chkSumTot) chkSumTot.textContent = vnd(total);
   }
 
   document.querySelectorAll('#scent-chips .scent-chip').forEach((chip) => {
@@ -2002,6 +2174,151 @@
   document.getElementById('chk-gift-wrap')?.addEventListener('change', (e) => {
     document.getElementById('chk-gift-msg').style.display = e.target.checked ? 'block' : 'none';
   });
+
+  function printCustomerOrderReceipt(order) {
+    if (!order) return;
+    const win = window.open('', '_blank', 'width=760,height=740');
+    if (!win) {
+      showToast('Vui lòng cho phép mở cửa sổ bật lên để in / lưu phiếu đơn hàng nhé!');
+      return;
+    }
+    const items = Array.isArray(order.items) ? order.items : [];
+    const totalQty = items.reduce((s, it) => s + Math.max(1, Number(it.qty || 1)), 0);
+    const subtotal =
+      order.subtotal !== undefined
+        ? Number(order.subtotal)
+        : items.reduce((s, it) => s + Number(it.price || 0) * Math.max(1, Number(it.qty || 1)), 0);
+    const discount = Number(order.discount || 0);
+    const shipFee = Number(order.shippingFee || 0);
+    const totalAmount = Number(order.totalAmount ?? Math.max(0, subtotal - discount + shipFee));
+    const isPaid = order.paymentStatus === 'paid';
+    const shopName = settings.shopName || 'NA 2HAND Boutique';
+    const shopPhone = settings.senderPhone || settings.zaloPhone || '0359427135';
+    const shopAddr = settings.senderAddress || 'Kho NA 2HAND Boutique — Giao hàng toàn quốc';
+    const thankNote =
+      settings.invoiceThankYouNote ||
+      'Cảm ơn nàng đã tin yêu NA 2HAND Boutique! Chúc nàng luôn xinh đẹp rạng rỡ trong thiết kế mới nhé ♡';
+    const fullAddr = [order.address, order.district, order.province].filter(Boolean).join(', ');
+    const createdStr = order.createdAt ? new Date(order.createdAt).toLocaleString('vi-VN') : new Date().toLocaleString('vi-VN');
+    const logoUrl = `${window.location.origin}/images/brand-logo.jpg`;
+
+    const rowsHtml = items
+      .map((it, idx) => {
+        const meta = [it.color, it.size]
+          .map((x) => String(x || '').trim())
+          .filter((x) => x && x !== 'Mặc định' && x !== 'Theo hình');
+        const lineSum = Number(it.price || 0) * Math.max(1, Number(it.qty || 1));
+        return `
+          <tr>
+            <td style="text-align:center;">${idx + 1}</td>
+            <td>
+              <strong>${escapeHtml(it.name)}</strong>
+              ${meta.length > 0 ? `<div style="font-size:11px; color:#6b515d;">Phân loại: ${escapeHtml(meta.join(' • '))}</div>` : ''}
+            </td>
+            <td style="text-align:center;">${it.qty}</td>
+            <td style="text-align:right;">${vnd(it.price)}</td>
+            <td style="text-align:right; font-weight:700;">${vnd(lineSum)}</td>
+          </tr>
+        `;
+      })
+      .join('');
+
+    win.document.write(`<!DOCTYPE html>
+      <html lang="vi">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Phieu-Don-Hang-${escapeHtml(order.orderCode)}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&display=swap" rel="stylesheet" />
+        <style>
+          * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          @page { size: A5 portrait; margin: 10mm; }
+          body { font-family: 'Be Vietnam Pro', sans-serif; color: #22131a; background: #fff; margin: 0; padding: 18px; }
+          .receipt-box { max-width: 650px; margin: 0 auto; border: 1.5px solid #ead5de; border-radius: 14px; padding: 22px 24px; }
+          table { width: 100%; border-collapse: collapse; margin: 14px 0; }
+          th { background: #2b151e; color: #fff; font-size: 11px; text-transform: uppercase; padding: 8px; text-align: left; }
+          td { padding: 8px; border-bottom: 1px solid #eedce4; font-size: 12.5px; vertical-align: top; }
+          .no-print-bar { max-width: 650px; margin: 0 auto 12px; display: flex; justify-content: flex-end; gap: 8px; }
+          .p-btn { background: #c83767; color: #fff; border: none; padding: 8px 16px; border-radius: 999px; font-family: inherit; font-weight: 700; cursor: pointer; }
+          @media print {
+            body { padding: 0; }
+            .no-print-bar { display: none !important; }
+            .receipt-box { border: none; padding: 0; max-width: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="no-print-bar">
+          <button type="button" class="p-btn" onclick="window.print()">🖨️ In / Lưu File PDF</button>
+        </div>
+        <div class="receipt-box">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; border-bottom:2px solid #e9cada; padding-bottom:12px; margin-bottom:12px;">
+            <div style="display:flex; gap:10px; align-items:center;">
+              <img src="${escapeAttr(logoUrl)}" style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:1px solid #e9cada;" onerror="this.style.display='none'" />
+              <div>
+                <div style="font-size:17px; font-weight:800;">${escapeHtml(shopName)}</div>
+                <div style="font-size:11.5px; color:#5e424e;">Hotline / Zalo: <strong>${escapeHtml(shopPhone)}</strong></div>
+                <div style="font-size:11.5px; color:#5e424e;">${escapeHtml(shopAddr)}</div>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:13px; font-weight:800; color:#c83767; text-transform:uppercase;">PHIẾU XÁC NHẬN ĐẶT HÀNG</div>
+              <div style="font-size:13px; font-weight:800; margin-top:2px;">Mã đơn: #${escapeHtml(order.orderCode)}</div>
+              <div style="font-size:11px; color:#6b515d; margin-top:2px;">${escapeHtml(createdStr)}</div>
+            </div>
+          </div>
+
+          <div style="background:#fdf8fa; border:1px solid #edd6e0; border-radius:10px; padding:10px 13px; font-size:12.5px; line-height:1.6;">
+            <div>Người nhận: <strong>${escapeHtml(order.customerName)}</strong> — SĐT: <strong>${escapeHtml(order.customerPhone)}</strong></div>
+            <div>Địa chỉ nhận hàng: <strong>${escapeHtml(fullAddr)}</strong></div>
+            <div>Hương giấy lụa gói hàng: <strong>${escapeHtml(order.scentChoice || 'Hương Đào Trắng')}</strong>${order.giftWrap ? ` • <strong>Gói hộp quà nơ</strong>` : ''}</div>
+            ${order.giftWrap && order.giftCardMessage ? `<div>Lời chúc trên thiệp: <em>"${escapeHtml(order.giftCardMessage)}"</em></div>` : ''}
+            ${order.note ? `<div>Ghi chú đơn hàng: ${escapeHtml(order.note)}</div>` : ''}
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align:center; width:38px;">STT</th>
+                <th>Sản phẩm</th>
+                <th style="text-align:center; width:46px;">SL</th>
+                <th style="text-align:right; width:95px;">Đơn giá</th>
+                <th style="text-align:right; width:105px;">Thành tiền</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+            <div style="font-size:12px; line-height:1.6;">
+              <div>Phương thức thanh toán: <strong>${order.paymentMethod === 'qr' ? 'Chuyển khoản Quét mã QR' : 'Thanh toán khi nhận hàng (COD)'}</strong></div>
+              <div style="font-weight:700; color:${isPaid ? '#15803d' : '#be123c'};">
+                Trạng thái: ${isPaid ? 'Đã thanh toán đủ' : order.paymentStatus === 'customer_confirmed_qr' ? 'Đã báo chuyển khoản QR (chờ đối soát)' : 'Thanh toán khi nhận hàng'}
+              </div>
+            </div>
+
+            <div style="min-width:245px; background:#fdf8fa; border:1px solid #ead5de; border-radius:10px; padding:10px 13px; font-size:12.5px; line-height:1.7;">
+              <div style="display:flex; justify-content:space-between;"><span>Tạm tính (${totalQty} món):</span><strong>${vnd(subtotal)}</strong></div>
+              ${discount > 0 ? `<div style="display:flex; justify-content:space-between; color:#c83767;"><span>Ưu đãi Voucher:</span><strong>-${vnd(discount)}</strong></div>` : ''}
+              <div style="display:flex; justify-content:space-between;"><span>Phí vận chuyển:</span><strong>${shipFee === 0 ? 'Miễn phí' : vnd(shipFee)}</strong></div>
+              <div style="display:flex; justify-content:space-between; border-top:1.5px solid #2b151e; margin-top:4px; padding-top:5px; font-size:15px; font-weight:800; color:#c83767;">
+                <span>Tổng thanh toán:</span><span>${vnd(totalAmount)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:18px; padding-top:10px; border-top:1px dashed #dcc2ce; text-align:center; font-size:11.5px; color:#6b515d;">
+            <strong>${escapeHtml(thankNote)}</strong>
+          </div>
+        </div>
+        <script>
+          window.onload = function () {
+            setTimeout(function () { window.focus(); window.print(); }, 250);
+          };
+        <\/script>
+      </body>
+      </html>`);
+    win.document.close();
+  }
 
   function renderOrderSuccessAndQR(order, paymentInfo) {
     const stepForm = document.getElementById('checkout-form-step');
@@ -2064,9 +2381,14 @@
       `
       }
 
-      <button type="button" id="btn-done-order" class="nav-pill" style="padding:10px 22px;">
-        Tiếp tục dạo cửa hàng
-      </button>
+      <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+        <button type="button" id="btn-print-my-receipt" class="cta-outline" style="padding:10px 18px; font-size:0.82rem;">
+          🖨️ In / Lưu Phiếu Đặt Hàng
+        </button>
+        <button type="button" id="btn-done-order" class="nav-pill" style="padding:10px 22px;">
+          Tiếp tục dạo cửa hàng
+        </button>
+      </div>
     `;
 
     let uploadedReceiptDataUrl = '';
@@ -2102,6 +2424,10 @@
         showToast(d.message || 'Đã ghi nhận thanh toán QR!');
       };
     }
+
+    stepOk.querySelector('#btn-print-my-receipt')?.addEventListener('click', () => {
+      printCustomerOrderReceipt(order);
+    });
 
     stepOk.querySelector('#btn-done-order').onclick = () => {
       document.getElementById('checkout-modal').classList.remove('open');
@@ -2187,17 +2513,27 @@
               ${o.scentChoice ? `<div>Hương giấy gói: <strong>${escapeHtml(o.scentChoice)}</strong></div>` : ''}
             </div>
 
-            ${
-              o.orderStatus === 'pending'
-                ? `<div style="margin-top:10px; text-align:right;">
-                    <button type="button" class="text-link-btn btn-cancel-my-order" data-code="${escapeAttr(o.orderCode)}" data-phone="${escapeAttr(o.customerPhone)}" style="color:#be123c; font-weight:700;">Hủy đơn hàng này</button>
-                  </div>`
-                : ''
-            }
+            <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="nav-pill btn-print-tracked-order" data-code="${escapeAttr(o.orderCode)}" style="padding:6px 12px; font-size:0.74rem;">
+                🖨️ In / Lưu Hóa Đơn
+              </button>
+              ${
+                o.orderStatus === 'pending'
+                  ? `<button type="button" class="text-link-btn btn-cancel-my-order" data-code="${escapeAttr(o.orderCode)}" data-phone="${escapeAttr(o.customerPhone)}" style="color:#be123c; font-weight:700;">Hủy đơn hàng này</button>`
+                  : ''
+              }
+            </div>
           </div>
         `;
       })
       .join('');
+
+    box.querySelectorAll('.btn-print-tracked-order').forEach((btn) => {
+      btn.onclick = () => {
+        const foundOrd = (d.orders || []).find((x) => x.orderCode === btn.dataset.code);
+        if (foundOrd) printCustomerOrderReceipt(foundOrd);
+      };
+    });
 
     box.querySelectorAll('.btn-cancel-my-order').forEach((btn) => {
       btn.onclick = async () => {
@@ -2396,6 +2732,7 @@
   }
 
   initAtmosphereAndMotion();
+  initProvinceDropdown();
   startFlashTimer();
   bindEvents();
   loadStorefront();

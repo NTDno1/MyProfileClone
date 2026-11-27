@@ -227,12 +227,12 @@
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
           <div>
-            <h3 style="font-size:1.05rem;">Danh Sách Đơn Đặt Hàng</h3>
-            <p style="font-size:0.78rem; color:var(--muted);">Quản lý đơn Quét QR, biên lai chuyển khoản, hương giấy gói &amp; Ship COD</p>
+            <h3 style="font-size:1.05rem;">Danh Sách Đơn Đặt Hàng &amp; In Đơn Cho Khách</h3>
+            <p style="font-size:0.78rem; color:var(--muted);">Quản lý đơn Quét QR / COD, in Hóa đơn khách hàng (A5/A4), Tem dán gói hàng (A6) &amp; Bill nhiệt (K80)</p>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-            <input type="text" id="ord-search-input" class="input" style="margin-bottom:0; width:210px; padding:7px 11px; font-size:0.8rem;" placeholder="Tìm mã đơn, tên, SĐT..." />
-            <select id="ord-status-filter" class="select" style="margin-bottom:0; width:165px; padding:7px 10px; font-size:0.8rem;">
+            <input type="text" id="ord-search-input" class="input" style="margin-bottom:0; width:195px; padding:7px 11px; font-size:0.8rem;" placeholder="Tìm mã đơn, tên, SĐT..." />
+            <select id="ord-status-filter" class="select" style="margin-bottom:0; width:160px; padding:7px 10px; font-size:0.8rem;">
               <option value="all">Tất cả trạng thái</option>
               <option value="pending">Đơn mới chờ duyệt</option>
               <option value="confirmed">Đã xác nhận</option>
@@ -241,6 +241,12 @@
               <option value="completed">Hoàn thành</option>
               <option value="cancelled">Đã hủy</option>
             </select>
+            <button type="button" class="btn btn-sm btn-primary" id="btn-print-selected-orders" title="In hàng loạt các đơn đã tích chọn">
+              🖨️ In Đơn Đã Chọn (<span id="sel-orders-count">0</span>)
+            </button>
+            <button type="button" class="btn btn-sm" id="btn-preview-sample-invoice" style="background:#fff5f9; border-color:#f472b6; color:#be185d; font-weight:700;">
+              👁️ Mẫu In &amp; Cấu Hình Phiếu Đơn
+            </button>
             <button type="button" class="btn btn-sm" id="btn-refresh-orders">Làm mới</button>
           </div>
         </div>
@@ -248,7 +254,10 @@
           <table>
             <thead>
               <tr>
-                <th>Mã Đơn / Thời gian</th>
+                <th style="width:36px; text-align:center;">
+                  <input type="checkbox" id="ord-select-all" title="Chọn / bỏ chọn tất cả đơn trên trang" />
+                </th>
+                <th>Mã Đơn / In Đơn</th>
                 <th>Khách hàng & Địa chỉ</th>
                 <th>Sản phẩm đặt</th>
                 <th>Tổng tiền & TT</th>
@@ -292,6 +301,13 @@
               <label class="label">Giá gốc chưa giảm (VNĐ - để hiện % giảm)</label>
               <input type="number" id="pf-orig-price" class="input" placeholder="280000" />
             </div>
+          </div>
+
+          <div style="margin:-4px 0 12px; padding:8px 12px; background:#fff7ed; border:1px dashed #fdba74; border-radius:11px; font-size:0.79rem; color:#9a3412;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700;">
+              <input type="checkbox" id="pf-custom-price-lock" />
+              <span>📌 Giữ mức giá tinh chỉnh riêng cho sản phẩm này (không bị thay đổi khi tăng/giảm % hàng loạt hoặc đồng bộ lại từ sàn)</span>
+            </label>
           </div>
 
           <div class="grid-2">
@@ -344,8 +360,9 @@
                 <strong style="font-size:0.86rem; color:#54283b;">🧩 Các Phân Hệ Con Ở Trong (VD: Mẫu LS1, LS2... LS15 kèm Ảnh &amp; Tồn kho riêng)</strong>
                 <div style="font-size:0.74rem; color:var(--muted);">Tự động điền khi kéo sâu từ Shopee / TikTok Shop, hoặc bấm "+ Thêm phân hệ" để thêm thủ công.</div>
               </div>
-              <div style="display:flex; align-items:center; gap:8px;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                 <input type="text" id="pf-var-group" class="input" value="Mẫu" placeholder="Tên nhóm (VD: Mẫu)" style="width:110px; margin-bottom:0; padding:6px 10px; font-size:0.78rem;" />
+                <button type="button" class="btn btn-sm" id="btn-sync-price-to-vars" title="Áp dụng ô Giá bán hiện tại cho toàn bộ các mẫu bên dưới">⚡ Áp giá chung cho các mẫu</button>
                 <button type="button" class="btn btn-sm" id="btn-add-variant-row">+ Thêm phân hệ</button>
               </div>
             </div>
@@ -394,6 +411,76 @@
 
           <button type="submit" class="btn btn-primary">💾 Lưu Sản Phẩm Vào Cửa Hàng</button>
         </form>
+      </div>
+
+      <!-- BULK PERCENTAGE PRICE ADJUSTMENT FOR SHOPEE / PLATFORM PRODUCTS -->
+      <div class="card" style="background:linear-gradient(135deg,#fffaf5,#fff5f9); border-color:#fed7aa;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+          <div style="max-width:740px;">
+            <h3 style="font-size:1.05rem; margin-bottom:4px;">💰 Tăng / Giảm Giá Hàng Loạt Sản Phẩm Từ Sàn (+/- %)</h3>
+            <p style="font-size:0.78rem; color:var(--muted); line-height:1.5;">
+              Trên sàn Shopee giá thường phải cộng thêm phí sàn, nên bạn có thể giảm (hoặc tăng) hàng loạt theo <strong>%</strong> để giá trên Web tối ưu hơn cho khách. Các sản phẩm bạn đã <strong>tinh chỉnh giá riêng</strong> vẫn được giữ nguyên.
+            </p>
+          </div>
+          <span id="bulk-adj-current-badge" class="badge" style="background:#ffedd5; color:#c2410c; font-size:0.76rem; padding:6px 11px;">
+            Đang áp dụng: 0% (Bằng giá sàn)
+          </span>
+        </div>
+
+        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+          <span style="font-size:0.77rem; font-weight:700; color:var(--muted); margin-right:4px;">Chọn nhanh mức %:</span>
+          <button type="button" class="btn btn-sm bulk-pct-preset" data-pct="-20">Giảm 20%</button>
+          <button type="button" class="btn btn-sm bulk-pct-preset" data-pct="-15">Giảm 15%</button>
+          <button type="button" class="btn btn-sm bulk-pct-preset" data-pct="-12">Giảm 12%</button>
+          <button type="button" class="btn btn-sm bulk-pct-preset" data-pct="-10">Giảm 10%</button>
+          <button type="button" class="btn btn-sm bulk-pct-preset" data-pct="-5">Giảm 5%</button>
+          <button type="button" class="btn btn-sm bulk-pct-preset" data-pct="0">0% (Giá gốc sàn)</button>
+          <button type="button" class="btn btn-sm bulk-pct-preset" data-pct="5">Tăng +5%</button>
+          <button type="button" class="btn btn-sm bulk-pct-preset" data-pct="10">Tăng +10%</button>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; align-items:end; margin-bottom:12px;">
+          <div>
+            <label class="label">Nguồn sản phẩm áp dụng</label>
+            <select id="bulk-adj-target" class="select" style="margin-bottom:0;">
+              <option value="shopee">🧡 Sản phẩm từ Shopee</option>
+              <option value="tiktok">🎵 Sản phẩm từ TikTok Shop</option>
+              <option value="all_platform">🌐 Toàn bộ sản phẩm kéo từ sàn</option>
+            </select>
+          </div>
+          <div>
+            <label class="label">Tỉ lệ tăng / giảm (%) — Nhập âm để giảm</label>
+            <input type="number" id="bulk-adj-pct" class="input" step="0.5" value="0" placeholder="VD: -10 là giảm 10%, 5 là tăng 5%" style="margin-bottom:0; font-weight:800;" />
+          </div>
+          <div>
+            <label class="label">Quy tắc làm tròn giá</label>
+            <select id="bulk-adj-round" class="select" style="margin-bottom:0;">
+              <option value="1000">Làm tròn nghìn đồng (VD: 99.000đ)</option>
+              <option value="500">Làm tròn 500đ (VD: 96.500đ)</option>
+              <option value="1">Giữ chính xác từng đồng</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding-top:8px; border-top:1px dashed #fed7aa;">
+          <div style="display:flex; flex-direction:column; gap:5px; font-size:0.8rem;">
+            <label style="display:flex; align-items:center; gap:7px; font-weight:700; cursor:pointer;">
+              <input type="checkbox" id="bulk-adj-respect-manual" checked />
+              <span>📌 Giữ nguyên giá các sản phẩm đã tinh chỉnh riêng bằng tay</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:7px; font-weight:600; color:var(--muted); cursor:pointer;">
+              <input type="checkbox" id="bulk-adj-cross" checked />
+              <span>Hiện giá sàn gạch ngang (giá gốc) khi giảm giá trên Web</span>
+            </label>
+            <div id="bulk-adj-preview-text" style="font-size:0.78rem; color:#be185d; font-weight:700; margin-top:2px;">
+              Ví dụ minh họa: SP trên sàn 110.000đ → Giá bán trên Web: 110.000đ
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-primary" id="btn-apply-bulk-price" style="padding:11px 20px;">
+            ⚡ Áp Dụng Giá Hàng Loạt
+          </button>
+        </div>
       </div>
 
       <div class="card">
@@ -757,14 +844,152 @@
           </div>
         </div>
 
-        <div class="grid-2">
-          <div>
-            <label class="label">Phí giao hàng mặc định (VNĐ)</label>
-            <input type="number" id="st-ship-fee" class="input" />
+        <div style="background:#fff9fb; border:1.5px solid #f3b8d2; border-radius:16px; padding:16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <div>
+              <h4 style="font-size:0.96rem; color:#54283b; margin-bottom:3px;">🚚 Cấu Hình Phí Vận Chuyển Theo 3 Miền (Bắc · Trung · Nam)</h4>
+              <p style="font-size:0.76rem; color:var(--muted); line-height:1.45;">
+                Khách hàng chỉ cần chọn <strong>Tỉnh / Thành phố</strong> — phần mềm tự động nhận diện vùng miền (không để khách tự chọn miền) và tính phí vận chuyển ngay từ lúc thêm vào giỏ hàng.
+              </p>
+            </div>
+            <button type="button" class="btn btn-sm" id="btn-toggle-hidden-ship-split" style="background:#fff1f2; border-color:#fda4af; color:#be123c; font-weight:700;">
+              🔒 Mở cấu hình ẩn: Tỉ lệ chịu phí ship 2 bên
+            </button>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:12px;">
+            <div style="background:#fff; border:1px solid var(--border); border-radius:12px; padding:10px 12px;">
+              <label class="label">🌿 Phí ship Miền Bắc (VNĐ)</label>
+              <input type="number" id="st-ship-bac" class="input" value="30000" step="1000" style="margin-bottom:4px; font-weight:800;" />
+              <div id="st-ship-note-bac" style="font-size:0.73rem; color:#0f766e; font-weight:700;">Khách trả trên giỏ hàng: 30.000đ</div>
+            </div>
+            <div style="background:#fff; border:1px solid var(--border); border-radius:12px; padding:10px 12px;">
+              <label class="label">🌤️ Phí ship Miền Trung (VNĐ)</label>
+              <input type="number" id="st-ship-trung" class="input" value="40000" step="1000" style="margin-bottom:4px; font-weight:800;" />
+              <div id="st-ship-note-trung" style="font-size:0.73rem; color:#0f766e; font-weight:700;">Khách trả trên giỏ hàng: 40.000đ</div>
+            </div>
+            <div style="background:#fff; border:1px solid var(--border); border-radius:12px; padding:10px 12px;">
+              <label class="label">☀️ Phí ship Miền Nam (VNĐ)</label>
+              <input type="number" id="st-ship-nam" class="input" value="50000" step="1000" style="margin-bottom:4px; font-weight:800;" />
+              <div id="st-ship-note-nam" style="font-size:0.73rem; color:#0f766e; font-weight:700;">Khách trả trên giỏ hàng: 50.000đ</div>
+            </div>
+          </div>
+
+          <div class="grid-2" style="align-items:end; margin-bottom:4px;">
+            <div>
+              <label class="label">Miền tạm tính mặc định trong Giỏ Hàng (khi khách chưa chọn Tỉnh/TP)</label>
+              <select id="st-default-ship-region" class="select" style="margin-bottom:0;">
+                <option value="bac">Miền Bắc</option>
+                <option value="trung">Miền Trung</option>
+                <option value="nam">Miền Nam</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:flex; align-items:center; gap:7px; font-size:0.8rem; font-weight:700; margin-bottom:6px; cursor:pointer;">
+                <input type="checkbox" id="st-freeship-enabled" checked />
+                <span>🎁 Bật Miễn phí giao hàng cho đơn đạt mốc (VNĐ):</span>
+              </label>
+              <input type="number" id="st-freeship" class="input" value="299000" step="1000" style="margin-bottom:0;" />
+            </div>
+          </div>
+
+          <!-- HIDDEN INTERNAL SELLER / BUYER SHIPPING FEE SPLIT PANEL (PER REGION) -->
+          <div id="hidden-ship-split-panel" style="display:none; margin-top:14px; padding:14px; border-radius:14px; background:#fff5f7; border:1.5px dashed #f472b6;">
+            <div style="font-weight:800; font-size:0.86rem; color:#9d174d; margin-bottom:4px;">
+              🔒 Cấu Hình Ẩn Nội Bộ: Tỉ Lệ Hỗ Trợ Phí Ship Giữa Người Bán &amp; Khách Hàng (Theo Từng Miền)
+            </div>
+            <p style="font-size:0.75rem; color:var(--muted); margin-bottom:12px; line-height:1.45;">
+              Tỉ lệ này hoàn toàn ẩn với khách hàng. Ngay khi khách bấm <strong>Thêm vào Túi Đồ</strong> hoặc chọn Tỉnh/Thành phố, phí ship hiển thị sẽ tự động ăn theo phần % khách chịu của miền đó.
+            </p>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(235px, 1fr)); gap:12px;">
+              <!-- MIỀN BẮC SPLIT -->
+              <div style="background:#fff; border:1px solid #fbcfe8; border-radius:12px; padding:11px;">
+                <div style="font-weight:800; font-size:0.82rem; color:#3d1a29; margin-bottom:6px;">🌿 Tỉ lệ Miền Bắc</div>
+                <div style="display:flex; gap:4px; flex-wrap:wrap; margin-bottom:8px;">
+                  <button type="button" class="btn btn-sm ship-ratio-preset" data-reg="bac" data-shop="0" style="padding:3px 7px; font-size:0.7rem;">0-100</button>
+                  <button type="button" class="btn btn-sm ship-ratio-preset" data-reg="bac" data-shop="30" style="padding:3px 7px; font-size:0.7rem;">30-70</button>
+                  <button type="button" class="btn btn-sm ship-ratio-preset" data-reg="bac" data-shop="50" style="padding:3px 7px; font-size:0.7rem;">50-50</button>
+                  <button type="button" class="btn btn-sm ship-ratio-preset" data-reg="bac" data-shop="70" style="padding:3px 7px; font-size:0.7rem;">70-30</button>
+                  <button type="button" class="btn btn-sm ship-ratio-preset" data-reg="bac" data-shop="100" style="padding:3px 7px; font-size:0.7rem;">100-0</button>
+                </div>
+                <div class="grid-2" style="gap:8px;">
+                  <div>
+                    <label class="label" style="font-size:0.71rem;">Shop chịu (%)</label>
+                    <input type="number" id="st-split-shop-bac" class="input" min="0" max="100" value="0" style="margin-bottom:0; padding:6px 8px;" />
+                  </div>
+                  <div>
+                    <label class="label" style="font-size:0.71rem;">Khách chịu (%)</label>
+                    <input type="number" id="st-split-cust-bac" class="input" min="0" max="100" value="100" style="margin-bottom:0; padding:6px 8px;" />
+                  </div>
+                </div>
+                <div id="st-split-summary-bac" style="margin-top:7px; font-size:0.73rem; font-weight:700; color:#be185d;"></div>
+              </div>
+
+              <!-- MIỀN TRUNG SPLIT -->
+              <div style="background:#fff; border:1px solid #fbcfe8; border-radius:12px; padding:11px;">
+                <div style="font-weight:800; font-size:0.82rem; color:#3d1a29; margin-bottom:6px;">🌤️ Tỉ lệ Miền Trung</div>
+                <div style="display:flex; gap:4px; flex-wrap:wrap; margin-bottom:8px;">
+                  <button type="button" class="btn btn-sm ship-ratio-preset" data-reg="trung" data-shop="0" style="padding:3px 7px; font-size:0.7rem;">0-100</button>
+                  <button type="button" class="btn btn-sm ship-ratio-preset" data-reg="trung" data-shop="30" style="padding:3px 7px; font-size:0.7rem;">30-70</button>
+                  <button type="button" class="btn btn-sm ship-ratio-preset" data-reg="trung" data-shop="50" style="padding:3px 7px; font-size:0.7rem;">50-50</button>
+                  <button type="button" class="btn btn-sm ship-ratio-preset" data-reg="trung" data-shop="70" style="padding:3px 7px; font-size:0.7rem;">70-30</button>
+                  <button type="button" class="btn btn-sm ship-ratio-preset" data-reg="trung" data-shop="100" style="padding:3px 7px; font-size:0.7rem;">100-0</button>
+                </div>
+                <div class="grid-2" style="gap:8px;">
+                  <div>
+                    <label class="label" style="font-size:0.71rem;">Shop chịu (%)</label>
+                    <input type="number" id="st-split-shop-trung" class="input" min="0" max="100" value="0" style="margin-bottom:0; padding:6px 8px;" />
+                  </div>
+                  <div>
+                    <label class="label" style="font-size:0.71rem;">Khách chịu (%)</label>
+                    <input type="number" id="st-split-cust-trung" class="input" min="0" max="100" value="100" style="margin-bottom:0; padding:6px 8px;" />
+                  </div>
+                </div>
+                <div id="st-split-summary-trung" style="margin-top:7px; font-size:0.73rem; font-weight:700; color:#be185d;"></div>
+              </div>
+
+              <!-- MIỀN NAM SPLIT -->
+              <div style="background:#fff; border:1px solid #fbcfe8; border-radius:12px; padding:11px;">
+                <div style="font-weight:800; font-size:0.82rem; color:#3d1a29; margin-bottom:6px;">☀️ Tỉ lệ Miền Nam</div>
+                <div style="display:flex; gap:4px; flex-wrap:wrap; margin-bottom:8px;">
+                  <button type="button" class="btn btn-sm ship-ratio-preset" data-reg="nam" data-shop="0" style="padding:3px 7px; font-size:0.7rem;">0-100</button>
+                  <button type="button" class="btn btn-sm ship-ratio-preset" data-reg="nam" data-shop="30" style="padding:3px 7px; font-size:0.7rem;">30-70</button>
+                  <button type="button" class="btn btn-sm ship-ratio-preset" data-reg="nam" data-shop="50" style="padding:3px 7px; font-size:0.7rem;">50-50</button>
+                  <button type="button" class="btn btn-sm ship-ratio-preset" data-reg="nam" data-shop="70" style="padding:3px 7px; font-size:0.7rem;">70-30</button>
+                  <button type="button" class="btn btn-sm ship-ratio-preset" data-reg="nam" data-shop="100" style="padding:3px 7px; font-size:0.7rem;">100-0</button>
+                </div>
+                <div class="grid-2" style="gap:8px;">
+                  <div>
+                    <label class="label" style="font-size:0.71rem;">Shop chịu (%)</label>
+                    <input type="number" id="st-split-shop-nam" class="input" min="0" max="100" value="0" style="margin-bottom:0; padding:6px 8px;" />
+                  </div>
+                  <div>
+                    <label class="label" style="font-size:0.71rem;">Khách chịu (%)</label>
+                    <input type="number" id="st-split-cust-nam" class="input" min="0" max="100" value="100" style="margin-bottom:0; padding:6px 8px;" />
+                  </div>
+                </div>
+                <div id="st-split-summary-nam" style="margin-top:7px; font-size:0.73rem; font-weight:700; color:#be185d;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:14px; margin-bottom:16px;">
+          <h4 style="font-size:0.92rem; color:#334155; margin-bottom:10px;">🖨️ Thông Tin Người Gửi &amp; Lời Cảm Ơn Trên Phiếu In Đơn Hàng</h4>
+          <div class="grid-2">
+            <div>
+              <label class="label">Hotline / Zalo in trên Hóa đơn &amp; Vận đơn</label>
+              <input type="text" id="st-sender-phone" class="input" placeholder="0359427135" />
+            </div>
+            <div>
+              <label class="label">Địa chỉ Kho / Cửa hàng người gửi</label>
+              <input type="text" id="st-sender-address" class="input" placeholder="Kho NA 2HAND Boutique — Giao hàng toàn quốc" />
+            </div>
           </div>
           <div>
-            <label class="label">Miễn phí giao hàng cho đơn từ (VNĐ)</label>
-            <input type="number" id="st-freeship" class="input" />
+            <label class="label">Lời nhắn cảm ơn dưới chân Hóa đơn khách hàng</label>
+            <input type="text" id="st-invoice-note" class="input" style="margin-bottom:0;" placeholder="Cảm ơn nàng đã tin yêu NA 2HAND Boutique!..." />
           </div>
         </div>
 
@@ -810,9 +1035,71 @@
     </section>
   </main>
 
+  <!-- ORDER PRINT STUDIO & LIVE TEMPLATE PREVIEW MODAL -->
+  <div id="print-studio-modal" style="display:none; position:fixed; inset:0; z-index:9998; background:rgba(34,15,24,0.62); backdrop-filter:blur(5px); align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#fff; width:100%; max-width:940px; max-height:92vh; border-radius:22px; border:1.5px solid var(--border); box-shadow:0 24px 60px rgba(0,0,0,0.25); display:flex; flex-direction:column; overflow:hidden;">
+      <!-- Header -->
+      <div style="padding:15px 20px; background:linear-gradient(135deg,#fff5f9,#fdf2f8); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h3 style="font-size:1.05rem; color:#3d1a29; margin:0;" id="print-studio-title">🖨️ Trình Thiết Kế &amp; In Đơn Hàng Cho Khách</h3>
+          <div style="font-size:0.76rem; color:var(--muted);" id="print-studio-subtitle">Chọn khổ giấy in phù hợp (Hóa đơn khách A5/A4, Tem dán gói hàng A6 100×150mm, hoặc Bill nhiệt K80)</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button type="button" class="btn btn-primary" id="btn-execute-print" style="padding:9px 18px;">
+            🖨️ Bấm In Ngay / Lưu PDF
+          </button>
+          <button type="button" class="btn btn-sm" id="btn-close-print-studio">✕ Đóng</button>
+        </div>
+      </div>
+
+      <!-- Template Selector & Quick Sender Settings -->
+      <div style="padding:12px 20px; background:#fafafa; border-bottom:1px solid #eee;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+          <div style="display:flex; gap:7px; flex-wrap:wrap;" id="print-tpl-tabs">
+            <button type="button" class="btn btn-sm btn-primary print-tpl-btn" data-tpl="invoice_a5">
+              🧾 1. Hóa Đơn Cho Khách (A5 / A4 Boutique)
+            </button>
+            <button type="button" class="btn btn-sm print-tpl-btn" data-tpl="label_a6">
+              📦 2. Tem Dán Gói Hàng Shipper (A6 100×150mm)
+            </button>
+            <button type="button" class="btn btn-sm print-tpl-btn" data-tpl="thermal_k80">
+              🧾 3. Bill Nhiệt Thu Ngân (K80 — 80mm)
+            </button>
+          </div>
+          <button type="button" class="btn btn-sm" id="btn-toggle-print-sender-cfg" style="font-size:0.74rem;">
+            ⚙️ Sửa nhanh Địa chỉ / SĐT Shop trên phiếu in
+          </button>
+        </div>
+
+        <div id="print-sender-quick-cfg" style="display:none; background:#fff; border:1px dashed #f0abc6; border-radius:12px; padding:10px 12px; margin-top:6px;">
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:8px; align-items:end;">
+            <div>
+              <label class="label" style="font-size:0.72rem;">Hotline / Zalo Người Gửi</label>
+              <input type="text" id="ps-sender-phone" class="input" style="margin-bottom:0; padding:6px 9px; font-size:0.79rem;" placeholder="0359427135" />
+            </div>
+            <div>
+              <label class="label" style="font-size:0.72rem;">Địa chỉ Kho / Cửa Hàng</label>
+              <input type="text" id="ps-sender-addr" class="input" style="margin-bottom:0; padding:6px 9px; font-size:0.79rem;" placeholder="Kho NA 2HAND Boutique..." />
+            </div>
+            <div>
+              <label class="label" style="font-size:0.72rem;">Lời cảm ơn cuối hóa đơn</label>
+              <input type="text" id="ps-thank-note" class="input" style="margin-bottom:0; padding:6px 9px; font-size:0.79rem;" placeholder="Cảm ơn nàng đã ủng hộ..." />
+            </div>
+          </div>
+          <div style="margin-top:8px; text-align:right;">
+            <button type="button" class="btn btn-sm btn-primary" id="btn-save-print-sender-cfg">💾 Lưu cấu hình người gửi</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Scrollable Paper Preview -->
+      <div id="print-studio-preview" style="flex:1; overflow-y:auto; background:#e5e7eb; padding:20px; display:flex; flex-direction:column; align-items:center; gap:20px;"></div>
+    </div>
+  </div>
+
   <div class="toast" id="toast">Đã lưu thành công!</div>
 
   <script src="/js/shopee-harvester-runtime.js?v=6"></script>
-  <script src="/js/shop-admin.js?v=12"></script>
+  <script src="/js/shop-admin.js?v=14"></script>
 </body>
 </html>

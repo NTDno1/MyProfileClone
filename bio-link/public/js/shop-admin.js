@@ -191,8 +191,10 @@
 
       renderOrders();
       renderCategoryOptions();
+      renderProductSizeChartOptions();
       renderProductsTable();
       renderCategoriesAndCoupons();
+      initSizeChartsManagerFromStore();
       populateSettingsForm();
       setupSyncTools();
       loadSyncAudit();
@@ -518,6 +520,130 @@
     renderVariantEditorRows();
   });
 
+  let editingProductCustomChart = {
+    name: '',
+    columns: ['Size', 'Chiều cao (cm)', 'Cân nặng (kg)', 'Số đo (cm)'],
+    rows: [
+      ['S', '1m50 - 1m60', '42 - 48kg', 'Eo 64'],
+      ['M', '1m55 - 1m65', '49 - 54kg', 'Eo 68']
+    ],
+    note: ''
+  };
+
+  function renderProductSizeChartOptions() {
+    const sel = document.getElementById('pf-size-chart-id');
+    if (!sel || !shopData) return;
+    const prevVal = sel.value || 'auto';
+    const charts = shopData.sizeCharts || [];
+    sel.innerHTML = [
+      `<option value="auto">✨ Tự động nhận diện theo tên / danh mục sản phẩm (Khuyên dùng)</option>`,
+      `<option value="none">🚫 Không hiện bảng size (Phụ kiện, Sticker...)</option>`,
+      ...charts.map((c) => `<option value="${escapeHtml(c.id)}">📏 ${escapeHtml(c.name)}</option>`),
+      `<option value="custom">✍️ Tự tạo bảng size riêng bằng tay chỉ cho sản phẩm này</option>`
+    ].join('');
+    if ([...sel.options].some((o) => o.value === prevVal)) {
+      sel.value = prevVal;
+    }
+    toggleProductCustomSizeBox();
+  }
+
+  function toggleProductCustomSizeBox() {
+    const sel = document.getElementById('pf-size-chart-id');
+    const wrap = document.getElementById('pf-custom-size-wrap');
+    if (!sel || !wrap) return;
+    wrap.style.display = sel.value === 'custom' ? 'block' : 'none';
+    if (sel.value === 'custom') {
+      renderProductCustomSizeTable();
+    }
+  }
+
+  function renderProductCustomSizeTable() {
+    const box = document.getElementById('pf-cs-table-editor');
+    if (!box) return;
+    const cols = editingProductCustomChart.columns;
+    const rows = editingProductCustomChart.rows;
+
+    const headCells = cols
+      .map(
+        (col, ci) => `
+        <th style="padding:6px; background:#f8fafc;">
+          <div style="display:flex; gap:4px; align-items:center;">
+            <input type="text" class="input pf-cs-col-inp" data-ci="${ci}" value="${escapeHtml(col)}" style="margin-bottom:0; padding:5px 7px; font-size:0.76rem; font-weight:700; min-width:95px;" />
+            ${cols.length > 2 ? `<button type="button" class="btn btn-sm btn-danger pf-cs-del-col" data-ci="${ci}" style="padding:3px 6px;">✕</button>` : ''}
+          </div>
+        </th>`
+      )
+      .join('');
+
+    const bodyRows = rows
+      .map(
+        (r, ri) => `
+        <tr>
+          ${cols
+            .map(
+              (_, ci) => `
+              <td style="padding:5px;">
+                <input type="text" class="input pf-cs-cell-inp" data-ri="${ri}" data-ci="${ci}" value="${escapeHtml(r[ci] ?? '')}" style="margin-bottom:0; padding:5px 7px; font-size:0.77rem; min-width:85px;" />
+              </td>`
+            )
+            .join('')}
+          <td style="padding:5px; width:36px;">
+            <button type="button" class="btn btn-sm btn-danger pf-cs-del-row" data-ri="${ri}">✕</button>
+          </td>
+        </tr>`
+      )
+      .join('');
+
+    box.innerHTML = `
+      <table style="width:100%; border-collapse:collapse;">
+        <thead><tr>${headCells}<th style="width:36px;"></th></tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    `;
+
+    box.querySelectorAll('.pf-cs-col-inp').forEach((inp) => {
+      inp.addEventListener('input', () => {
+        editingProductCustomChart.columns[Number(inp.dataset.ci)] = inp.value;
+      });
+    });
+    box.querySelectorAll('.pf-cs-cell-inp').forEach((inp) => {
+      inp.addEventListener('input', () => {
+        const ri = Number(inp.dataset.ri);
+        const ci = Number(inp.dataset.ci);
+        if (!editingProductCustomChart.rows[ri]) editingProductCustomChart.rows[ri] = [];
+        editingProductCustomChart.rows[ri][ci] = inp.value;
+      });
+    });
+    box.querySelectorAll('.pf-cs-del-col').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const ci = Number(btn.dataset.ci);
+        editingProductCustomChart.columns.splice(ci, 1);
+        editingProductCustomChart.rows.forEach((r) => r.splice(ci, 1));
+        renderProductCustomSizeTable();
+      });
+    });
+    box.querySelectorAll('.pf-cs-del-row').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        editingProductCustomChart.rows.splice(Number(btn.dataset.ri), 1);
+        renderProductCustomSizeTable();
+      });
+    });
+  }
+
+  document.getElementById('pf-size-chart-id')?.addEventListener('change', toggleProductCustomSizeBox);
+  document.getElementById('btn-jump-size-tab')?.addEventListener('click', () => {
+    document.querySelector('.tab-btn[data-tab="pane-sizes"]')?.click();
+  });
+  document.getElementById('btn-pf-cs-add-col')?.addEventListener('click', () => {
+    editingProductCustomChart.columns.push(`Cột ${editingProductCustomChart.columns.length + 1}`);
+    editingProductCustomChart.rows.forEach((r) => r.push(''));
+    renderProductCustomSizeTable();
+  });
+  document.getElementById('btn-pf-cs-add-row')?.addEventListener('click', () => {
+    editingProductCustomChart.rows.push(editingProductCustomChart.columns.map(() => ''));
+    renderProductCustomSizeTable();
+  });
+
   function resetProductForm() {
     document.getElementById('pf-id').value = '';
     document.getElementById('pf-name').value = '';
@@ -533,6 +659,22 @@
     document.getElementById('pf-desc').value = '';
     const vg = document.getElementById('pf-var-group');
     if (vg) vg.value = 'Mẫu';
+    const scSel = document.getElementById('pf-size-chart-id');
+    if (scSel) scSel.value = 'auto';
+    editingProductCustomChart = {
+      name: '',
+      columns: ['Size', 'Chiều cao (cm)', 'Cân nặng (kg)', 'Số đo (cm)'],
+      rows: [
+        ['S', '1m50 - 1m60', '42 - 48kg', 'Eo 64'],
+        ['M', '1m55 - 1m65', '49 - 54kg', 'Eo 68']
+      ],
+      note: ''
+    };
+    const csName = document.getElementById('pf-cs-name');
+    const csNote = document.getElementById('pf-cs-note');
+    if (csName) csName.value = '';
+    if (csNote) csNote.value = '';
+    toggleProductCustomSizeBox();
     editingVariants = [];
     renderVariantEditorRows();
     document.getElementById('pf-flash').checked = false;
@@ -591,6 +733,16 @@
       productTag: chosenTag,
       sourceUrl,
       sourcePlatform: chosenTag,
+      sizeChartId: document.getElementById('pf-size-chart-id')?.value || 'auto',
+      customSizeChart:
+        document.getElementById('pf-size-chart-id')?.value === 'custom'
+          ? {
+              name: document.getElementById('pf-cs-name')?.value.trim() || `Bảng Size — ${document.getElementById('pf-name').value.trim()}`,
+              columns: editingProductCustomChart.columns,
+              rows: editingProductCustomChart.rows,
+              note: document.getElementById('pf-cs-note')?.value.trim() || ''
+            }
+          : null,
       images: document
         .getElementById('pf-images')
         .value.split('\n')
@@ -883,6 +1035,17 @@
         document.getElementById('pf-desc').value = prod.description || '';
         const vg = document.getElementById('pf-var-group');
         if (vg) vg.value = prod.variantGroupName || 'Mẫu';
+        const scSel = document.getElementById('pf-size-chart-id');
+        if (scSel) {
+          renderProductSizeChartOptions();
+          scSel.value = prod.sizeChartId || 'auto';
+          if (prod.sizeChartId === 'custom' && prod.customSizeChart) {
+            editingProductCustomChart = JSON.parse(JSON.stringify(prod.customSizeChart));
+            document.getElementById('pf-cs-name').value = prod.customSizeChart.name || '';
+            document.getElementById('pf-cs-note').value = prod.customSizeChart.note || '';
+          }
+          toggleProductCustomSizeBox();
+        }
         editingVariants = Array.isArray(prod.variants) ? JSON.parse(JSON.stringify(prod.variants)) : [];
         renderVariantEditorRows();
         document.getElementById('pf-flash').checked = !!prod.isFlashSale;
@@ -1415,10 +1578,546 @@
     }
   });
 
-  // --- 5. QR PAYMENT & STORE SETTINGS ---
+  // --- 5. SIZE CHARTS BUILDER (QUẦN LOE / JEAN, ÁO HOODIE & MANUAL CHARTS) ---
+  let editingSizeCharts = [];
+  let selectedAdminChartIdx = 0;
+
+  function initSizeChartsManagerFromStore() {
+    if (!shopData) return;
+    editingSizeCharts = JSON.parse(JSON.stringify(shopData.sizeCharts || []));
+    if (selectedAdminChartIdx >= editingSizeCharts.length) {
+      selectedAdminChartIdx = Math.max(0, editingSizeCharts.length - 1);
+    }
+    renderSizeChartsManagerUI();
+  }
+
+  function syncCurrentChartMetaFromInputs() {
+    const cur = editingSizeCharts[selectedAdminChartIdx];
+    if (!cur) return;
+    const nEl = document.getElementById('sc-name');
+    const kEl = document.getElementById('sc-keywords');
+    const noteEl = document.getElementById('sc-note');
+    const diagEl = document.getElementById('sc-diagram-url');
+    if (nEl) cur.name = nEl.value;
+    if (kEl) cur.autoKeywords = kEl.value;
+    if (noteEl) cur.note = noteEl.value;
+    if (diagEl) cur.diagramUrl = diagEl.value.trim();
+  }
+
+  function renderSizeChartsManagerUI() {
+    const bar = document.getElementById('size-charts-selector-bar');
+    const panel = document.getElementById('size-chart-editor-panel');
+    if (!bar || !panel) return;
+
+    if (editingSizeCharts.length === 0) {
+      bar.innerHTML = `<span style="font-size:0.82rem; color:var(--muted);">Chưa có bảng size nào — hãy bấm "+ Tạo Bảng Size Thủ Công Mới" hoặc "Khôi phục mẫu gốc".</span>`;
+      panel.style.display = 'none';
+      return;
+    }
+    panel.style.display = 'block';
+
+    bar.innerHTML = editingSizeCharts
+      .map(
+        (c, idx) => `
+        <button type="button" class="btn btn-sm ${idx === selectedAdminChartIdx ? 'btn-primary' : ''}" data-scidx="${idx}">
+          📏 ${escapeHtml(c.name || `Bảng Size #${idx + 1}`)} (${(c.rows || []).length} size)
+        </button>`
+      )
+      .join('');
+
+    bar.querySelectorAll('button[data-scidx]').forEach((b) => {
+      b.addEventListener('click', () => {
+        syncCurrentChartMetaFromInputs();
+        selectedAdminChartIdx = Number(b.dataset.scidx);
+        renderSizeChartsManagerUI();
+      });
+    });
+
+    const cur = editingSizeCharts[selectedAdminChartIdx];
+    document.getElementById('sc-name').value = cur.name || '';
+    document.getElementById('sc-keywords').value = cur.autoKeywords || '';
+    document.getElementById('sc-note').value = cur.note || '';
+    document.getElementById('sc-diagram-url').value = cur.diagramUrl || '';
+    const prevImg = document.getElementById('sc-diagram-preview');
+    if (prevImg) {
+      prevImg.src = cur.diagramUrl || '/images/size-diagram-pants.svg';
+      prevImg.style.opacity = cur.diagramUrl ? '1' : '0.28';
+    }
+
+    renderActiveSpreadsheetTable();
+  }
+
+  function renderActiveSpreadsheetTable() {
+    const box = document.getElementById('sc-spreadsheet-box');
+    const cur = editingSizeCharts[selectedAdminChartIdx];
+    if (!box || !cur) return;
+
+    if (!Array.isArray(cur.columns) || cur.columns.length === 0) {
+      cur.columns = ['Size', 'Thông số'];
+    }
+    if (!Array.isArray(cur.rows)) cur.rows = [];
+
+    const headHtml = cur.columns
+      .map(
+        (col, ci) => `
+        <th style="background:#23131b; padding:7px 6px; min-width:118px;">
+          <div style="display:flex; gap:4px; align-items:center;">
+            <input type="text" class="input sc-col-input" data-ci="${ci}" value="${escapeHtml(col)}" style="margin-bottom:0; padding:5px 8px; font-size:0.76rem; font-weight:700; background:#fff; color:#2b151e;" />
+            ${cur.columns.length > 2 ? `<button type="button" class="btn btn-sm btn-danger sc-del-col-btn" data-ci="${ci}" title="Xóa cột này" style="padding:4px 7px;">✕</button>` : ''}
+          </div>
+        </th>`
+      )
+      .join('');
+
+    const rowsHtml = cur.rows
+      .map(
+        (row, ri) => `
+        <tr>
+          ${cur.columns
+            .map(
+              (_, ci) => `
+              <td style="padding:5px 6px;">
+                <input type="text" class="input sc-cell-input" data-ri="${ri}" data-ci="${ci}" value="${escapeHtml(row[ci] ?? '')}" style="margin-bottom:0; padding:6px 8px; font-size:0.8rem; font-weight:${ci === 0 ? '700' : '500'};" placeholder="..." />
+              </td>`
+            )
+            .join('')}
+          <td style="padding:5px; width:42px; text-align:center;">
+            <button type="button" class="btn btn-sm btn-danger sc-del-row-btn" data-ri="${ri}" title="Xóa dòng này">✕</button>
+          </td>
+        </tr>`
+      )
+      .join('');
+
+    box.innerHTML = `
+      <table style="width:100%; border-collapse:collapse;">
+        <thead><tr>${headHtml}<th style="background:#23131b; color:#fff; width:42px; text-align:center; font-size:0.72rem;">Xóa</th></tr></thead>
+        <tbody>${rowsHtml || `<tr><td colspan="${cur.columns.length + 1}" style="text-align:center; padding:16px; color:var(--muted);">Chưa có dòng nào — bấm "+ Thêm Dòng Size Mới" nhé!</td></tr>`}</tbody>
+      </table>
+    `;
+
+    box.querySelectorAll('.sc-col-input').forEach((inp) => {
+      inp.addEventListener('input', () => {
+        cur.columns[Number(inp.dataset.ci)] = inp.value;
+      });
+    });
+    box.querySelectorAll('.sc-cell-input').forEach((inp) => {
+      inp.addEventListener('input', () => {
+        const ri = Number(inp.dataset.ri);
+        const ci = Number(inp.dataset.ci);
+        if (!cur.rows[ri]) cur.rows[ri] = [];
+        cur.rows[ri][ci] = inp.value;
+      });
+    });
+    box.querySelectorAll('.sc-del-col-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const ci = Number(btn.dataset.ci);
+        cur.columns.splice(ci, 1);
+        cur.rows.forEach((r) => r.splice(ci, 1));
+        renderActiveSpreadsheetTable();
+      });
+    });
+    box.querySelectorAll('.sc-del-row-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        cur.rows.splice(Number(btn.dataset.ri), 1);
+        renderSizeChartsManagerUI();
+      });
+    });
+  }
+
+  ['sc-name', 'sc-keywords', 'sc-note', 'sc-diagram-url'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('input', () => {
+      syncCurrentChartMetaFromInputs();
+      if (id === 'sc-diagram-url') {
+        const prevImg = document.getElementById('sc-diagram-preview');
+        const v = document.getElementById('sc-diagram-url').value.trim();
+        if (prevImg) {
+          prevImg.src = v || '/images/size-diagram-pants.svg';
+          prevImg.style.opacity = v ? '1' : '0.28';
+        }
+      }
+    });
+  });
+
+  document.getElementById('sc-diagram-file')?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    showToast('Đang tải ảnh sơ đồ đo size... ⏳');
+    try {
+      const url = await uploadFileToServer(file);
+      document.getElementById('sc-diagram-url').value = url;
+      syncCurrentChartMetaFromInputs();
+      renderSizeChartsManagerUI();
+      showToast('Đã tải ảnh minh họa thành công! Nhớ bấm Lưu Cấu Hình Bảng Size nhé ✨');
+    } catch (err) {
+      showToast(err.message, true);
+    } finally {
+      e.target.value = '';
+    }
+  });
+
+  document.getElementById('btn-sc-add-col')?.addEventListener('click', () => {
+    const cur = editingSizeCharts[selectedAdminChartIdx];
+    if (!cur) return;
+    syncCurrentChartMetaFromInputs();
+    cur.columns.push(`Thông số ${cur.columns.length}`);
+    cur.rows.forEach((r) => r.push(''));
+    renderActiveSpreadsheetTable();
+  });
+
+  document.getElementById('btn-sc-add-row')?.addEventListener('click', () => {
+    const cur = editingSizeCharts[selectedAdminChartIdx];
+    if (!cur) return;
+    syncCurrentChartMetaFromInputs();
+    cur.rows.push(cur.columns.map((_, i) => (i === 0 ? `Size ${cur.rows.length + 1}` : '')));
+    renderSizeChartsManagerUI();
+  });
+
+  document.getElementById('btn-add-new-size-chart')?.addEventListener('click', () => {
+    syncCurrentChartMetaFromInputs();
+    editingSizeCharts.push({
+      id: `chart_${Date.now()}`,
+      name: `Bảng Size Tùy Chỉnh Mới #${editingSizeCharts.length + 1}`,
+      autoKeywords: '',
+      columns: ['Size', 'Chiều cao (cm)', 'Cân nặng (kg)', 'Rộng / Ngực (cm)', 'Eo (cm)', 'Dài (cm)'],
+      rows: [
+        ['S', '1m50 - 1m60', '42 - 48kg', '84', '64', '60'],
+        ['M', '1m55 - 1m65', '49 - 54kg', '88', '68', '62'],
+        ['L', '1m60 - 1m70', '55 - 62kg', '92', '72', '64']
+      ],
+      diagramUrl: '',
+      note: 'Số đo trải phẳng thực tế (cm), có thể chênh lệch nhẹ 1-2cm.'
+    });
+    selectedAdminChartIdx = editingSizeCharts.length - 1;
+    renderSizeChartsManagerUI();
+    showToast('Đã tạo bảng size thủ công mới! Hãy chỉnh thông số rồi bấm Lưu nhé 📏');
+  });
+
+  document.getElementById('btn-dup-size-chart')?.addEventListener('click', () => {
+    const cur = editingSizeCharts[selectedAdminChartIdx];
+    if (!cur) return;
+    syncCurrentChartMetaFromInputs();
+    const copy = JSON.parse(JSON.stringify(cur));
+    copy.id = `chart_${Date.now()}`;
+    copy.name = `${cur.name} (Bản sao)`;
+    editingSizeCharts.push(copy);
+    selectedAdminChartIdx = editingSizeCharts.length - 1;
+    renderSizeChartsManagerUI();
+    showToast('Đã nhân bản bảng size!');
+  });
+
+  document.getElementById('btn-delete-cur-size-chart')?.addEventListener('click', () => {
+    if (editingSizeCharts.length === 0) return;
+    const cur = editingSizeCharts[selectedAdminChartIdx];
+    if (!confirm(`Bạn chắc chắn muốn xóa "${cur?.name || 'Bảng size này'}"?`)) return;
+    editingSizeCharts.splice(selectedAdminChartIdx, 1);
+    selectedAdminChartIdx = Math.max(0, selectedAdminChartIdx - 1);
+    renderSizeChartsManagerUI();
+  });
+
+  document.getElementById('btn-save-all-size-charts')?.addEventListener('click', async () => {
+    syncCurrentChartMetaFromInputs();
+    try {
+      const res = await apiFetch('/api/shop/admin/size-charts', {
+        method: 'PUT',
+        body: JSON.stringify({ sizeCharts: editingSizeCharts })
+      });
+      showToast(res.message || 'Đã lưu toàn bộ Bảng Size thành công! 📏');
+      await loadOverview();
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  });
+
+  document.getElementById('btn-reset-default-charts')?.addEventListener('click', async () => {
+    try {
+      const res = await apiFetch('/api/shop/admin/size-charts/reset-defaults', { method: 'POST' });
+      showToast(res.message || 'Đã khôi phục mẫu chuẩn Quần Loe & Áo Hoodie!');
+      await loadOverview();
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  });
+
+  // --- 6. HERO POLAROID, "GÓC PHỐI ĐỒ" STUDIO, QR PAYMENT & STORE SETTINGS ---
+  let editingLookbookSets = [];
+  let activePinEditTarget = {}; // { [setIdx]: pinIdx }
+
+  function buildDefaultLookbookSetsSeed() {
+    const prods = shopData?.products || [];
+    const p0 = prods[0]?.id || '';
+    const p1 = prods[Math.min(5, Math.max(0, prods.length - 1))]?.id || p0;
+    const p2 = prods[Math.min(1, Math.max(0, prods.length - 1))]?.id || p0;
+    const p3 = prods[Math.min(4, Math.max(0, prods.length - 1))]?.id || p0;
+    return [
+      {
+        id: 'look-1',
+        tabLabel: 'Set Hẹn Hò Cuối Tuần',
+        title: 'Look 01 — Hẹn Hò Cuối Tuần Dịu Dàng',
+        description: 'Phối sẵn tông màu hài hòa — nàng có thể chọn lẻ từng món hoặc rinh trọn bộ vào túi đồ.',
+        photo: '/media/bio-link/girlfriend-1.jpg',
+        pins: [
+          { productId: p0, x: 48, y: 42 },
+          { productId: p1, x: 66, y: 68 }
+        ]
+      },
+      {
+        id: 'look-2',
+        tabLabel: 'Set Tiểu Thư Dạo Phố',
+        title: 'Look 02 — Dạo Phố Năng Động Ngọt Ngào',
+        description: 'Phối sẵn tông màu hài hòa — nàng có thể chọn lẻ từng món hoặc rinh trọn bộ vào túi đồ.',
+        photo: '/media/bio-link/girlfriend-2.jpg',
+        pins: [
+          { productId: p2, x: 46, y: 45 },
+          { productId: p3, x: 58, y: 74 }
+        ]
+      }
+    ];
+  }
+
+  function renderLookbookSetsEditor() {
+    const wrap = document.getElementById('st-lookbook-sets-editor');
+    if (!wrap || !shopData) return;
+    const allProds = (shopData.products || []).filter((p) => !p.isLocked);
+
+    wrap.innerHTML = editingLookbookSets
+      .map((s, sIdx) => {
+        const pins = Array.isArray(s.pins) ? s.pins : [];
+        const selPinIdx = Math.min(activePinEditTarget[sIdx] || 0, Math.max(0, pins.length - 1));
+        const pinsDotsHtml = pins
+          .map(
+            (pin, pIdx) => `
+            <span
+              data-sidx="${sIdx}"
+              data-pidx="${pIdx}"
+              class="lb-admin-pin"
+              style="position:absolute; left:${Number(pin.x ?? 50)}%; top:${Number(pin.y ?? 50)}%; transform:translate(-50%,-50%); width:26px; height:26px; border-radius:50%; background:${pIdx === selPinIdx ? '#e14b85' : '#2b151e'}; color:#fff; font-size:0.74rem; font-weight:800; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 3px 10px rgba(0,0,0,0.28); cursor:pointer;"
+              title="Chấm món số ${pIdx + 1}"
+            >${pIdx + 1}</span>`
+          )
+          .join('');
+
+        const pinsRowsHtml = pins
+          .map((pin, pIdx) => {
+            const optsHtml = allProds
+              .map(
+                (pr) =>
+                  `<option value="${escapeHtml(pr.id)}" ${pr.id === pin.productId ? 'selected' : ''}>${escapeHtml(pr.name.slice(0, 48))} (${formatVnd(pr.price)})</option>`
+              )
+              .join('');
+            return `
+              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; background:#fff; padding:7px 8px; border-radius:10px; border:1.5px solid ${pIdx === selPinIdx ? '#e14b85' : 'var(--border)'}; margin-bottom:6px;">
+                <button type="button" class="btn btn-sm lb-select-pin-btn ${pIdx === selPinIdx ? 'btn-primary' : ''}" data-sidx="${sIdx}" data-pidx="${pIdx}" title="Chọn chấm này rồi click lên ảnh bên trái để đặt tọa độ">
+                  🎯 Chấm #${pIdx + 1}
+                </button>
+                <select class="select lb-pin-prod" data-sidx="${sIdx}" data-pidx="${pIdx}" style="flex:1 1 200px; margin-bottom:0; padding:6px 8px; font-size:0.78rem;">
+                  ${optsHtml}
+                </select>
+                <span style="font-size:0.72rem; color:var(--muted);">X%:</span>
+                <input type="number" min="5" max="95" class="input lb-pin-x" data-sidx="${sIdx}" data-pidx="${pIdx}" value="${Math.round(Number(pin.x ?? 50))}" style="width:58px; margin-bottom:0; padding:5px 7px; font-size:0.76rem;" />
+                <span style="font-size:0.72rem; color:var(--muted);">Y%:</span>
+                <input type="number" min="5" max="95" class="input lb-pin-y" data-sidx="${sIdx}" data-pidx="${pIdx}" value="${Math.round(Number(pin.y ?? 50))}" style="width:58px; margin-bottom:0; padding:5px 7px; font-size:0.76rem;" />
+                ${pins.length > 1 ? `<button type="button" class="btn btn-sm btn-danger lb-del-pin" data-sidx="${sIdx}" data-pidx="${pIdx}">✕</button>` : ''}
+              </div>
+            `;
+          })
+          .join('');
+
+        return `
+          <div style="background:#fff; border:1.5px solid var(--border); border-radius:16px; padding:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+              <strong style="color:var(--pri); font-size:0.9rem;">✨ Set Phối Đồ #${sIdx + 1}</strong>
+              ${editingLookbookSets.length > 1 ? `<button type="button" class="btn btn-sm btn-danger lb-del-set" data-sidx="${sIdx}">🗑️ Xóa Set này</button>` : ''}
+            </div>
+
+            <div style="display:grid; grid-template-columns: minmax(180px, 230px) minmax(0, 1fr); gap:14px; align-items:start;">
+              <div>
+                <div class="lb-photo-click-stage" data-sidx="${sIdx}" style="position:relative; width:100%; aspect-ratio:3/3.6; border-radius:14px; overflow:hidden; border:1.5px solid var(--border); cursor:crosshair; background:#f8fafc;" title="Click trực tiếp lên ảnh để đặt vị trí chấm đang chọn!">
+                  <img src="${escapeHtml(s.photo || '/media/bio-link/girlfriend-1.jpg')}" alt="Lookbook" style="width:100%; height:100%; object-fit:cover; display:block; pointer-events:none;" />
+                  ${pinsDotsHtml}
+                </div>
+                <div style="font-size:0.71rem; color:var(--pri); font-weight:700; text-align:center; margin:5px 0;">
+                  👆 Bấm lên ảnh để dời Chấm #${selPinIdx + 1}
+                </div>
+                <input type="text" class="input lb-set-photo" data-sidx="${sIdx}" value="${escapeHtml(s.photo || '')}" placeholder="URL ảnh mẫu..." style="margin-bottom:5px; padding:6px 8px; font-size:0.75rem;" />
+                <label class="btn btn-sm" style="width:100%; cursor:pointer;">
+                  📤 Tải ảnh Set #${sIdx + 1} lên
+                  <input type="file" class="lb-set-photo-file" data-sidx="${sIdx}" accept="image/*" style="display:none;" />
+                </label>
+              </div>
+
+              <div>
+                <div class="grid-2">
+                  <div>
+                    <label class="label">Tên nút Tab chuyển Set</label>
+                    <input type="text" class="input lb-set-tab" data-sidx="${sIdx}" value="${escapeHtml(s.tabLabel || '')}" placeholder="VD: Set Hẹn Hò Cuối Tuần" />
+                  </div>
+                  <div>
+                    <label class="label">Tiêu đề hiển thị trong khung</label>
+                    <input type="text" class="input lb-set-title" data-sidx="${sIdx}" value="${escapeHtml(s.title || '')}" placeholder="VD: Look 01 — Hẹn Hò Cuối Tuần Dịu Dàng" />
+                  </div>
+                </div>
+                <div>
+                  <label class="label">Dòng mô tả ngắn của Set</label>
+                  <input type="text" class="input lb-set-desc" data-sidx="${sIdx}" value="${escapeHtml(s.description || '')}" placeholder="Phối sẵn tông màu hài hòa..." />
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <label class="label" style="margin-bottom:0;">Các món sản phẩm gắn trên ảnh (${pins.length} món):</label>
+                  <button type="button" class="btn btn-sm lb-add-pin" data-sidx="${sIdx}">+ Thêm món vào Set</button>
+                </div>
+                ${pinsRowsHtml}
+              </div>
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+
+    wrap.querySelectorAll('.lb-set-tab').forEach((inp) => {
+      inp.addEventListener('input', () => {
+        editingLookbookSets[Number(inp.dataset.sidx)].tabLabel = inp.value;
+      });
+    });
+    wrap.querySelectorAll('.lb-set-title').forEach((inp) => {
+      inp.addEventListener('input', () => {
+        editingLookbookSets[Number(inp.dataset.sidx)].title = inp.value;
+      });
+    });
+    wrap.querySelectorAll('.lb-set-desc').forEach((inp) => {
+      inp.addEventListener('input', () => {
+        editingLookbookSets[Number(inp.dataset.sidx)].description = inp.value;
+      });
+    });
+    wrap.querySelectorAll('.lb-set-photo').forEach((inp) => {
+      inp.addEventListener('change', () => {
+        editingLookbookSets[Number(inp.dataset.sidx)].photo = inp.value.trim();
+        renderLookbookSetsEditor();
+      });
+    });
+    wrap.querySelectorAll('.lb-set-photo-file').forEach((fInp) => {
+      fInp.addEventListener('change', async (ev) => {
+        const file = ev.target.files?.[0];
+        if (!file) return;
+        const sIdx = Number(fInp.dataset.sidx);
+        showToast('Đang tải ảnh phối đồ lên... ⏳');
+        try {
+          const url = await uploadFileToServer(file);
+          editingLookbookSets[sIdx].photo = url;
+          renderLookbookSetsEditor();
+          showToast('Đã tải ảnh phối đồ lên! Nhớ bấm Lưu Ngay nhé 💖');
+        } catch (err) {
+          showToast(err.message, true);
+        } finally {
+          ev.target.value = '';
+        }
+      });
+    });
+
+    wrap.querySelectorAll('.lb-select-pin-btn, .lb-admin-pin').forEach((el) => {
+      el.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        activePinEditTarget[Number(el.dataset.sidx)] = Number(el.dataset.pidx);
+        renderLookbookSetsEditor();
+      });
+    });
+
+    wrap.querySelectorAll('.lb-photo-click-stage').forEach((stage) => {
+      stage.addEventListener('click', (ev) => {
+        const sIdx = Number(stage.dataset.sidx);
+        const setObj = editingLookbookSets[sIdx];
+        if (!setObj || !Array.isArray(setObj.pins) || setObj.pins.length === 0) return;
+        const pIdx = Math.min(activePinEditTarget[sIdx] || 0, setObj.pins.length - 1);
+        const rect = stage.getBoundingClientRect();
+        const xPct = Math.min(92, Math.max(8, Math.round(((ev.clientX - rect.left) / rect.width) * 100)));
+        const yPct = Math.min(92, Math.max(8, Math.round(((ev.clientY - rect.top) / rect.height) * 100)));
+        setObj.pins[pIdx].x = xPct;
+        setObj.pins[pIdx].y = yPct;
+        renderLookbookSetsEditor();
+      });
+    });
+
+    wrap.querySelectorAll('.lb-pin-prod').forEach((sel) => {
+      sel.addEventListener('change', () => {
+        editingLookbookSets[Number(sel.dataset.sidx)].pins[Number(sel.dataset.pidx)].productId = sel.value;
+      });
+    });
+    wrap.querySelectorAll('.lb-pin-x').forEach((inp) => {
+      inp.addEventListener('input', () => {
+        editingLookbookSets[Number(inp.dataset.sidx)].pins[Number(inp.dataset.pidx)].x = Number(inp.value || 50);
+      });
+    });
+    wrap.querySelectorAll('.lb-pin-y').forEach((inp) => {
+      inp.addEventListener('input', () => {
+        editingLookbookSets[Number(inp.dataset.sidx)].pins[Number(inp.dataset.pidx)].y = Number(inp.value || 50);
+      });
+    });
+    wrap.querySelectorAll('.lb-add-pin').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const sIdx = Number(btn.dataset.sidx);
+        const firstProdId = allProds[0]?.id || '';
+        editingLookbookSets[sIdx].pins.push({ productId: firstProdId, x: 50, y: 55 });
+        activePinEditTarget[sIdx] = editingLookbookSets[sIdx].pins.length - 1;
+        renderLookbookSetsEditor();
+      });
+    });
+    wrap.querySelectorAll('.lb-del-pin').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const sIdx = Number(btn.dataset.sidx);
+        editingLookbookSets[sIdx].pins.splice(Number(btn.dataset.pidx), 1);
+        activePinEditTarget[sIdx] = 0;
+        renderLookbookSetsEditor();
+      });
+    });
+    wrap.querySelectorAll('.lb-del-set').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        editingLookbookSets.splice(Number(btn.dataset.sidx), 1);
+        renderLookbookSetsEditor();
+      });
+    });
+  }
+
+  document.getElementById('btn-add-lookbook-set')?.addEventListener('click', () => {
+    const firstProdId = (shopData?.products || [])[0]?.id || '';
+    editingLookbookSets.push({
+      id: `look_${Date.now()}`,
+      tabLabel: `Set Phối #${editingLookbookSets.length + 1}`,
+      title: `Look 0${editingLookbookSets.length + 1} — Gợi Ý Phối Đồ Mới`,
+      description: 'Phối sẵn tông màu hài hòa — nàng có thể chọn lẻ từng món hoặc rinh trọn bộ vào túi đồ.',
+      photo: '/media/bio-link/girlfriend-1.jpg',
+      pins: [{ productId: firstProdId, x: 50, y: 48 }]
+    });
+    renderLookbookSetsEditor();
+  });
+
   function populateSettingsForm() {
     if (!shopData || !shopData.settings) return;
     const s = shopData.settings;
+    // Hero & Polaroids
+    document.getElementById('st-hero-kicker').value = s.heroKicker || 'LOOKBOOK 2026 — TUYỂN CHỌN TỪNG ĐƯỜNG KIM';
+    document.getElementById('st-hero-stamp').value = s.heroStampText || 'NA 2HAND ATELIER ✦ SCENTED PARCEL ✦';
+    document.getElementById('st-hero-title').value = s.heroTitle || 'Tủ đồ *tiểu thư* thơm hương đào trắng dành riêng cho nàng';
+    document.getElementById('st-hero-sub').value = s.heroSubtitle || '';
+    document.getElementById('st-hero-img1').value = s.heroBannerImage || '/media/bio-link/girlfriend-1.jpg';
+    document.getElementById('st-hero-img1-prev').src = s.heroBannerImage || '/media/bio-link/girlfriend-1.jpg';
+    document.getElementById('st-hero-cap1').value = s.heroPolaroid1Caption || 'Look 01 — *Soft Coquette*';
+    document.getElementById('st-hero-img2').value = s.heroBannerImage2 || '/media/bio-link/girlfriend-2.jpg';
+    document.getElementById('st-hero-img2-prev').src = s.heroBannerImage2 || '/media/bio-link/girlfriend-2.jpg';
+    document.getElementById('st-hero-cap2').value = s.heroPolaroid2Caption || 'Look 02 — *Sweet Muse*';
+    document.getElementById('st-hero-deal-enabled').checked = s.heroDealEnabled !== false;
+    document.getElementById('st-hero-deal-label').value = s.heroDealLabel || 'Khung giờ Giá Ngọt kết thúc sau';
+
+    // Lookbook Studio ("Góc Phối Đồ Có Sẵn Cho Nàng")
+    document.getElementById('st-lb-enabled').checked = s.lookbookEnabled !== false;
+    document.getElementById('st-lb-heading').value = s.lookbookHeading || 'Góc Phối Đồ *Có Sẵn Cho Nàng*';
+    document.getElementById('st-lb-sub').value =
+      s.lookbookSubheading || 'Chạm vào các chấm ngọc trai phát sáng trên ảnh để xem từng món trong set đồ';
+    editingLookbookSets =
+      Array.isArray(s.lookbookSets) && s.lookbookSets.length > 0
+        ? JSON.parse(JSON.stringify(s.lookbookSets))
+        : buildDefaultLookbookSetsSeed();
+    renderLookbookSetsEditor();
+
+    // QR & Store Settings
     document.getElementById('st-qr-enabled').checked = s.qrEnabled !== false;
     document.getElementById('st-cod-enabled').checked = s.codEnabled !== false;
     document.getElementById('st-qr-mode').value = s.qrMode || 'custom_image';
@@ -1436,6 +2135,47 @@
     document.getElementById('st-tele-token').value = s.telegramBotToken || '';
     document.getElementById('st-tele-chat').value = s.telegramChatId || '';
   }
+
+  document.getElementById('st-hero-img1')?.addEventListener('input', (e) => {
+    const val = e.target.value.trim();
+    if (val) document.getElementById('st-hero-img1-prev').src = val;
+  });
+  document.getElementById('st-hero-img2')?.addEventListener('input', (e) => {
+    const val = e.target.value.trim();
+    if (val) document.getElementById('st-hero-img2-prev').src = val;
+  });
+
+  document.getElementById('st-hero-img1-file')?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    showToast('Đang tải ảnh Polaroid 1 lên... ⏳');
+    try {
+      const url = await uploadFileToServer(file);
+      document.getElementById('st-hero-img1').value = url;
+      document.getElementById('st-hero-img1-prev').src = url;
+      showToast('Đã tải ảnh Polaroid 1 thành công! Nhớ bấm Lưu Ngay nhé ✨');
+    } catch (err) {
+      showToast(err.message, true);
+    } finally {
+      e.target.value = '';
+    }
+  });
+
+  document.getElementById('st-hero-img2-file')?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    showToast('Đang tải ảnh Polaroid 2 lên... ⏳');
+    try {
+      const url = await uploadFileToServer(file);
+      document.getElementById('st-hero-img2').value = url;
+      document.getElementById('st-hero-img2-prev').src = url;
+      showToast('Đã tải ảnh Polaroid 2 thành công! Nhớ bấm Lưu Ngay nhé ✨');
+    } catch (err) {
+      showToast(err.message, true);
+    } finally {
+      e.target.value = '';
+    }
+  });
 
   document.getElementById('st-qr-url')?.addEventListener('input', (e) => {
     const val = e.target.value.trim();
@@ -1459,8 +2199,22 @@
     }
   });
 
-  document.getElementById('btn-save-settings')?.addEventListener('click', async () => {
+  async function saveAllSettingsAndVisuals() {
     const payload = {
+      heroKicker: document.getElementById('st-hero-kicker').value.trim(),
+      heroStampText: document.getElementById('st-hero-stamp').value.trim(),
+      heroTitle: document.getElementById('st-hero-title').value.trim(),
+      heroSubtitle: document.getElementById('st-hero-sub').value.trim(),
+      heroBannerImage: document.getElementById('st-hero-img1').value.trim() || '/media/bio-link/girlfriend-1.jpg',
+      heroPolaroid1Caption: document.getElementById('st-hero-cap1').value.trim(),
+      heroBannerImage2: document.getElementById('st-hero-img2').value.trim() || '/media/bio-link/girlfriend-2.jpg',
+      heroPolaroid2Caption: document.getElementById('st-hero-cap2').value.trim(),
+      heroDealEnabled: document.getElementById('st-hero-deal-enabled').checked,
+      heroDealLabel: document.getElementById('st-hero-deal-label').value.trim(),
+      lookbookEnabled: document.getElementById('st-lb-enabled').checked,
+      lookbookHeading: document.getElementById('st-lb-heading').value.trim(),
+      lookbookSubheading: document.getElementById('st-lb-sub').value.trim(),
+      lookbookSets: editingLookbookSets,
       qrEnabled: document.getElementById('st-qr-enabled').checked,
       codEnabled: document.getElementById('st-cod-enabled').checked,
       qrMode: document.getElementById('st-qr-mode').value,
@@ -1483,11 +2237,16 @@
         method: 'PUT',
         body: JSON.stringify(payload)
       });
-      showToast('Đã lưu cài đặt cửa hàng & Mã QR thanh toán! 💖');
+      showToast('Đã lưu Giao Diện, Góc Phối Đồ & Cài Đặt Cửa Hàng thành công! 💖');
       await loadOverview();
     } catch (err) {
       showToast(err.message, true);
     }
+  }
+
+  document.getElementById('btn-save-settings')?.addEventListener('click', saveAllSettingsAndVisuals);
+  document.querySelectorAll('.btn-save-settings-trigger').forEach((btn) => {
+    btn.addEventListener('click', saveAllSettingsAndVisuals);
   });
 
   document.getElementById('btn-change-shared-pass')?.addEventListener('click', async () => {

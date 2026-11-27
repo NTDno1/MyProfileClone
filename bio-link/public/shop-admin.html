@@ -180,7 +180,8 @@
       </div>
       <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
         <a href="/shop" target="_blank" class="btn btn-primary btn-sm">🛍️ Xem Web Bán Hàng (/shop)</a>
-        <a href="/affiliate-admin" class="btn btn-sm" style="border-color:#d8b4fe; color:#7e22ce; background:#faf5ff;">✨ Quản trị Affiliate</a>
+        <a href="/tu-do" target="_blank" class="btn btn-sm">🔗 Xem Góc Đồ Xinh (/tu-do)</a>
+        <a href="/affiliate-admin" class="btn btn-sm" style="border-color:#d8b4fe; color:#7e22ce; background:#faf5ff;">✨ Quản trị Góc Đồ Xinh</a>
         <a href="/admin" class="btn btn-sm">🌸 Quản trị Bio Link</a>
         <button type="button" class="btn btn-sm" id="btn-logout">Đăng xuất</button>
       </div>
@@ -218,7 +219,8 @@
       <button type="button" class="tab-btn" data-tab="pane-products">👗 2. Sản Phẩm</button>
       <button type="button" class="tab-btn" data-tab="pane-sync">🚀 3. Kéo Tự Động Shopee & TikTok</button>
       <button type="button" class="tab-btn" data-tab="pane-vouchers">🎟️ 4. Danh Mục & Mã Giảm Giá</button>
-      <button type="button" class="tab-btn" data-tab="pane-settings">💳 5. Cài Đặt Mã QR & Cửa Hàng</button>
+      <button type="button" class="tab-btn" data-tab="pane-sizes">📏 5. Cấu Hình Bảng Size</button>
+      <button type="button" class="tab-btn" data-tab="pane-settings">🎨 6. Giao Diện, Phối Đồ & Cài Đặt</button>
     </div>
 
     <!-- PANE 1: ORDERS -->
@@ -349,6 +351,35 @@
               </div>
             </div>
             <div id="pf-variants-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+          </div>
+
+          <div style="background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:16px; padding:14px; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+              <div>
+                <strong style="font-size:0.85rem; color:#3d1a29;">📏 Bảng Thông Số Size Áp Dụng Cho Sản Phẩm Này</strong>
+                <div style="font-size:0.74rem; color:var(--muted);">Chọn mẫu có sẵn (Quần Loe/Jean, Áo Hoodie...) hoặc tự nhập bảng thông số riêng bằng tay cho sản phẩm này.</div>
+              </div>
+              <button type="button" class="btn btn-sm" id="btn-jump-size-tab">⚙️ Quản lý kho Bảng Size</button>
+            </div>
+            <select id="pf-size-chart-id" class="select" style="margin-bottom:8px;"></select>
+
+            <div id="pf-custom-size-wrap" style="display:none; background:#fff; border:1px dashed #cbd5e1; border-radius:12px; padding:12px; margin-top:8px;">
+              <div class="grid-2">
+                <div>
+                  <label class="label">Tiêu đề bảng size riêng</label>
+                  <input type="text" id="pf-cs-name" class="input" placeholder="VD: Bảng Size Chân Váy Dài Xếp Ly" />
+                </div>
+                <div>
+                  <label class="label">Ghi chú dưới bảng (tùy chọn)</label>
+                  <input type="text" id="pf-cs-note" class="input" placeholder="VD: Co giãn nhẹ 1-2cm..." />
+                </div>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+                <button type="button" class="btn btn-sm" id="btn-pf-cs-add-col">+ Thêm Cột</button>
+                <button type="button" class="btn btn-sm" id="btn-pf-cs-add-row">+ Thêm Dòng Size</button>
+              </div>
+              <div id="pf-cs-table-editor" style="overflow-x:auto;"></div>
+            </div>
           </div>
 
           <div>
@@ -486,10 +517,178 @@
       </div>
     </section>
 
-    <!-- PANE 5: QR PAYMENT & STORE SETTINGS -->
-    <section class="tab-pane" id="pane-settings" style="display: none;">
+    <!-- PANE 5: SIZE CHARTS BUILDER (QUẦN LOE / JEAN, ÁO HOODIE & MANUAL CUSTOM CHARTS) -->
+    <section class="tab-pane" id="pane-sizes" style="display: none;">
       <div class="card">
-        <h3 style="font-size:1.05rem; margin-bottom:14px;">💳 Cấu Hình Phương Thức Thanh Toán (Mã QR & COD)</h3>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+          <div>
+            <h3 style="font-size:1.08rem; margin-bottom:4px;">📏 Quản Lý &amp; Tự Tạo Bảng Size Cho Từng Loại Quần Áo</h3>
+            <p style="font-size:0.79rem; color:var(--muted); line-height:1.5;">
+              Đã tích hợp sẵn <strong>Bảng Size Quần Loe / Quần Jean Form Loose</strong> &amp; <strong>Bảng Size Áo Hoodie Form Rộng</strong>. Bạn có thể bấm chỉnh sửa trực tiếp từng ô, thêm/bớt cột &amp; dòng, hoặc bấm <strong>+ Tạo Bảng Size Thủ Công Mới</strong> cho bất kỳ loại trang phục nào khác (Áo sơ mi, Chân váy, Áo dài, Giày dép, Đồ bộ...).
+            </p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-add-new-size-chart">+ Tạo Bảng Size Thủ Công Mới</button>
+            <button type="button" class="btn btn-sm" id="btn-dup-size-chart">📋 Nhân bản bảng đang chọn</button>
+            <button type="button" class="btn btn-sm" id="btn-reset-default-charts">🔄 Khôi phục mẫu Quần Loe &amp; Hoodie gốc</button>
+          </div>
+        </div>
+
+        <div id="size-charts-selector-bar" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;"></div>
+
+        <div id="size-chart-editor-panel" style="background:#fff9fb; border:1.5px solid var(--border); border-radius:18px; padding:18px;">
+          <div class="grid-2">
+            <div>
+              <label class="label">Tên Bảng Size hiển thị cho khách *</label>
+              <input type="text" id="sc-name" class="input" placeholder="VD: Bảng Size Quần Loe / Quần Jean Form Loose" />
+            </div>
+            <div>
+              <label class="label">Từ khóa tự động gắn vào sản phẩm (cách nhau dấu phẩy)</label>
+              <input type="text" id="sc-keywords" class="input" placeholder="VD: quần, jean, loe, ống rộng..." />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div>
+              <label class="label">Ghi chú hiển thị dưới bảng thông số</label>
+              <input type="text" id="sc-note" class="input" placeholder="VD: Thông số đo trải phẳng (cm), có thể chênh lệch nhẹ 1-2cm." />
+            </div>
+            <div>
+              <label class="label">Ảnh sơ đồ minh họa cách đo (Tùy chọn — Dán link hoặc Tải ảnh lên)</label>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <img id="sc-diagram-preview" src="/images/size-diagram-pants.svg" alt="Sơ đồ" style="width:44px; height:44px; object-fit:contain; border-radius:8px; border:1px solid var(--border); background:#fff; padding:2px;" />
+                <input type="text" id="sc-diagram-url" class="input" style="margin-bottom:0; flex:1;" placeholder="/images/size-diagram-pants.svg hoặc để trống" />
+                <label class="btn btn-sm" style="cursor:pointer; white-space:nowrap;">
+                  📤 Tải ảnh
+                  <input type="file" id="sc-diagram-file" accept="image/*" style="display:none;" />
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin:10px 0 8px;">
+            <strong style="font-size:0.85rem; color:#54283b;">📋 Bảng Thông Số Chi Tiết (Bấm trực tiếp vào tiêu đề cột hoặc từng ô để sửa bằng tay):</strong>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="btn btn-sm" id="btn-sc-add-col">+ Thêm Cột Thông Số Mới</button>
+              <button type="button" class="btn btn-sm" id="btn-sc-add-row">+ Thêm Dòng Size Mới</button>
+            </div>
+          </div>
+
+          <div id="sc-spreadsheet-box" style="overflow-x:auto; background:#fff; border:1px solid var(--border); border-radius:14px; padding:8px; margin-bottom:14px;"></div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <button type="button" class="btn btn-primary" id="btn-save-all-size-charts">💾 Lưu Toàn Bộ Cấu Hình Bảng Size</button>
+            <button type="button" class="btn btn-danger btn-sm" id="btn-delete-cur-size-chart">🗑️ Xóa bảng size đang chọn</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANE 6: HERO LOOKBOOK, MIX & MATCH STUDIO, QR PAYMENT & STORE SETTINGS -->
+    <section class="tab-pane" id="pane-settings" style="display: none;">
+      <!-- CARD A: HERO BANNER & DUAL POLAROID EDITOR (IMAGE 1) -->
+      <div class="card" style="background:linear-gradient(135deg,#fff9fb,#fff); border-color:#f3b8d2;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+          <div>
+            <h3 style="font-size:1.06rem; margin-bottom:3px;">🖼️ 1. Chỉnh Sửa Khung Mở Đầu &amp; Bộ Đôi Ảnh Polaroid (Đầu Trang /shop)</h3>
+            <p style="font-size:0.77rem; color:var(--muted);">Mẹo: Đặt từ khóa trong dấu sao <code>*tiểu thư*</code> để chữ tự động in nghiêng màu hồng nghệ thuật.</p>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm btn-save-settings-trigger">💾 Lưu Ngay</button>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <label class="label">Dòng nhãn nhỏ phía trên (Kicker)</label>
+            <input type="text" id="st-hero-kicker" class="input" placeholder="LOOKBOOK 2026 — TUYỂN CHỌN TỪNG ĐƯỜNG KIM" />
+          </div>
+          <div>
+            <label class="label">Chữ chạy vòng tròn trên Con Dấu Sáp</label>
+            <input type="text" id="st-hero-stamp" class="input" placeholder="NA 2HAND ATELIER ✦ SCENTED PARCEL ✦" />
+          </div>
+        </div>
+
+        <div>
+          <label class="label">Tiêu đề lớn chính giữa (Hỗ trợ gõ *chữ nghiêng*)</label>
+          <input type="text" id="st-hero-title" class="input" placeholder="Tủ đồ *tiểu thư* thơm hương đào trắng dành riêng cho nàng" />
+        </div>
+
+        <div>
+          <label class="label">Đoạn mô tả chi tiết dưới tiêu đề</label>
+          <textarea id="st-hero-sub" rows="2" class="textarea" placeholder="Những thiết kế váy hoa nhí, dạ tweed ánh nhũ..."></textarea>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:8px;">
+          <div style="background:#fff; border:1px solid var(--border); border-radius:14px; padding:12px;">
+            <label class="label">📸 Khung Ảnh Polaroid Lớn (Bên trái — Look 01)</label>
+            <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px;">
+              <img id="st-hero-img1-prev" src="/media/bio-link/girlfriend-1.jpg" alt="Polaroid 1" style="width:68px; height:80px; object-fit:cover; border-radius:10px; border:1.5px solid var(--border); flex-shrink:0;" />
+              <div style="flex:1; min-width:0;">
+                <input type="text" id="st-hero-img1" class="input" style="margin-bottom:6px;" placeholder="/media/bio-link/girlfriend-1.jpg" />
+                <label class="btn btn-sm" style="cursor:pointer;">
+                  📤 Tải ảnh Polaroid 1 lên
+                  <input type="file" id="st-hero-img1-file" accept="image/*" style="display:none;" />
+                </label>
+              </div>
+            </div>
+            <label class="label">Chú thích dưới ảnh Polaroid 1</label>
+            <input type="text" id="st-hero-cap1" class="input" style="margin-bottom:0;" placeholder="Look 01 — *Soft Coquette*" />
+          </div>
+
+          <div style="background:#fff; border:1px solid var(--border); border-radius:14px; padding:12px;">
+            <label class="label">📸 Khung Ảnh Polaroid Nhỏ (Bên phải — Look 02)</label>
+            <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px;">
+              <img id="st-hero-img2-prev" src="/media/bio-link/girlfriend-2.jpg" alt="Polaroid 2" style="width:68px; height:80px; object-fit:cover; border-radius:10px; border:1.5px solid var(--border); flex-shrink:0;" />
+              <div style="flex:1; min-width:0;">
+                <input type="text" id="st-hero-img2" class="input" style="margin-bottom:6px;" placeholder="/media/bio-link/girlfriend-2.jpg" />
+                <label class="btn btn-sm" style="cursor:pointer;">
+                  📤 Tải ảnh Polaroid 2 lên
+                  <input type="file" id="st-hero-img2-file" accept="image/*" style="display:none;" />
+                </label>
+              </div>
+            </div>
+            <label class="label">Chú thích dưới ảnh Polaroid 2</label>
+            <input type="text" id="st-hero-cap2" class="input" style="margin-bottom:0;" placeholder="Look 02 — *Sweet Muse*" />
+          </div>
+        </div>
+
+        <div class="grid-2" style="align-items:center; margin-top:10px;">
+          <label style="font-size:0.84rem; font-weight:700;"><input type="checkbox" id="st-hero-deal-enabled" checked /> ⏱️ Hiển thị thanh đồng hồ đếm ngược Khung Giờ Giá Ngọt</label>
+          <div>
+            <input type="text" id="st-hero-deal-label" class="input" style="margin-bottom:0;" placeholder="Khung giờ Giá Ngọt kết thúc sau" />
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD B: "GÓC PHỐI ĐỒ CÓ SẴN CHO NÀNG" STUDIO EDITOR (IMAGE 2) -->
+      <div class="card" style="background:linear-gradient(135deg,#fdf7ff,#fff); border-color:#e9d5ff;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+          <div>
+            <h3 style="font-size:1.06rem; margin-bottom:3px;">👗 2. Chỉnh Sửa Mục "Góc Phối Đồ Có Sẵn Cho Nàng" (Chấm Ngọc Trai Gắn Sản Phẩm)</h3>
+            <p style="font-size:0.77rem; color:var(--muted);">Đổi ảnh mẫu phối đồ, chọn sản phẩm bất kỳ trong Shop gắn vào từng Set và <strong>click trực tiếp lên ảnh xem trước</strong> để đặt vị trí chấm số 1, 2, 3...</p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <label style="font-size:0.82rem; font-weight:700; margin-right:6px;"><input type="checkbox" id="st-lb-enabled" checked /> 👁️ Hiện trên /shop</label>
+            <button type="button" class="btn btn-sm" id="btn-add-lookbook-set">+ Thêm Set Phối Đồ</button>
+            <button type="button" class="btn btn-primary btn-sm btn-save-settings-trigger">💾 Lưu Ngay</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <label class="label">Tiêu đề khu vực (Hỗ trợ *chữ nghiêng*)</label>
+            <input type="text" id="st-lb-heading" class="input" placeholder="Góc Phối Đồ *Có Sẵn Cho Nàng*" />
+          </div>
+          <div>
+            <label class="label">Dòng hướng dẫn bên dưới tiêu đề</label>
+            <input type="text" id="st-lb-sub" class="input" placeholder="Chạm vào các chấm ngọc trai phát sáng trên ảnh để xem từng món trong set đồ" />
+          </div>
+        </div>
+
+        <div id="st-lookbook-sets-editor" style="display:flex; flex-direction:column; gap:14px;"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="font-size:1.05rem; margin-bottom:14px;">💳 3. Cấu Hình Phương Thức Thanh Toán (Mã QR & COD)</h3>
         <div style="display:flex; gap:20px; margin-bottom:16px; font-size:0.86rem; font-weight:700; flex-wrap:wrap;">
           <label><input type="checkbox" id="st-qr-enabled" checked /> 📱 Bật Quét Mã QR Chuyển Khoản</label>
           <label><input type="checkbox" id="st-cod-enabled" checked /> 💵 Bật Nhận Hàng Rồi Thanh Toán (COD)</label>
@@ -615,6 +814,6 @@
   <div class="toast" id="toast">Đã lưu thành công!</div>
 
   <script src="/js/shopee-harvester-runtime.js?v=6"></script>
-  <script src="/js/shop-admin.js?v=10"></script>
+  <script src="/js/shop-admin.js?v=11"></script>
 </body>
 </html>

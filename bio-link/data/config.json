@@ -3,7 +3,7 @@
     "name": "NA 2HAND",
     "subtitle": "LIFESTYLE",
     "quote": "Fashion inspo for the girl who's always on the go ✨",
-    "avatar": "/uploads/girlfriend-1.jpg",
+    "avatar": "/media/bio-link/girlfriend-1.jpg",
     "verifiedBadge": true
   },
   "theme": {
@@ -14,7 +14,7 @@
     "accentColor": "#b55672",
     "bgType": "image-overlay",
     "bgImage": "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1000&q=80",
-    "portraitBgImage": "/uploads/girlfriend-1.jpg",
+    "portraitBgImage": "/media/bio-link/girlfriend-1.jpg",
     "bgGradientStart": "#f6c4d2",
     "bgGradientMid": "#e89ab2",
     "bgGradientEnd": "#c8738e",
@@ -45,7 +45,18 @@
       "badge": "NEW",
       "shimmer": true,
       "enabled": true,
-      "clicks": 0
+      "clicks": 28
+    },
+    {
+      "id": "link-affiliate",
+      "title": "GÓC ĐỒ XINH & TỦ ĐỒ TUYỂN CHỌN",
+      "subtitle": "",
+      "url": "/tu-do",
+      "icon": "sparkles",
+      "badge": "NEW",
+      "shimmer": true,
+      "enabled": true,
+      "clicks": 5
     },
     {
       "id": "link-1",
@@ -56,7 +67,7 @@
       "badge": "HOT",
       "shimmer": true,
       "enabled": true,
-      "clicks": 1
+      "clicks": 3
     },
     {
       "id": "link-2",
@@ -75,8 +86,8 @@
     "title": "MY COLLECTION",
     "subtitle": "Khám phá trọn bộ sưu tập yêu thích của mình",
     "url": "https://www.tiktok.com/@na2hand154?_r=1&_t=ZS-9BaJQCZaRXR",
-    "image": "/uploads/girlfriend-2.jpg",
-    "clicks": 5
+    "image": "/media/bio-link/girlfriend-2.jpg",
+    "clicks": 10
   },
   "socials": [
     {
@@ -85,7 +96,7 @@
       "label": "Facebook",
       "url": "https://www.facebook.com/anganh.764617",
       "enabled": true,
-      "clicks": 0
+      "clicks": 1
     },
     {
       "id": "soc-2",
@@ -93,7 +104,7 @@
       "label": "Instagram",
       "url": "https://www.instagram.com/na2hand154?knvt=MWtpYmx1ajNucnE3ZQ%3D%3D&utm_source=qr",
       "enabled": true,
-      "clicks": 0
+      "clicks": 1
     },
     {
       "id": "soc-6",
@@ -132,7 +143,15 @@
       "label": "Threads",
       "url": "https://www.threads.com/@na2hand154?igshid=NTc4MTIwNjQ2YQ==",
       "enabled": true,
-      "clicks": 1
+      "clicks": 2
+    },
+    {
+      "id": "soc-zalo",
+      "platform": "zalo",
+      "label": "Zalo",
+      "url": "https://zalo.me/0359427135",
+      "enabled": true,
+      "clicks": 2
     }
   ],
   "seo": {
@@ -142,6 +161,6 @@
     "footerText": "Made with ♡ by My Love"
   },
   "analytics": {
-    "totalViews": 38
+    "totalViews": 102
   }
 }

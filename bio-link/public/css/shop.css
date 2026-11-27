@@ -2530,6 +2530,136 @@ body::before {
   white-space: nowrap;
 }
 
+/* Multi-Garment Size Charts & Smart Advisor Table */
+.size-chart-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.size-chart-tab-btn {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line-strong);
+  background: #ffffff;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.size-chart-tab-btn:hover {
+  border-color: var(--rose-300);
+  background: var(--rose-50);
+}
+
+.size-chart-tab-btn.active {
+  background: var(--ink);
+  color: #ffffff;
+  border-color: var(--ink);
+  box-shadow: 0 4px 12px rgba(43, 21, 30, 0.18);
+}
+
+.size-chart-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid var(--line-strong);
+  background: #ffffff;
+}
+
+.size-chart-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.size-chart-table thead th {
+  background: #1a1216;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 10px 9px;
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+  white-space: nowrap;
+}
+
+.size-chart-table thead th:last-child {
+  border-right: none;
+}
+
+.size-chart-table tbody td {
+  padding: 9px 8px;
+  border-top: 1px solid #ecdce2;
+  border-right: 1px solid #f2e6eb;
+  color: var(--ink);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.size-chart-table tbody td:first-child {
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.size-chart-table tbody td:last-child {
+  border-right: none;
+}
+
+.size-chart-table tbody tr:nth-child(even) {
+  background: #fdf9fb;
+}
+
+.size-chart-table tbody tr.is-rec-row {
+  background: #ffe9f1 !important;
+  box-shadow: inset 3px 0 0 var(--cherry);
+}
+
+.size-chart-table tbody tr.is-rec-row td {
+  color: var(--cherry-deep);
+  font-weight: 700;
+}
+
+.size-rec-mini-pill {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--cherry);
+  color: #ffffff;
+  font-size: 0.63rem;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+.size-chart-diagram {
+  display: block;
+  max-width: 220px;
+  max-height: 230px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin: 12px auto 4px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  padding: 6px;
+}
+
+.detail-size-chart-box {
+  margin-bottom: 15px;
+  border-radius: 14px;
+  border: 1px solid var(--rose-200);
+  background: #fffafb;
+  padding: 11px 12px;
+}
+
 /* Accessibility: Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

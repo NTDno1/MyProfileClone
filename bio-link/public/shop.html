@@ -18,7 +18,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,500;1,600;1,700&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="/css/shop.css?v=5" />
+  <link rel="stylesheet" href="/css/shop.css?v=6" />
 </head>
 
 <body>
@@ -137,6 +137,10 @@
         <a href="/" class="nav-pill" title="Về trang Bio NA 2HAND">
           <span>Bio</span>
         </a>
+        <a href="/tu-do" class="nav-pill" title="Góc Đồ Xinh &amp; Tủ Đồ Tuyển Chọn">
+          <span class="hide-sm">Góc Đồ Xinh</span>
+          <span class="show-sm-only" style="display:none;">Tủ Đồ</span>
+        </a>
         <button type="button" class="nav-pill" id="btn-open-size-guide" title="Bảng tính Size chuẩn dáng">
           <svg width="15" height="15">
             <use href="#ico-ruler"></use>
@@ -180,7 +184,7 @@
           <svg width="12" height="12">
             <use href="#ico-star4"></use>
           </svg>
-          <span>LOOKBOOK 2026 — TUYỂN CHỌN TỪNG ĐƯỜNG KIM</span>
+          <span id="hero-kicker-text">LOOKBOOK 2026 — TUYỂN CHỌN TỪNG ĐƯỜNG KIM</span>
         </div>
 
         <h1 class="hero-headline" id="hero-title">
@@ -208,10 +212,10 @@
         </div>
 
         <!-- Live Flash Deal Counter Bar -->
-        <div class="hero-deal-strip">
+        <div class="hero-deal-strip" id="hero-deal-strip">
           <div class="deal-label">
             <span class="pulse-dot"></span>
-            <strong>Khung giờ Giá Ngọt kết thúc sau</strong>
+            <strong id="hero-deal-label-text">Khung giờ Giá Ngọt kết thúc sau</strong>
           </div>
           <div class="deal-clock" aria-label="Đồng hồ đếm ngược">
             <span class="clock-cell" id="timer-h">04</span>
@@ -232,7 +236,7 @@
             </defs>
             <circle cx="60" cy="60" r="54" fill="#fff9f6" stroke="#eba8c1" stroke-width="1.5" stroke-dasharray="4 3" />
             <text font-size="9.2" font-weight="700" fill="#b83262" letter-spacing="2.3">
-              <textPath href="#stampCircle">NA 2HAND ATELIER ✦ SCENTED PARCEL ✦</textPath>
+              <textPath href="#stampCircle" id="hero-stamp-text">NA 2HAND ATELIER ✦ SCENTED PARCEL ✦</textPath>
             </text>
             <use href="#ico-bow" x="44" y="46" width="32" height="28" style="color:#c93b6b"></use>
           </svg>
@@ -242,14 +246,14 @@
           <div class="polaroid-img-wrap">
             <img src="/media/bio-link/girlfriend-1.jpg" alt="Lookbook tiểu thư NA 2HAND" id="hero-photo" />
           </div>
-          <figcaption>Look 01 — <em>Soft Coquette</em></figcaption>
+          <figcaption id="hero-cap-1">Look 01 — <em>Soft Coquette</em></figcaption>
         </figure>
 
         <figure class="polaroid-card sub-polaroid" id="hero-polaroid-2">
           <div class="polaroid-img-wrap">
-            <img src="/media/bio-link/girlfriend-2.jpg" alt="Góc phối đồ ngọt ngào NA 2HAND" />
+            <img src="/media/bio-link/girlfriend-2.jpg" alt="Góc phối đồ ngọt ngào NA 2HAND" id="hero-photo-2" />
           </div>
-          <figcaption>Look 02 — <em>Sweet Muse</em></figcaption>
+          <figcaption id="hero-cap-2">Look 02 — <em>Sweet Muse</em></figcaption>
         </figure>
       </div>
     </section>
@@ -272,13 +276,13 @@
     </section>
 
     <!-- SECTION 3: INTERACTIVE "SHOP THE LOOK" MIX & MATCH STUDIO -->
-    <section class="section-block lookbook-studio reveal-up" aria-labelledby="lookbook-heading">
+    <section class="section-block lookbook-studio reveal-up" id="lookbook-section" aria-labelledby="lookbook-heading">
       <div class="section-head-inline">
         <div>
           <h2 class="section-title" id="lookbook-heading">Góc Phối Đồ <em>Có Sẵn Cho Nàng</em></h2>
-          <p class="section-sub">Chạm vào các chấm ngọc trai phát sáng trên ảnh để xem từng món trong set đồ</p>
+          <p class="section-sub" id="lookbook-subheading">Chạm vào các chấm ngọc trai phát sáng trên ảnh để xem từng món trong set đồ</p>
         </div>
-        <div class="look-switcher" role="tablist" aria-label="Chọn bộ phối đồ">
+        <div class="look-switcher" id="look-switcher-tabs" role="tablist" aria-label="Chọn bộ phối đồ">
           <button type="button" class="look-tab active" data-look="0">Set Hẹn Hò Cuối Tuần</button>
           <button type="button" class="look-tab" data-look="1">Set Tiểu Thư Dạo Phố</button>
         </div>
@@ -382,6 +386,8 @@
       <div class="footer-links">
         <a href="/">Trang Bio Chính</a>
         <span>·</span>
+        <a href="/tu-do">Góc Đồ Xinh</a>
+        <span>·</span>
         <a href="#catalog-anchor">Tủ Đồ</a>
         <span>·</span>
         <button type="button" class="footer-link-btn" id="footer-open-track">Tra Cứu Đơn</button>
@@ -414,49 +420,53 @@
     <img id="lightbox-img" src="" alt="Phóng to chi tiết sản phẩm" />
   </div>
 
-  <!-- INTERACTIVE SMART SIZE ADVISOR MODAL -->
+  <!-- INTERACTIVE SMART SIZE ADVISOR & MULTI-GARMENT SIZE CHARTS MODAL -->
   <div class="modal-backdrop" id="size-modal" role="dialog" aria-modal="true">
-    <div class="modal-card" style="max-width: 500px;">
+    <div class="modal-card" style="max-width: 760px;">
       <button type="button" class="modal-close-btn" id="btn-close-size">✕</button>
-      <div class="modal-kicker">CÔNG CỤ ĐO DÁNG TỰ ĐỘNG</div>
+      <div class="modal-kicker">BẢNG THÔNG SỐ &amp; ĐO DÁNG TỰ ĐỘNG</div>
       <h2 class="modal-heading">Gợi Ý Size <em>Chuẩn Dáng Nàng</em></h2>
-      <p class="modal-sub">Kéo thanh trượt theo chiều cao &amp; cân nặng để tiệm tính ngay size vừa vặn nhất nhé.</p>
+      <p class="modal-sub">Chọn loại trang phục (Quần Loe/Jean, Áo Hoodie, Đầm Váy...) và kéo chiều cao &amp; cân nặng để tiệm tự động dò đúng dòng Size vừa nhất nhé.</p>
+
+      <div class="size-chart-tabs" id="size-chart-tabs" role="tablist" aria-label="Chọn bảng size trang phục"></div>
 
       <div class="size-calc-box">
-        <div class="range-group">
-          <div class="range-label-row">
-            <span>Chiều cao của nàng</span>
-            <strong id="calc-h-val">158 cm</strong>
+        <div class="form-grid-2" style="gap: 14px;">
+          <div class="range-group" style="margin-bottom: 0;">
+            <div class="range-label-row">
+              <span>Chiều cao</span>
+              <strong id="calc-h-val">160 cm</strong>
+            </div>
+            <input type="range" id="calc-height" min="145" max="186" value="160" class="cute-range" />
           </div>
-          <input type="range" id="calc-height" min="145" max="176" value="158" class="cute-range" />
+
+          <div class="range-group" style="margin-bottom: 0;">
+            <div class="range-label-row">
+              <span>Cân nặng</span>
+              <strong id="calc-w-val">52 kg</strong>
+            </div>
+            <input type="range" id="calc-weight" min="38" max="86" value="52" class="cute-range" />
+          </div>
         </div>
 
-        <div class="range-group">
-          <div class="range-label-row">
-            <span>Cân nặng hiện tại</span>
-            <strong id="calc-w-val">48 kg</strong>
-          </div>
-          <input type="range" id="calc-weight" min="38" max="70" value="48" class="cute-range" />
-        </div>
-
-        <div class="range-group">
-          <span style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:8px;">Sở thích mặc của
-            nàng:</span>
+        <div class="range-group" style="margin-top: 10px;">
+          <span style="display:block; font-size:0.8rem; font-weight:700; margin-bottom:8px;">Sở thích mặc:</span>
           <div class="fit-pref-pills" id="fit-pref-pills">
             <button type="button" class="variant-pill" data-fit="slim">Ôm tôn dáng</button>
-            <button type="button" class="variant-pill selected" data-fit="regular">Vừa vặn tiểu thư</button>
+            <button type="button" class="variant-pill selected" data-fit="regular">Vừa vặn chuẩn phom</button>
             <button type="button" class="variant-pill" data-fit="loose">Rộng thoải mái</button>
           </div>
         </div>
 
         <div class="size-result-card" id="size-result-card">
-          <div class="size-result-badge" id="size-rec-letter">Size S</div>
+          <div class="size-result-badge" id="size-rec-letter">Size M</div>
           <div>
-            <div class="size-result-title" id="size-rec-title">Vừa xinh với Size S hoặc Freesize!</div>
-            <div class="size-result-desc" id="size-rec-desc">Vòng eo gợi ý ~62–66cm. Các mẫu babydoll &amp; cardigan tại
-              tiệm nàng diện lên sẽ cực kỳ thanh thoát.</div>
+            <div class="size-result-title" id="size-rec-title">Vừa xinh với Size M!</div>
+            <div class="size-result-desc" id="size-rec-desc">Kéo thanh chiều cao &amp; cân nặng để xem thông số chi tiết bên dưới.</div>
           </div>
         </div>
+
+        <div id="size-chart-table-box" style="margin-top: 16px;"></div>
       </div>
     </div>
   </div>
@@ -704,7 +714,7 @@
   <!-- Global Toast Feedback -->
   <div class="shop-toast" id="shop-toast"></div>
 
-  <script src="/js/shop.js?v=7"></script>
+  <script src="/js/shop.js?v=8"></script>
 </body>
 
 </html>

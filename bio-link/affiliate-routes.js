@@ -289,8 +289,8 @@ function registerAffiliateRoutes(app, { dataDir, getMongoDb, requireAuth, record
       if (typeof recordAnalyticsEvent === 'function') {
         recordAnalyticsEvent(req, {
           type: 'affiliate_view',
-          targetTitle: 'Xem trang Affiliate (/affiliate)',
-          targetUrl: '/affiliate'
+          targetTitle: 'Xem Góc Đồ Xinh (/tu-do)',
+          targetUrl: '/tu-do'
         }).catch(() => {});
       }
     }

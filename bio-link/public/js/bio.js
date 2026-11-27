@@ -215,12 +215,13 @@
       const a = document.createElement('a');
       a.className = `bio-link-btn fade-up ${link.shimmer ? 'has-shimmer' : ''}`;
       a.style.animationDelay = `${0.1 + idx * 0.05}s`;
-      a.href = link.url || '#';
+      const rawHref = link.url === '/affiliate' ? '/tu-do' : link.url || '#';
+      a.href = rawHref;
       if (
-        !String(link.url || '').startsWith('#') &&
-        !String(link.url || '').startsWith('/') &&
-        !String(link.url || '').startsWith('mailto:') &&
-        !String(link.url || '').startsWith('tel:')
+        !String(rawHref).startsWith('#') &&
+        !String(rawHref).startsWith('/') &&
+        !String(rawHref).startsWith('mailto:') &&
+        !String(rawHref).startsWith('tel:')
       ) {
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
@@ -230,13 +231,22 @@
 
       const iconSvg = window.getBioIconSvg(link.icon);
       const iconHtml = iconSvg ? `<span class="link-icon-left">${iconSvg}</span>` : '';
-      const subHtml = link.subtitle ? `<span class="link-subtitle">${escapeHtml(link.subtitle)}</span>` : '';
+      const cleanLinkTitle = /affiliate/i.test(String(link.title || ''))
+        ? String(link.title)
+            .replace(/TỦ ĐỒ AFFILIATE\s*&?\s*LINK ĐỒ XINH/gi, 'GÓC ĐỒ XINH & TỦ ĐỒ TUYỂN CHỌN')
+            .replace(/\baffiliate\b/gi, 'Tuyển Chọn')
+            .replace(/\s+/g, ' ')
+            .trim()
+        : link.title || 'LINK';
+      const subHtml = link.subtitle
+        ? `<span class="link-subtitle">${escapeHtml(String(link.subtitle).replace(/\baffiliate\b/gi, 'tuyển chọn'))}</span>`
+        : '';
       const badgeHtml = link.badge ? `<span class="link-badge">${escapeHtml(link.badge)}</span>` : '';
 
       a.innerHTML = `
         ${iconHtml}
         <span class="link-text-group">
-          <span class="link-title">${escapeHtml(link.title || 'LINK')}</span>
+          <span class="link-title">${escapeHtml(cleanLinkTitle)}</span>
           ${subHtml}
         </span>
         ${badgeHtml}

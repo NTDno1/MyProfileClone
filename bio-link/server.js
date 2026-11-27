@@ -155,13 +155,15 @@ async function initMongoConnection(customUri, customDbName) {
         cfgChanged = true;
       }
       if (!Array.isArray(migrated.data.links)) migrated.data.links = [];
-      const hasAffLink = migrated.data.links.some((l) => l && (l.id === 'link-affiliate' || l.url === '/affiliate'));
-      if (!hasAffLink) {
+      const affLinkIdx = migrated.data.links.findIndex(
+        (l) => l && (l.id === 'link-affiliate' || l.url === '/affiliate' || l.url === '/tu-do')
+      );
+      if (affLinkIdx === -1) {
         migrated.data.links.splice(1, 0, {
           id: 'link-affiliate',
-          title: 'TỦ ĐỒ AFFILIATE & LINK ĐỒ XINH',
+          title: 'GÓC ĐỒ XINH & TỦ ĐỒ TUYỂN CHỌN',
           subtitle: '',
-          url: '/affiliate',
+          url: '/tu-do',
           icon: 'sparkles',
           badge: 'NEW',
           shimmer: true,
@@ -169,6 +171,16 @@ async function initMongoConnection(customUri, customDbName) {
           clicks: 0
         });
         cfgChanged = true;
+      } else {
+        const curAff = migrated.data.links[affLinkIdx];
+        if (curAff.url === '/affiliate') {
+          curAff.url = '/tu-do';
+          cfgChanged = true;
+        }
+        if (/affiliate/i.test(String(curAff.title || ''))) {
+          curAff.title = 'GÓC ĐỒ XINH & TỦ ĐỒ TUYỂN CHỌN';
+          cfgChanged = true;
+        }
       }
       fs.writeFileSync(CONFIG_FILE, JSON.stringify(migrated.data, null, 2), 'utf8');
       if (cfgChanged) {
@@ -355,6 +367,19 @@ function loadConfigFromFile() {
       analytics: { ...DEFAULT_CONFIG.analytics, ...(parsed.analytics || {}) }
     };
     const migrated = rewriteLegacyBioUrls(merged);
+    if (Array.isArray(migrated.data.links)) {
+      migrated.data.links.forEach((l) => {
+        if (!l) return;
+        if (l.url === '/affiliate') {
+          l.url = '/tu-do';
+          migrated.changed = true;
+        }
+        if (/affiliate/i.test(String(l.title || ''))) {
+          l.title = 'GÓC ĐỒ XINH & TỦ ĐỒ TUYỂN CHỌN';
+          migrated.changed = true;
+        }
+      });
+    }
     if (migrated.changed) {
       fs.writeFileSync(CONFIG_FILE, JSON.stringify(migrated.data, null, 2), 'utf8');
     }
@@ -1115,11 +1140,17 @@ app.get('/shop-admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'shop-admin.html'));
 });
 
-app.get('/affiliate', (req, res) => {
+app.get(['/tu-do', '/goc-do-xinh'], (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'affiliate.html'));
 });
 
-app.get('/affiliate-admin', (req, res) => {
+app.get('/affiliate', (req, res) => {
+  const qsIdx = req.originalUrl.indexOf('?');
+  const qs = qsIdx >= 0 ? req.originalUrl.slice(qsIdx) : '';
+  res.redirect(301, `/tu-do${qs}`);
+});
+
+app.get(['/tu-do-admin', '/affiliate-admin'], (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'affiliate-admin.html'));
 });
 

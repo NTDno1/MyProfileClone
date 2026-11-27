@@ -315,7 +315,7 @@
     }
     try {
       await navigator.clipboard.writeText(shareUrl);
-      showToast('Đã sao chép đường dẫn Tủ đồ Affiliate! ♡');
+      showToast('Đã sao chép đường dẫn Góc Đồ Xinh! ♡');
     } catch {
       prompt('Sao chép đường dẫn dưới đây:', shareUrl);
     }
@@ -343,10 +343,18 @@
       document.body.setAttribute('data-tone', profile.themeTone || 'blush');
       if (profile.handle) document.getElementById('aff-handle').textContent = profile.handle;
       if (profile.title) {
-        document.getElementById('aff-title').textContent = profile.title;
-        document.title = `${profile.title} — Tủ Đồ Xinh & Link Chính Hãng`;
+        const cleanCustomerTitle = String(profile.title)
+          .replace(/\baffiliate\b/gi, 'Closet')
+          .replace(/\s+/g, ' ')
+          .trim();
+        document.getElementById('aff-title').textContent = cleanCustomerTitle;
+        document.title = `${cleanCustomerTitle} — Góc Đồ Xinh & Tủ Đồ Tuyển Chọn`;
       }
-      if (profile.subtitle) document.getElementById('aff-subtitle').textContent = profile.subtitle;
+      if (profile.subtitle) {
+        document.getElementById('aff-subtitle').textContent = String(profile.subtitle)
+          .replace(/\baffiliate\b/gi, 'chính hãng')
+          .trim();
+      }
       if (profile.avatar) document.getElementById('aff-avatar').src = profile.avatar;
 
       renderCategoryPills();

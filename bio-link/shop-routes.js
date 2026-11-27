@@ -226,13 +226,95 @@ const DEFAULT_REVIEWS = [
   }
 ];
 
+const DEFAULT_SIZE_CHARTS = [
+  {
+    id: 'chart-quan-loe',
+    name: 'Bảng Size Quần Loe / Quần Jean Form Loose',
+    autoKeywords: 'quần, jean, jeans, loe, ống rộng, ống đứng, baggy, culottes',
+    columns: ['Size', 'Chiều cao (cm)', 'Cân nặng (kg)', 'Vòng bụng', 'Vòng mông', 'Vòng đùi', 'Dài quần'],
+    rows: [
+      ['28', 'Dưới 1m65', '52 - 59kg', '71', '97,5', '59', '98'],
+      ['29', 'Dưới 1m65', '52 - 59kg', '73', '100', '61', '99'],
+      ['30', '1m65 - 1m75', '60 - 65kg', '75,5', '102,5', '62,5', '100'],
+      ['31', '1m65 - 1m75', '60 - 65kg', '78', '105', '64', '101'],
+      ['32', '1m65 - 1m75', '66 - 71kg', '80,5', '107,5', '65,5', '102'],
+      ['33', '1m75 - 1m85', '72 - 77kg', '83', '110', '67', '103'],
+      ['34', '1m75 - 1m85', '78 - 83kg', '85,5', '112,5', '69', '104']
+    ],
+    diagramUrl: '/images/size-diagram-pants.svg',
+    note: 'Thông số đo thực tế trải phẳng (cm), có thể chênh lệch nhẹ 1–2cm tùy chất vải denim.'
+  },
+  {
+    id: 'chart-ao-hoodie',
+    name: 'Bảng Size Áo Hoodie / Sweater Form Rộng',
+    autoKeywords: 'hoodie, sweater, nỉ, áo khoác, form rộng, áo thun',
+    columns: ['Size (INT)', 'Rộng áo / Width (cm)', 'Dài áo / Top Length (cm)', 'Cân nặng gợi ý (kg)'],
+    rows: [
+      ['M', '50', '66', '40 - 44kg'],
+      ['L', '52', '68', '45 - 55kg'],
+      ['XL', '54', '70', '56 - 65kg'],
+      ['XXL', '56', '72', '66 - 74kg']
+    ],
+    diagramUrl: '/images/size-diagram-hoodie.svg',
+    note: 'Thông số có thể chênh lệch nhẹ 1–2cm tùy phom áo (The measurements may vary slightly).'
+  },
+  {
+    id: 'chart-vay-dam-nu',
+    name: 'Bảng Size Đầm Váy & Chân Váy Nữ (S / M / L)',
+    autoKeywords: 'đầm, váy, babydoll, chân váy, tweed, cardigan, áo kiểu, set',
+    columns: ['Size', 'Chiều cao (cm)', 'Cân nặng (kg)', 'Vòng ngực (cm)', 'Vòng eo (cm)', 'Vòng mông (cm)'],
+    rows: [
+      ['S', '1m50 - 1m62', '40 - 47kg', '82', '64', '88'],
+      ['M', '1m55 - 1m66', '48 - 53kg', '86', '68', '92'],
+      ['L', '1m58 - 1m70', '54 - 60kg', '90', '73', '96']
+    ],
+    diagramUrl: '',
+    note: 'Các mẫu Freesize tại tiệm thường vừa đẹp cho nàng từ 42kg – 56kg.'
+  }
+];
+
+function sanitizeSizeChartObj(c, fallbackIdx = 1) {
+  if (!c || typeof c !== 'object') return null;
+  const cols = Array.isArray(c.columns)
+    ? c.columns.map((x) => String(x ?? '').trim()).filter(Boolean)
+    : ['Size', 'Thông số'];
+  const safeCols = cols.length > 0 ? cols : ['Size', 'Thông số'];
+  const rows = Array.isArray(c.rows)
+    ? c.rows
+        .filter((r) => Array.isArray(r) && r.some((cell) => String(cell ?? '').trim() !== ''))
+        .map((r) => safeCols.map((_, ci) => String(r[ci] ?? '').trim()))
+    : [];
+  return {
+    id: String(c.id || `chart_${Date.now()}_${fallbackIdx}`).trim(),
+    name: String(c.name || `Bảng Size #${fallbackIdx}`).trim(),
+    autoKeywords: String(c.autoKeywords || '').trim(),
+    columns: safeCols,
+    rows,
+    diagramUrl: String(c.diagramUrl || '').trim(),
+    note: String(c.note || '').trim()
+  };
+}
+
 const DEFAULT_SHOP_SETTINGS = {
   shopName: 'NA 2HAND Boutique',
-  tagline: 'Tiệm Đồ Xinh Lung Linh Cho Nàng Thơ ✨',
+  tagline: 'Atelier & Curated Vintage',
   announcement: '✨ FREESHIP ĐƠN TỪ 299K • NHẬP MÃ XINHXINH10 GIẢM NGAY 10% • ĐỒ TUYỂN CHỌN THƠM PHỨC 🌸',
-  heroTitle: 'Tủ Đồ Xinh Lung Linh Của Nàng ✨',
-  heroSubtitle: 'Tuyển chọn những mẫu váy đầm tiểu thư, áo xinh & 2hand cao cấp chỉ có1-0-2, gói hàng thơm tho gửi trao tận tay nàng ♡',
+  heroKicker: 'LOOKBOOK 2026 — TUYỂN CHỌN TỪNG ĐƯỜNG KIM',
+  heroTitle: 'Tủ đồ *tiểu thư* thơm hương đào trắng dành riêng cho nàng',
+  heroSubtitle:
+    'Những thiết kế váy hoa nhí, dạ tweed ánh nhũ và đồ 2hand tuyển chọn độ mới trên 98% — giặt hấp kỹ lưỡng, gói giấy lụa thắt nơ trước khi trao tới tay nàng.',
   heroBannerImage: '/media/bio-link/girlfriend-1.jpg',
+  heroPolaroid1Caption: 'Look 01 — *Soft Coquette*',
+  heroBannerImage2: '/media/bio-link/girlfriend-2.jpg',
+  heroPolaroid2Caption: 'Look 02 — *Sweet Muse*',
+  heroStampText: 'NA 2HAND ATELIER ✦ SCENTED PARCEL ✦',
+  heroDealEnabled: true,
+  heroDealLabel: 'Khung giờ Giá Ngọt kết thúc sau',
+  lookbookEnabled: true,
+  lookbookHeading: 'Góc Phối Đồ *Có Sẵn Cho Nàng*',
+  lookbookSubheading: 'Chạm vào các chấm ngọc trai phát sáng trên ảnh để xem từng món trong set đồ',
+  lookbookSets: [],
+  _heroV2Initialized: true,
   shippingFee: 25000,
   freeShipThreshold: 299000,
   codEnabled: true,
@@ -263,6 +345,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       if (!fs.existsSync(SHOP_FILE)) {
         const initial = {
           settings: DEFAULT_SHOP_SETTINGS,
+          sizeCharts: JSON.parse(JSON.stringify(DEFAULT_SIZE_CHARTS)),
           categories: DEFAULT_CATEGORIES,
           products: DEFAULT_PRODUCTS,
           coupons: DEFAULT_COUPONS,
@@ -275,6 +358,10 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       const parsed = JSON.parse(fs.readFileSync(SHOP_FILE, 'utf8'));
       return {
         settings: { ...DEFAULT_SHOP_SETTINGS, ...(parsed.settings || {}) },
+        sizeCharts:
+          Array.isArray(parsed.sizeCharts) && parsed.sizeCharts.length > 0
+            ? parsed.sizeCharts
+            : JSON.parse(JSON.stringify(DEFAULT_SIZE_CHARTS)),
         categories: Array.isArray(parsed.categories) && parsed.categories.length > 0 ? parsed.categories : DEFAULT_CATEGORIES,
         products: Array.isArray(parsed.products) ? parsed.products : DEFAULT_PRODUCTS,
         coupons: Array.isArray(parsed.coupons) ? parsed.coupons : DEFAULT_COUPONS,
@@ -284,6 +371,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
     } catch (e) {
       return {
         settings: { ...DEFAULT_SHOP_SETTINGS },
+        sizeCharts: JSON.parse(JSON.stringify(DEFAULT_SIZE_CHARTS)),
         categories: [...DEFAULT_CATEGORIES],
         products: [...DEFAULT_PRODUCTS],
         coupons: [...DEFAULT_COUPONS],
@@ -335,6 +423,10 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       if (remote && remote.store) {
         const merged = {
           settings: { ...DEFAULT_SHOP_SETTINGS, ...(remote.store.settings || {}) },
+          sizeCharts:
+            Array.isArray(remote.store.sizeCharts) && remote.store.sizeCharts.length > 0
+              ? remote.store.sizeCharts
+              : local.sizeCharts || JSON.parse(JSON.stringify(DEFAULT_SIZE_CHARTS)),
           categories: remote.store.categories || local.categories,
           products: remote.store.products || local.products,
           coupons: remote.store.coupons || local.coupons,
@@ -342,6 +434,19 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
           reviews: remote.store.reviews || local.reviews
         };
         let settingsChanged = false;
+        if (!remote.store.settings?._heroV2Initialized) {
+          if (merged.settings.heroTitle === 'Tủ Đồ Xinh Lung Linh Của Nàng ✨') {
+            merged.settings.heroTitle = DEFAULT_SHOP_SETTINGS.heroTitle;
+          }
+          if (String(merged.settings.heroSubtitle || '').includes('chỉ có1-0-2')) {
+            merged.settings.heroSubtitle = DEFAULT_SHOP_SETTINGS.heroSubtitle;
+          }
+          merged.settings._heroV2Initialized = true;
+          settingsChanged = true;
+        }
+        if (!Array.isArray(remote.store.sizeCharts) || remote.store.sizeCharts.length === 0) {
+          settingsChanged = true;
+        }
         if (!merged.settings.zaloPhone || merged.settings.zaloPhone === '0983877462') {
           merged.settings.zaloPhone = '0359427135';
           settingsChanged = true;
@@ -502,6 +607,7 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
     res.json({
       success: true,
       settings: publicSettings,
+      sizeCharts: store.sizeCharts || DEFAULT_SIZE_CHARTS,
       categories: store.categories,
       products: (store.products || []).filter((p) => p.enabled !== false && !p.isLocked),
       coupons: (store.coupons || []).filter((c) => c.enabled !== false),
@@ -960,6 +1066,8 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       platformItemId: platItemId || '',
       sourcePlatform: chosenTag,
       sourceUrl: rawSrc,
+      sizeChartId: String(b.sizeChartId || 'auto').trim(),
+      customSizeChart: b.sizeChartId === 'custom' && b.customSizeChart ? sanitizeSizeChartObj(b.customSizeChart, 99) : null,
       description: cleanProductDescription(b.description || ''),
       enabled: b.enabled !== false,
       createdAt: new Date().toISOString()
@@ -1013,6 +1121,13 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
       originalPrice: b.originalPrice !== undefined ? Number(b.originalPrice) : prev.originalPrice,
       stock: updatedStock,
       stockVerifiedV6: true,
+      sizeChartId: b.sizeChartId !== undefined ? String(b.sizeChartId || 'auto').trim() : prev.sizeChartId || 'auto',
+      customSizeChart:
+        b.sizeChartId === 'custom' && b.customSizeChart
+          ? sanitizeSizeChartObj(b.customSizeChart, 99)
+          : b.sizeChartId && b.sizeChartId !== 'custom'
+          ? null
+          : prev.customSizeChart || null,
       description: b.description !== undefined ? cleanProductDescription(b.description) : prev.description,
       updatedAt: new Date().toISOString()
     };
@@ -1255,6 +1370,36 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
     store.coupons = (store.coupons || []).filter((c) => c.id !== req.params.id);
     await saveShopStore(store);
     res.json({ success: true, coupons: store.coupons });
+  });
+
+  // Update Size Charts Library (Templates + Custom Manual Charts)
+  app.put('/api/shop/admin/size-charts', requireAuth, async (req, res) => {
+    const store = await getShopStore();
+    const rawCharts = Array.isArray(req.body?.sizeCharts) ? req.body.sizeCharts : [];
+    const cleaned = rawCharts
+      .map((c, idx) => sanitizeSizeChartObj(c, idx + 1))
+      .filter(Boolean);
+    store.sizeCharts = cleaned;
+    await saveShopStore(store);
+    res.json({
+      success: true,
+      sizeCharts: store.sizeCharts,
+      message: `Đã lưu ${cleaned.length} bảng cấu hình Size thành công! 📏`
+    });
+  });
+
+  app.post('/api/shop/admin/size-charts/reset-defaults', requireAuth, async (req, res) => {
+    const store = await getShopStore();
+    const existing = Array.isArray(store.sizeCharts) ? store.sizeCharts : [];
+    const defaultIds = new Set(DEFAULT_SIZE_CHARTS.map((c) => c.id));
+    const customKept = existing.filter((c) => c && !defaultIds.has(c.id));
+    store.sizeCharts = [...JSON.parse(JSON.stringify(DEFAULT_SIZE_CHARTS)), ...customKept];
+    await saveShopStore(store);
+    res.json({
+      success: true,
+      sizeCharts: store.sizeCharts,
+      message: 'Đã khôi phục các Bảng Size mẫu chuẩn (Quần Loe/Jean, Áo Hoodie & Đầm Váy)! ✨'
+    });
   });
 
   // Update Shop Settings & QR Payment Config
@@ -1519,6 +1664,8 @@ function registerShopRoutes(app, { dataDir, getMongoDb, requireAuth, recordAnaly
         isNew: true,
         sourcePlatform: incomingTag,
         sourceUrl: finalSourceUrl,
+        sizeChartId: prev?.sizeChartId || 'auto',
+        customSizeChart: prev?.customSizeChart || null,
         description: finalDesc,
         enabled: prev ? prev.enabled !== false : true,
         createdAt: prev ? prev.createdAt : new Date().toISOString(),

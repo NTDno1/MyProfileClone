@@ -348,7 +348,7 @@
 
     tbody.innerHTML = paged
       .map((it) => {
-        const directShare = `${window.location.origin}/affiliate?q=${encodeURIComponent(it.code || it.name)}`;
+        const directShare = `${window.location.origin}/tu-do?q=${encodeURIComponent(it.code || it.name)}`;
         return `
           <tr>
             <td>

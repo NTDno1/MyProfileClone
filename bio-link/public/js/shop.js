@@ -4,12 +4,15 @@
 
 (function () {
   let settings = {};
+  let sizeCharts = [];
   let categories = [];
   let products = [];
   let coupons = [];
   let reviews = [];
 
   let activeCategory = 'all';
+  let activeSizeChartId = '';
+  let tempCustomChart = null;
   let wishlistOnly = false;
   let searchQuery = '';
   let priceBracket = 'all';
@@ -36,6 +39,10 @@
 
   function escapeAttr(str) {
     return escapeHtml(str).replace(/"/g, '&quot;');
+  }
+
+  function formatItalicMarkup(str) {
+    return escapeHtml(str).replace(/\*([^*]+)\*/g, '<em>$1</em>');
   }
 
   function showToast(msg) {
@@ -201,6 +208,7 @@
       if (!data.success) return;
 
       settings = data.settings || {};
+      sizeCharts = Array.isArray(data.sizeCharts) ? data.sizeCharts : [];
       categories = data.categories || [];
       products = data.products || [];
       coupons = data.coupons || [];
@@ -232,8 +240,58 @@
       document.getElementById('marquee-track').innerHTML =
         `${escapeHtml(cleanAnn)} &nbsp;&nbsp;✦&nbsp;&nbsp; ${escapeHtml(cleanAnn)} &nbsp;&nbsp;✦&nbsp;&nbsp;`;
     }
+    if (settings.heroKicker) {
+      const hk = document.getElementById('hero-kicker-text');
+      if (hk) hk.textContent = settings.heroKicker;
+    }
+    if (settings.heroTitle) {
+      const ht = document.getElementById('hero-title');
+      if (ht) ht.innerHTML = formatItalicMarkup(settings.heroTitle);
+    }
+    if (settings.heroSubtitle) {
+      const hs = document.getElementById('hero-subtitle');
+      if (hs) hs.textContent = settings.heroSubtitle;
+    }
     if (settings.heroBannerImage) {
-      document.getElementById('hero-photo').src = settings.heroBannerImage;
+      const hp1 = document.getElementById('hero-photo');
+      if (hp1) hp1.src = settings.heroBannerImage;
+    }
+    if (settings.heroPolaroid1Caption) {
+      const hc1 = document.getElementById('hero-cap-1');
+      if (hc1) hc1.innerHTML = formatItalicMarkup(settings.heroPolaroid1Caption);
+    }
+    if (settings.heroBannerImage2) {
+      const hp2 = document.getElementById('hero-photo-2');
+      if (hp2) hp2.src = settings.heroBannerImage2;
+    }
+    if (settings.heroPolaroid2Caption) {
+      const hc2 = document.getElementById('hero-cap-2');
+      if (hc2) hc2.innerHTML = formatItalicMarkup(settings.heroPolaroid2Caption);
+    }
+    if (settings.heroStampText) {
+      const hst = document.getElementById('hero-stamp-text');
+      if (hst) hst.textContent = settings.heroStampText;
+    }
+    const dealStrip = document.getElementById('hero-deal-strip');
+    if (dealStrip) {
+      dealStrip.style.display = settings.heroDealEnabled === false ? 'none' : '';
+    }
+    if (settings.heroDealLabel) {
+      const hdl = document.getElementById('hero-deal-label-text');
+      if (hdl) hdl.textContent = settings.heroDealLabel;
+    }
+
+    const lookSec = document.getElementById('lookbook-section');
+    if (lookSec) {
+      lookSec.style.display = settings.lookbookEnabled === false ? 'none' : '';
+    }
+    if (settings.lookbookHeading) {
+      const lbh = document.getElementById('lookbook-heading');
+      if (lbh) lbh.innerHTML = formatItalicMarkup(settings.lookbookHeading);
+    }
+    if (settings.lookbookSubheading) {
+      const lbs = document.getElementById('lookbook-subheading');
+      if (lbs) lbs.textContent = settings.lookbookSubheading;
     }
     if (settings.messengerUrl) {
       const mLink = document.getElementById('floating-mess-link');
@@ -287,33 +345,96 @@
   }
 
   // --- 5. INTERACTIVE "SHOP THE LOOK" MIX & MATCH STUDIO ---
-  function renderLookbookStudio() {
-    const stage = document.getElementById('lookbook-stage');
-    if (!stage || products.length === 0) return;
-
+  function getResolvedLookbookSets() {
     const p0 = products[0];
     const p1 = products[Math.min(5, products.length - 1)];
     const p2 = products[Math.min(1, products.length - 1)];
     const p3 = products[Math.min(4, products.length - 1)];
 
-    const looks = [
+    const customSets = Array.isArray(settings.lookbookSets) ? settings.lookbookSets : [];
+    if (customSets.length > 0) {
+      return customSets
+        .map((s, idx) => {
+          const rawPins = Array.isArray(s.pins) ? s.pins : [];
+          const resolvedPins = rawPins
+            .map((pin, pIdx) => {
+              const foundProd =
+                products.find((pr) => pr.id === pin.productId) ||
+                products[(idx * 2 + pIdx) % Math.max(1, products.length)];
+              if (!foundProd) return null;
+              return {
+                x: Math.min(92, Math.max(8, Number(pin.x ?? 50))),
+                y: Math.min(92, Math.max(8, Number(pin.y ?? 50))),
+                prod: foundProd
+              };
+            })
+            .filter(Boolean);
+          return {
+            tabLabel: s.tabLabel || `Set Phối #${idx + 1}`,
+            photo: s.photo || '/media/bio-link/girlfriend-1.jpg',
+            title: s.title || `Look 0${idx + 1}`,
+            description:
+              s.description ||
+              'Phối sẵn tông màu hài hòa — nàng có thể chọn lẻ từng món hoặc rinh trọn bộ vào túi đồ.',
+            pins: resolvedPins
+          };
+        })
+        .filter((s) => s.pins.length > 0 || products.length > 0);
+    }
+
+    return [
       {
+        tabLabel: 'Set Hẹn Hò Cuối Tuần',
         photo: '/media/bio-link/girlfriend-1.jpg',
         title: 'Look 01 — Hẹn Hò Cuối Tuần Dịu Dàng',
+        description: 'Phối sẵn tông màu hài hòa — nàng có thể chọn lẻ từng món hoặc rinh trọn bộ vào túi đồ.',
         pins: [
           { x: 48, y: 42, prod: p0 },
           { x: 66, y: 68, prod: p1 }
-        ]
+        ].filter((x) => x.prod)
       },
       {
+        tabLabel: 'Set Tiểu Thư Dạo Phố',
         photo: '/media/bio-link/girlfriend-2.jpg',
         title: 'Look 02 — Dạo Phố Năng Động Ngọt Ngào',
+        description: 'Phối sẵn tông màu hài hòa — nàng có thể chọn lẻ từng món hoặc rinh trọn bộ vào túi đồ.',
         pins: [
           { x: 46, y: 45, prod: p2 },
           { x: 58, y: 74, prod: p3 }
-        ]
+        ].filter((x) => x.prod)
       }
     ];
+  }
+
+  function renderLookbookStudio() {
+    const lookSec = document.getElementById('lookbook-section');
+    const stage = document.getElementById('lookbook-stage');
+    const tabsWrap = document.getElementById('look-switcher-tabs');
+    if (settings.lookbookEnabled === false) {
+      if (lookSec) lookSec.style.display = 'none';
+      return;
+    }
+    if (!stage || products.length === 0) return;
+
+    const looks = getResolvedLookbookSets();
+    if (looks.length === 0) return;
+    if (activeLookIdx >= looks.length) activeLookIdx = 0;
+
+    if (tabsWrap) {
+      tabsWrap.style.display = looks.length > 1 ? 'inline-flex' : 'none';
+      tabsWrap.innerHTML = looks
+        .map(
+          (lk, i) =>
+            `<button type="button" class="look-tab ${i === activeLookIdx ? 'active' : ''}" data-look="${i}">${escapeHtml(lk.tabLabel)}</button>`
+        )
+        .join('');
+      tabsWrap.querySelectorAll('.look-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          activeLookIdx = Number(tab.dataset.look || 0);
+          renderLookbookStudio();
+        });
+      });
+    }
 
     const cur = looks[activeLookIdx] || looks[0];
     const uniquePins = cur.pins.filter((item, idx, arr) => item.prod && arr.findIndex((x) => x.prod?.id === item.prod?.id) === idx);
@@ -338,7 +459,7 @@
           ${escapeHtml(cur.title)}
         </div>
         <p style="font-size:0.8rem; color:var(--ink-muted); margin-top:-6px;">
-          Phối sẵn tông màu hài hòa — nàng có thể chọn lẻ từng món hoặc rinh trọn bộ vào túi đồ.
+          ${escapeHtml(cur.description || 'Phối sẵn tông màu hài hòa — nàng có thể chọn lẻ từng món hoặc rinh trọn bộ vào túi đồ.')}
         </p>
 
         ${uniquePins
@@ -398,15 +519,6 @@
       setTimeout(openCartDrawer, 550);
     });
   }
-
-  document.querySelectorAll('.look-tab').forEach((tab) => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.look-tab').forEach((t) => t.classList.remove('active'));
-      tab.classList.add('active');
-      activeLookIdx = Number(tab.dataset.look || 0);
-      renderLookbookStudio();
-    });
-  });
 
   // --- 6. SLIDING CATEGORY GLIDER & PRODUCT CATALOG ---
   function updateCategoryGlider() {
@@ -550,15 +662,6 @@
             ? Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)
             : 0;
         const isLiked = wishlist.includes(p.id);
-        const pTag = String(p.productTag || p.sourcePlatform || 'manual').toLowerCase();
-        const platLabel =
-          pTag === 'shopee'
-            ? 'Hàng Shopee'
-            : pTag === 'tiktok'
-            ? 'Hàng TikTok'
-            : pTag === 'lazada'
-            ? 'Hàng Lazada'
-            : 'Atelier Tự Đăng';
 
         const quickChipsHtml =
           inStockVars.length > 0
@@ -603,10 +706,11 @@
             <img src="${escapeAttr(img1)}" alt="${escapeAttr(p.name)}" class="prod-img-primary ${img2 ? 'has-alt' : ''} open-detail" loading="lazy" />
             ${img2 ? `<img src="${escapeAttr(img2)}" alt="" class="prod-img-secondary open-detail" loading="lazy" aria-hidden="true" />` : ''}
 
-            <div class="prod-badges-top">
-              ${disc > 0 ? `<span class="tag-pill-sale">-${disc}%</span>` : ''}
-              <span class="tag-pill-source">${platLabel}</span>
-            </div>
+            ${
+              disc > 0
+                ? `<div class="prod-badges-top"><span class="tag-pill-sale">-${disc}%</span></div>`
+                : ''
+            }
 
             <button type="button" class="wishlist-heart-btn ${isLiked ? 'liked' : ''}" data-like="${escapeAttr(p.id)}" aria-label="Lưu vào yêu thích">
               <svg width="16" height="16"><use href="#ico-heart"></use></svg>
@@ -839,6 +943,7 @@
 
     const prodReviews = reviews.filter((r) => r.productId === p.id);
     const related = products.filter((x) => x.id !== p.id).slice(0, 3);
+    const matchedSizeChart = resolveSizeChartForProduct(p);
 
     const isSizeSoldOutForVar = (vObj, sz) => {
       if (!vObj) return totalProductStock <= 0;
@@ -990,9 +1095,9 @@
             sizes.length > 0
               ? `
           <div style="margin-bottom:15px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; flex-wrap:wrap; gap:6px;">
               <span class="field-lbl" style="margin-bottom:0;">Kích cỡ (Size):</span>
-              <button type="button" class="text-link-btn" id="detail-open-size-calc" style="color:var(--cherry); font-weight:700;">Gợi ý size theo chiều cao/cân nặng</button>
+              <button type="button" class="text-link-btn" id="detail-open-size-calc" style="color:var(--cherry); font-weight:700;">📏 Bảng thông số &amp; gợi ý size</button>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;" id="detail-sizes">
               ${sizes
@@ -1002,6 +1107,25 @@
                   return `<button type="button" class="variant-pill ${szSel ? 'selected' : ''} ${szOut ? 'is-soldout' : ''}" data-val="${escapeAttr(s)}" ${szOut ? 'disabled title="Size này đã hết hàng"' : ''}>${escapeHtml(s)}${szOut ? ' (Hết)' : ''}</button>`;
                 })
                 .join('')}
+            </div>
+          </div>
+          `
+              : ''
+          }
+
+          ${
+            matchedSizeChart
+              ? `
+          <div class="detail-size-chart-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+              <strong style="font-size:0.79rem; color:var(--ink);">📏 ${escapeHtml(matchedSizeChart.name)}</strong>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <button type="button" class="text-link-btn" id="btn-toggle-inline-chart" style="font-size:0.75rem; font-weight:700; color:var(--ink-soft);">Xem bảng số đo ▾</button>
+                <button type="button" class="text-link-btn" id="detail-open-size-calc-2" style="font-size:0.75rem; font-weight:700; color:var(--cherry);">Đo tự động &rarr;</button>
+              </div>
+            </div>
+            <div id="inline-size-chart-body" style="display:none; margin-top:10px;">
+              ${renderSizeChartTableHtml(matchedSizeChart, -1, true)}
             </div>
           </div>
           `
@@ -1161,7 +1285,17 @@
     });
 
     content.querySelector('#detail-open-size-calc')?.addEventListener('click', () => {
-      document.getElementById('size-modal')?.classList.add('open');
+      openSizeAdvisorModal(matchedSizeChart);
+    });
+    content.querySelector('#detail-open-size-calc-2')?.addEventListener('click', () => {
+      openSizeAdvisorModal(matchedSizeChart);
+    });
+    content.querySelector('#btn-toggle-inline-chart')?.addEventListener('click', (ev) => {
+      const bodyEl = content.querySelector('#inline-size-chart-body');
+      if (!bodyEl) return;
+      const isHidden = bodyEl.style.display === 'none';
+      bodyEl.style.display = isHidden ? 'block' : 'none';
+      ev.currentTarget.textContent = isHidden ? 'Thu gọn bảng ▴' : 'Xem bảng số đo ▾';
     });
 
     const refreshSelectionUI = () => {
@@ -1351,35 +1485,258 @@
     };
   }
 
-  // --- 9. INTERACTIVE SMART SIZE ADVISOR ---
-  function updateSizeCalculation() {
-    const h = Number(document.getElementById('calc-height')?.value || 158);
-    const w = Number(document.getElementById('calc-weight')?.value || 48);
-    const fit = document.querySelector('#fit-pref-pills .variant-pill.selected')?.dataset.fit || 'regular';
-
-    document.getElementById('calc-h-val').textContent = `${h} cm`;
-    document.getElementById('calc-w-val').textContent = `${w} kg`;
-
-    let adjWeight = w + (fit === 'loose' ? 3 : fit === 'slim' ? -2 : 0) - (h - 158) * 0.25;
-    let rec = 'Size S';
-    let waist = '60–65cm';
-    if (adjWeight >= 47 && adjWeight <= 53.5) {
-      rec = 'Size M';
-      waist = '66–70cm';
-    } else if (adjWeight > 53.5) {
-      rec = 'Size L';
-      waist = '71–76cm';
+  // --- 9. INTERACTIVE MULTI-GARMENT SIZE CHARTS & SMART SIZE ADVISOR ---
+  function resolveSizeChartForProduct(p) {
+    if (!p) return null;
+    if (p.sizeChartId === 'none') return null;
+    if (p.sizeChartId === 'custom' && p.customSizeChart && Array.isArray(p.customSizeChart.columns)) {
+      return {
+        ...p.customSizeChart,
+        id: `custom_${p.id}`,
+        name: p.customSizeChart.name || `Bảng Size — ${p.name.slice(0, 32)}`
+      };
+    }
+    if (p.sizeChartId && p.sizeChartId !== 'auto') {
+      const exact = sizeCharts.find((c) => c.id === p.sizeChartId);
+      if (exact) return exact;
     }
 
+    // Smart auto-detection from product name + category
+    const text = `${p.name || ''} ${getCategoryLabel(p.category)}`.toLowerCase();
+    if (/sticker|nhãn dán|kẹp tóc|túi|balo|móc khóa|vớ|tất|ủng/.test(text)) {
+      return null;
+    }
+    for (const c of sizeCharts) {
+      const kws = String(c.autoKeywords || '')
+        .split(',')
+        .map((k) => k.trim().toLowerCase())
+        .filter(Boolean);
+      if (kws.some((kw) => text.includes(kw))) {
+        return c;
+      }
+    }
+    return sizeCharts[0] || null;
+  }
+
+  function renderSizeChartTableHtml(chart, recRowIdx = -1, compact = false) {
+    if (!chart || !Array.isArray(chart.columns) || chart.columns.length === 0) return '';
+    const cols = chart.columns;
+    const rows = Array.isArray(chart.rows) ? chart.rows : [];
+
+    const headHtml = cols.map((col) => `<th>${escapeHtml(col)}</th>`).join('');
+    const bodyHtml = rows
+      .map((r, rIdx) => {
+        const isRec = rIdx === recRowIdx;
+        const cellsHtml = cols
+          .map((_, cIdx) => {
+            const val = r[cIdx] ?? '';
+            if (cIdx === 0 && isRec) {
+              return `<td>${escapeHtml(val)} <span class="size-rec-mini-pill">Chuẩn nhất</span></td>`;
+            }
+            return `<td>${escapeHtml(val)}</td>`;
+          })
+          .join('');
+        return `<tr class="${isRec ? 'is-rec-row' : ''}">${cellsHtml}</tr>`;
+      })
+      .join('');
+
+    const diagHtml =
+      chart.diagramUrl && !compact
+        ? `<img src="${escapeAttr(chart.diagramUrl)}" alt="Minh họa cách đo" class="size-chart-diagram" loading="lazy" />`
+        : chart.diagramUrl && compact
+        ? `<img src="${escapeAttr(chart.diagramUrl)}" alt="Minh họa cách đo" class="size-chart-diagram" style="max-height:175px;" loading="lazy" />`
+        : '';
+
+    const noteHtml = chart.note
+      ? `<div style="font-size:0.74rem; color:var(--ink-muted); margin-top:7px; text-align:center;">${escapeHtml(chart.note)}</div>`
+      : '';
+
+    return `
+      <div class="size-chart-table-wrap">
+        <table class="size-chart-table">
+          <thead><tr>${headHtml}</tr></thead>
+          <tbody>${bodyHtml}</tbody>
+        </table>
+      </div>
+      ${noteHtml}
+      ${diagHtml}
+    `;
+  }
+
+  function parseRangeFromCell(rawText, isHeightCm) {
+    const s = String(rawText || '').toLowerCase().replace(/,/g, '.').trim();
+    if (!s) return null;
+
+    // Convert "1m65" -> "165", "1m7" -> "170"
+    const normalized = isHeightCm
+      ? s.replace(/(\d)\s*m\s*(\d{1,2})/g, (_, m, cm) => String(Number(m) * 100 + Number(cm.length === 1 ? cm + '0' : cm)))
+      : s;
+
+    const nums = (normalized.match(/\d+(?:\.\d+)?/g) || []).map(Number).filter((n) => !isNaN(n));
+    if (nums.length === 0) return null;
+
+    if (/dưới|<|<=|nhỏ hơn|tối đa/.test(normalized)) {
+      return { min: isHeightCm ? 135 : 30, max: nums[0] };
+    }
+    if (/trên|>|>=|từ\s*\d+\s*trở lên/.test(normalized)) {
+      return { min: nums[0], max: isHeightCm ? 205 : 120 };
+    }
+    if (nums.length >= 2) {
+      return { min: Math.min(nums[0], nums[1]), max: Math.max(nums[0], nums[1]) };
+    }
+    return { min: nums[0] - 2, max: nums[0] + 2 };
+  }
+
+  function getActiveAdvisorChartsList() {
+    const list = [...sizeCharts];
+    if (tempCustomChart && !list.some((c) => c.id === tempCustomChart.id)) {
+      list.unshift(tempCustomChart);
+    }
+    return list;
+  }
+
+  function renderSizeAdvisorTabs() {
+    const wrap = document.getElementById('size-chart-tabs');
+    if (!wrap) return;
+    const charts = getActiveAdvisorChartsList();
+    if (charts.length === 0) {
+      wrap.innerHTML = '';
+      return;
+    }
+    if (!activeSizeChartId || !charts.some((c) => c.id === activeSizeChartId)) {
+      activeSizeChartId = charts[0].id;
+    }
+    wrap.innerHTML = charts
+      .map(
+        (c) =>
+          `<button type="button" class="size-chart-tab-btn ${c.id === activeSizeChartId ? 'active' : ''}" data-cid="${escapeAttr(c.id)}">${escapeHtml(c.name)}</button>`
+      )
+      .join('');
+    wrap.querySelectorAll('.size-chart-tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        activeSizeChartId = btn.getAttribute('data-cid') || '';
+        renderSizeAdvisorTabs();
+        updateSizeCalculation();
+      });
+    });
+  }
+
+  function openSizeAdvisorModal(preferredChart = null) {
+    if (preferredChart && String(preferredChart.id || '').startsWith('custom_')) {
+      tempCustomChart = preferredChart;
+      activeSizeChartId = preferredChart.id;
+    } else {
+      tempCustomChart = null;
+      if (preferredChart && preferredChart.id) {
+        activeSizeChartId = preferredChart.id;
+      }
+    }
+    renderSizeAdvisorTabs();
+    updateSizeCalculation();
+    document.getElementById('size-modal')?.classList.add('open');
+  }
+
+  function updateSizeCalculation() {
+    const h = Number(document.getElementById('calc-height')?.value || 160);
+    const w = Number(document.getElementById('calc-weight')?.value || 52);
+    const fit = document.querySelector('#fit-pref-pills .variant-pill.selected')?.dataset.fit || 'regular';
+
+    const hValEl = document.getElementById('calc-h-val');
+    const wValEl = document.getElementById('calc-w-val');
+    if (hValEl) hValEl.textContent = `${h} cm`;
+    if (wValEl) wValEl.textContent = `${w} kg`;
+
+    const charts = getActiveAdvisorChartsList();
+    const chart = charts.find((c) => c.id === activeSizeChartId) || charts[0] || null;
+    const tableBox = document.getElementById('size-chart-table-box');
+
+    if (chart && Array.isArray(chart.rows) && chart.rows.length > 0) {
+      const colsLower = (chart.columns || []).map((c) => String(c || '').toLowerCase());
+      const weightColIdx = colsLower.findIndex((c) => /cân nặng|weight|\bkg\b/.test(c));
+      const heightColIdx = colsLower.findIndex((c) => /chiều cao|height/.test(c));
+
+      const adjW = w + (fit === 'loose' ? 2.5 : fit === 'slim' ? -2 : 0);
+      let bestIdx = 0;
+      let bestScore = Infinity;
+
+      chart.rows.forEach((row, idx) => {
+        let score = 0;
+        let hasMetric = false;
+        if (weightColIdx >= 0) {
+          const wr = parseRangeFromCell(row[weightColIdx], false);
+          if (wr) {
+            hasMetric = true;
+            if (adjW < wr.min) score += (wr.min - adjW) * 2.4;
+            else if (adjW > wr.max) score += (adjW - wr.max) * 2.4;
+            else {
+              const mid = (wr.min + wr.max) / 2;
+              score += Math.abs(adjW - mid) * 0.12;
+            }
+          }
+        }
+        if (heightColIdx >= 0) {
+          const hr = parseRangeFromCell(row[heightColIdx], true);
+          if (hr) {
+            hasMetric = true;
+            if (h < hr.min) score += (hr.min - h) * 0.85;
+            else if (h > hr.max) score += (h - hr.max) * 0.85;
+            else {
+              const midH = (hr.min + hr.max) / 2;
+              score += Math.abs(h - midH) * 0.04;
+            }
+          }
+        }
+        if (!hasMetric) {
+          // Fallback proportional index if manual table has no weight/height columns
+          const ratio = Math.min(1, Math.max(0, (adjW - 42) / 36));
+          const targetIdx = ratio * Math.max(0, chart.rows.length - 1);
+          score = Math.abs(idx - targetIdx);
+        }
+        if (score < bestScore) {
+          bestScore = score;
+          bestIdx = idx;
+        }
+      });
+
+      const bestRow = chart.rows[bestIdx] || chart.rows[0];
+      const recSizeName = String(bestRow[0] || 'M').trim();
+      const recLabel = /^size/i.test(recSizeName) ? recSizeName : `Size ${recSizeName}`;
+
+      const specPairs = (chart.columns || [])
+        .slice(1)
+        .map((colName, i) => {
+          const val = String(bestRow[i + 1] ?? '').trim();
+          return val ? `${colName}: ${val}` : '';
+        })
+        .filter(Boolean);
+
+      document.getElementById('size-rec-letter').textContent = recLabel;
+      document.getElementById('size-rec-title').textContent = `${chart.name}: Gợi ý chuẩn nhất là ${recLabel}!`;
+      document.getElementById('size-rec-desc').textContent =
+        specPairs.length > 0
+          ? `Thông số dòng ${recLabel} → ${specPairs.join(' • ')}`
+          : `Với chiều cao ${h}cm & cân nặng ${w}kg, ${recLabel} sẽ vừa đẹp nhất cho nàng.`;
+
+      if (tableBox) {
+        tableBox.innerHTML = renderSizeChartTableHtml(chart, bestIdx, false);
+      }
+      return;
+    }
+
+    // Fallback if store has zero size charts
+    let adjWeight = w + (fit === 'loose' ? 3 : fit === 'slim' ? -2 : 0) - (h - 158) * 0.25;
+    let rec = 'Size S';
+    if (adjWeight >= 47 && adjWeight <= 53.5) rec = 'Size M';
+    else if (adjWeight > 53.5) rec = 'Size L';
     document.getElementById('size-rec-letter').textContent = rec;
-    document.getElementById('size-rec-title').textContent = `Gợi ý chuẩn nhất: ${rec} (hoặc Freesize)`;
-    document.getElementById('size-rec-desc').textContent = `Với chiều cao ${h}cm & cân nặng ${w}kg (vòng eo ước tính ~${waist}), ${rec} sẽ lên phom tôn dáng và thoải mái nhất cho nàng.`;
+    document.getElementById('size-rec-title').textContent = `Gợi ý chuẩn nhất: ${rec}`;
+    document.getElementById('size-rec-desc').textContent = `Với chiều cao ${h}cm & cân nặng ${w}kg, ${rec} sẽ lên phom thoải mái nhất.`;
+    if (tableBox) tableBox.innerHTML = '';
   }
 
   ['btn-open-size-guide', 'hero-btn-size'].forEach((id) => {
     document.getElementById(id)?.addEventListener('click', () => {
-      updateSizeCalculation();
-      document.getElementById('size-modal')?.classList.add('open');
+      openSizeAdvisorModal(null);
     });
   });
   document.getElementById('btn-close-size')?.addEventListener('click', () => {

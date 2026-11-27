@@ -1132,26 +1132,26 @@
     content.innerHTML = `
       <button type="button" class="modal-close-btn" id="close-prod-modal" aria-label="Đóng">✕</button>
       <div class="detail-modal-grid">
-        <div>
+        <div class="detail-gallery-col">
           <div class="detail-main-img-box" id="detail-zoom-trigger">
             <img id="detail-main-img" src="${escapeAttr(initialMainImg)}" alt="${escapeAttr(p.name)}" />
             <span class="detail-zoom-hint">Chạm phóng to ảnh</span>
           </div>
 
-          <div style="display:flex; gap:8px; margin-top:10px; overflow-x:auto; padding-bottom:4px;">
+          <div class="detail-thumbs-row">
             ${imgs
               .map(
                 (u, i) => `
-              <img src="${escapeAttr(u)}" class="detail-thumb" data-src="${escapeAttr(u)}" style="width:64px; height:64px; aspect-ratio:1/1; object-fit:contain; background:#ffffff; border-radius:12px; cursor:pointer; flex-shrink:0; border:2px solid ${u === initialMainImg || (i === 0 && !chosenVariant?.image) ? 'var(--cherry)' : 'var(--line)'};" />
+              <img src="${escapeAttr(u)}" class="detail-thumb" data-src="${escapeAttr(u)}" style="border:2px solid ${u === initialMainImg || (i === 0 && !chosenVariant?.image) ? 'var(--cherry)' : 'var(--line)'};" />
             `
               )
               .join('')}
           </div>
         </div>
 
-        <div>
+        <div class="detail-info-col">
           <div class="modal-kicker">NA 2HAND ATELIER • ${escapeHtml(getCategoryLabel(p.category)).toUpperCase()}</div>
-          <h2 style="font-family:var(--font-serif); font-size:1.7rem; font-weight:700; line-height:1.2; margin-bottom:8px;">${escapeHtml(p.name)}</h2>
+          <h2 class="detail-prod-title">${escapeHtml(p.name)}</h2>
 
           <div style="font-size:0.8rem; color:var(--ink-muted); margin-bottom:14px;">
             ★ ${Number(p.rating || 5).toFixed(1)} (${p.reviewCount || 1} đánh giá) &nbsp;·&nbsp; Đã bán ${p.sold || 0} &nbsp;·&nbsp; Tổng kho: <strong id="detail-total-stock-val">${totalProductStock}</strong> chiếc
@@ -1190,7 +1190,7 @@
                         ${soldOut ? 'disabled title="Mẫu này đã hết hàng"' : ''}
                       >
                         ${v.image ? `<img src="${escapeAttr(v.image)}" alt="${escapeAttr(v.label)}" loading="lazy" />` : ''}
-                        <span>${escapeHtml(v.label)}${soldOut ? ' (Hết)' : ''}</span>
+                        <span class="var-chip-lbl">${escapeHtml(v.label)}${soldOut ? ' (Hết)' : ''}</span>
                         ${hasVarPriceDiff && Number(v.price) > 0 ? `<span class="var-chip-price">${vnd(v.price)}</span>` : ''}
                       </button>
                     `;
@@ -1274,37 +1274,48 @@
           <!-- DIRECT SHOPEE ORDER BUTTON (Only rendered when product has an exact 1-to-1 Shopee item URL!) -->
           ${
             isExactShopeeItem
-              ? `<a
-                  href="${escapeAttr(shopeeDirectUrl)}"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="btn-shopee-direct shimmer-sheen"
-                  id="btn-open-shopee-direct"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M6 7h12l-1 13H7L6 7z"></path>
-                    <path d="M9 7V5a3 3 0 0 1 6 0v2"></path>
-                    <path d="M10 12.5c0-.7.9-1.2 2-1.2s2 .5 2 1.2-.9 1-2 1.3-2 .6-2 1.3.9 1.2 2 1.2 2-.5 2-1.2"></path>
-                  </svg>
-                  <span>Mở Trực Tiếp Sản Phẩm &amp; Đặt Hàng Trên Shopee</span>
-                  <span style="font-size:0.86rem;">↗</span>
-                </a>`
+              ? `<div style="text-align:center; margin-bottom:12px;">
+                  <a
+                    href="${escapeAttr(shopeeDirectUrl)}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="btn-shopee-direct"
+                    id="btn-open-shopee-direct"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M6 7h12l-1 13H7L6 7z"></path>
+                      <path d="M9 7V5a3 3 0 0 1 6 0v2"></path>
+                      <path d="M10 12.5c0-.7.9-1.2 2-1.2s2 .5 2 1.2-.9 1-2 1.3-2 .6-2 1.3.9 1.2 2 1.2 2-.5 2-1.2"></path>
+                    </svg>
+                    <span>Xem &amp; đặt trên Shopee ↗</span>
+                  </a>
+                </div>`
               : ''
           }
 
           ${
             pTag === 'tiktok' && rawSrcUrl && rawSrcUrl.includes('tiktok')
-              ? `<a href="${escapeAttr(rawSrcUrl)}" target="_blank" rel="noopener noreferrer" style="display:block; text-align:center; font-size:0.77rem; color:var(--ink-muted); text-decoration:underline; margin-bottom:14px;">
+              ? `<a href="${escapeAttr(rawSrcUrl)}" target="_blank" rel="noopener noreferrer" style="display:block; text-align:center; font-size:0.77rem; color:var(--ink-muted); text-decoration:underline; margin-bottom:6px;">
                   Hoặc mở xem trên TikTok Shop chính thức &rarr;
                 </a>`
               : ''
           }
-
-          <div style="font-size:0.84rem; line-height:1.6; color:var(--ink-soft); background:var(--paper); padding:13px 15px; border-radius:14px; border:1px solid var(--line); white-space:pre-line;">
-            <strong style="color:var(--ink);">Chi tiết chất liệu &amp; phom dáng:</strong><br/>${escapeHtml(p.description || '')}
-          </div>
         </div>
       </div>
+
+      <!-- Full-Width Product Description Across Entire Popup -->
+      ${
+        String(p.description || '').trim()
+          ? `
+        <div style="width:100%; margin-top:20px; padding:16px 18px; border-radius:16px; background:var(--paper); border:1px solid var(--line);">
+          <div style="font-family:var(--font-serif); font-size:1.25rem; font-weight:700; color:var(--ink); margin-bottom:8px; padding-bottom:7px; border-bottom:1px dashed var(--line-strong);">
+            Mô Tả <em>Chi Tiết Sản Phẩm</em>
+          </div>
+          <div style="font-size:0.86rem; line-height:1.7; color:var(--ink-soft); white-space:pre-line; overflow-wrap:break-word;">${escapeHtml(String(p.description || '').trim())}</div>
+        </div>
+      `
+          : ''
+      }
 
       <!-- Cross-sell Related Pieces -->
       ${
@@ -1383,6 +1394,7 @@
     `;
 
     modal.classList.add('open');
+    content.scrollTop = 0;
 
     content.querySelector('#close-prod-modal').onclick = () => modal.classList.remove('open');
     content.querySelector('#detail-zoom-trigger').onclick = () =>
@@ -1480,7 +1492,11 @@
         if (v.image) {
           content.querySelector('#detail-main-img').src = v.image;
           content.querySelectorAll('.detail-thumb').forEach((th) => {
-            th.style.borderColor = th.getAttribute('data-src') === v.image ? 'var(--cherry)' : 'var(--line)';
+            const matched = th.getAttribute('data-src') === v.image;
+            th.style.borderColor = matched ? 'var(--cherry)' : 'var(--line)';
+            if (matched) {
+              th.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
           });
         }
         refreshSelectionUI();
@@ -2626,8 +2642,32 @@
       if (e.target.id === 'cart-drawer-backdrop') closeCartDrawer();
     });
 
-    document.getElementById('product-modal').addEventListener('click', (e) => {
-      if (e.target.id === 'product-modal') e.currentTarget.classList.remove('open');
+    ['product-modal', 'size-modal', 'lucky-modal', 'checkout-modal', 'track-modal'].forEach((mid) => {
+      document.getElementById(mid)?.addEventListener('click', (e) => {
+        if (e.target.id === mid) e.currentTarget.classList.remove('open');
+      });
+    });
+
+    // Global ESC key closes topmost open modal / lightbox / cart drawer
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const lightbox = document.getElementById('image-lightbox');
+      if (lightbox && lightbox.classList.contains('open')) {
+        lightbox.classList.remove('open');
+        return;
+      }
+      const modalPriority = ['size-modal', 'checkout-modal', 'lucky-modal', 'track-modal', 'product-modal'];
+      for (const mid of modalPriority) {
+        const el = document.getElementById(mid);
+        if (el && el.classList.contains('open')) {
+          el.classList.remove('open');
+          return;
+        }
+      }
+      const cartDrawer = document.getElementById('cart-drawer-backdrop');
+      if (cartDrawer && cartDrawer.classList.contains('open')) {
+        closeCartDrawer();
+      }
     });
 
     // Apply coupon

@@ -1363,35 +1363,44 @@ body::before {
 
 .prod-price-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: 8px;
+  flex-wrap: wrap;
   margin-top: auto;
   padding-top: 8px;
   border-top: 1px solid #f7eaef;
 }
 
 .prod-price {
-  font-size: 1.02rem;
+  font-size: 1rem;
   font-weight: 800;
   color: var(--cherry);
+  white-space: nowrap;
 }
 
 .prod-orig-price {
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   color: #b493a1;
   text-decoration: line-through;
+  white-space: nowrap;
+  margin-left: 4px;
 }
 
 .prod-detail-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--rose-200);
   background: var(--rose-50);
   color: var(--cherry);
   font-family: inherit;
   font-size: 0.73rem;
   font-weight: 700;
-  padding: 6px 11px;
+  padding: 6px 12px;
   border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -2658,6 +2667,599 @@ body::before {
   border: 1px solid var(--rose-200);
   background: #fffafb;
   padding: 11px 12px;
+}
+
+/* ==========================================================================
+   10. COMPREHENSIVE MOBILE STOREFRONT ARCHITECTURE & TOUCH UX POLISH
+   ========================================================================== */
+.look-piece-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  line-height: 1.32;
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.look-set-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line-strong);
+  flex-wrap: wrap;
+}
+
+.look-set-footer #btn-buy-whole-look {
+  padding: 10px 18px;
+  font-size: 0.81rem;
+}
+
+.detail-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 26px;
+}
+
+.detail-main-img-box {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  cursor: zoom-in;
+}
+
+.detail-main-img-box #detail-main-img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  object-position: center;
+  background: #ffffff;
+  display: block;
+}
+
+.detail-zoom-hint {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+
+.mobile-bottom-nav {
+  display: none;
+}
+
+/* Disable hover-only quick-add overlay on touch screens so tapping cards is instant & clean */
+@media (hover: none) {
+  .quick-add-overlay {
+    display: none !important;
+  }
+  .product-card:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 768px) {
+  /* 1. Clean 2-Row Mobile Header: Row 1 = [Brand] + [Wishlist & Bag], Row 2 = [Search] */
+  .desktop-only-nav {
+    display: none !important;
+  }
+
+  .marquee-bar {
+    font-size: 0.66rem;
+    padding: 5px 0;
+  }
+
+  .header-inner {
+    padding: 9px 12px 10px;
+    gap: 8px;
+  }
+
+  .shop-brand {
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .brand-emblem {
+    width: 36px;
+    height: 36px;
+  }
+
+  .brand-name {
+    font-size: 1.22rem;
+    white-space: nowrap;
+  }
+
+  .brand-sub {
+    font-size: 0.61rem;
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .header-actions {
+    gap: 6px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .header-actions .nav-pill {
+    padding: 7px 11px;
+    font-size: 0.76rem;
+    gap: 5px;
+  }
+
+  .search-wrap {
+    order: 3;
+    flex: 1 1 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .search-box input {
+    padding: 8px 32px 8px 34px;
+    font-size: 15px; /* Prevents iOS Safari auto-zoom on tap */
+  }
+
+  .hot-tags-row {
+    display: none;
+  }
+
+  /* 2. Frosted iOS-Style Fixed Bottom Navigation Bar */
+  .mobile-bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 65;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: center;
+    background: rgba(255, 252, 250, 0.96);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--line-strong);
+    box-shadow: 0 -6px 24px rgba(43, 21, 30, 0.08);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+
+  .mob-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: none;
+    background: none;
+    color: var(--ink-soft);
+    text-decoration: none;
+    font-family: inherit;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 4px 2px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .mob-nav-item svg {
+    color: var(--cherry);
+    flex-shrink: 0;
+  }
+
+  .mob-nav-item:active {
+    color: var(--cherry);
+    transform: scale(0.95);
+  }
+
+  /* Pad main container & lift floating buttons above bottom nav */
+  .shop-container {
+    padding: 14px 12px calc(92px + env(safe-area-inset-bottom));
+  }
+
+  .floating-concierge {
+    right: 12px;
+    bottom: calc(70px + env(safe-area-inset-bottom));
+    gap: 7px;
+  }
+
+  .concierge-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 0.66rem;
+  }
+
+  .shop-toast {
+    bottom: calc(74px + env(safe-area-inset-bottom));
+    max-width: 90vw;
+    white-space: normal;
+    text-align: center;
+  }
+
+  /* 3. Hero Section & Dual Polaroid Mobile Fit */
+  .hero-atelier {
+    border-radius: 22px;
+    padding: 20px 16px 24px;
+    gap: 22px;
+    margin-bottom: 28px;
+  }
+
+  .hero-kicker {
+    font-size: 0.63rem;
+    padding: 4px 10px;
+    margin-bottom: 10px;
+    max-width: 100%;
+  }
+
+  .hero-headline {
+    font-size: 1.82rem;
+    line-height: 1.14;
+    max-width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .hero-lead {
+    font-size: 0.84rem;
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+
+  .hero-cta-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .hero-cta-row .cta-ribbon,
+  .hero-cta-row .cta-outline {
+    width: 100%;
+    justify-content: center;
+    padding: 11px 10px;
+    font-size: 0.79rem;
+    white-space: nowrap;
+  }
+
+  .hero-deal-strip {
+    width: 100%;
+    justify-content: space-between;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .deal-label {
+    font-size: 0.72rem;
+  }
+
+  .clock-cell {
+    font-size: 0.72rem;
+    padding: 3px 6px;
+    min-width: 26px;
+  }
+
+  .hero-collage {
+    min-height: 245px;
+  }
+
+  .wax-stamp {
+    top: -12px;
+    right: 6px;
+    transform: scale(0.76);
+  }
+
+  .main-polaroid {
+    width: 185px;
+    padding: 8px 8px 11px;
+    transform: rotate(-3deg) translateX(-28px);
+  }
+
+  .main-polaroid .polaroid-img-wrap {
+    height: 205px;
+  }
+
+  .sub-polaroid {
+    width: 145px;
+    padding: 7px 7px 10px;
+    right: 6px;
+    bottom: -4px;
+  }
+
+  .sub-polaroid .polaroid-img-wrap {
+    height: 158px;
+  }
+
+  .polaroid-card figcaption {
+    font-size: 0.8rem;
+    margin-top: 6px;
+  }
+
+  /* 4. Vouchers Horizontal Swipe Carousel on Mobile */
+  .section-block {
+    margin-bottom: 30px;
+  }
+
+  .section-head-inline {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-size: 1.48rem;
+  }
+
+  .section-sub {
+    font-size: 0.77rem;
+  }
+
+  .voucher-strip {
+    display: flex;
+    overflow-x: auto;
+    gap: 10px;
+    padding-bottom: 4px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .voucher-strip::-webkit-scrollbar { display: none; }
+
+  .voucher-ticket {
+    flex: 0 0 82%;
+    max-width: 295px;
+    scroll-snap-align: start;
+    padding: 12px 15px;
+  }
+
+  /* 5. Lookbook Studio ("Góc Phối Đồ") Mobile Fit */
+  .look-switcher {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .look-switcher::-webkit-scrollbar { display: none; }
+
+  .look-tab {
+    padding: 6px 12px;
+    font-size: 0.74rem;
+    white-space: nowrap;
+  }
+
+  .lookbook-grid {
+    padding: 13px;
+    border-radius: 20px;
+    gap: 14px;
+  }
+
+  .look-photo-stage {
+    aspect-ratio: 1 / 1.04;
+    border-radius: 15px;
+  }
+
+  .look-piece-card {
+    padding: 9px 10px;
+    gap: 9px;
+  }
+
+  .look-piece-card img {
+    width: 52px;
+    height: 52px;
+  }
+
+  .look-set-footer #btn-buy-whole-look {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* 6. Single-Row Scrollable Filter Controls */
+  .catalog-top-row {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .catalog-controls {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 6px;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .catalog-controls::-webkit-scrollbar { display: none; }
+
+  .refined-select,
+  .toggle-chip {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 7px 11px;
+    font-size: 0.75rem;
+  }
+
+  .glider-tabs-wrap {
+    margin-bottom: 14px;
+  }
+
+  .cat-pill {
+    padding: 7px 13px;
+    font-size: 0.76rem;
+  }
+}
+
+@media (max-width: 640px) {
+  /* 7. 2-Column Mobile Product Cards — Crisp 1-Line Price + Full-Width CTA Pill */
+  .products-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .product-card {
+    border-radius: 16px;
+  }
+
+  .wishlist-heart-btn {
+    top: 7px;
+    right: 7px;
+    width: 30px;
+    height: 30px;
+  }
+
+  .prod-badges-top {
+    top: 7px;
+    left: 7px;
+  }
+
+  .tag-pill-sale {
+    font-size: 0.63rem;
+    padding: 2px 7px;
+  }
+
+  .prod-body {
+    padding: 9px 10px 11px;
+  }
+
+  .prod-cat-kicker {
+    font-size: 0.6rem;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .prod-title {
+    font-size: 0.81rem;
+    line-height: 1.33;
+    min-height: 2.66em;
+    margin-bottom: 5px;
+  }
+
+  .card-variant-strip {
+    gap: 4px;
+    margin: 3px 0 6px;
+  }
+
+  .card-var-swatch {
+    width: 20px;
+    height: 20px;
+  }
+
+  .card-var-swatch:nth-child(n+5) {
+    display: none;
+  }
+
+  .card-var-more {
+    font-size: 0.63rem;
+    padding: 1px 5px;
+  }
+
+  .prod-meta-row {
+    font-size: 0.66rem;
+    margin-bottom: 6px;
+  }
+
+  .prod-price-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding-top: 7px;
+  }
+
+  .prod-price {
+    font-size: clamp(0.78rem, 3.6vw, 0.9rem);
+    letter-spacing: -0.015em;
+    white-space: nowrap;
+  }
+
+  .prod-orig-price {
+    font-size: 0.68rem;
+  }
+
+  .prod-price-row .prod-detail-btn {
+    width: 100%;
+    padding: 7px 8px;
+    font-size: 0.73rem;
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  /* 8. Native Bottom-Sheet Modals on Phones */
+  .live-proof-toast {
+    display: none !important;
+  }
+
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal-card,
+  .modal-card.modal-lg {
+    max-width: 100% !important;
+    max-height: 92dvh;
+    border-radius: 22px 22px 0 0;
+    padding: 18px 15px calc(22px + env(safe-area-inset-bottom));
+  }
+
+  .modal-close-btn {
+    top: 12px;
+    right: 12px;
+  }
+
+  .modal-heading {
+    font-size: 1.48rem;
+    padding-right: 34px;
+  }
+
+  .detail-modal-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .detail-main-img-box #detail-main-img {
+    max-height: 285px;
+  }
+
+  .modal-card .cta-outline,
+  .modal-card .cta-ribbon {
+    padding: 11px 10px;
+    font-size: 0.81rem;
+    white-space: nowrap;
+  }
+
+  .btn-shopee-direct {
+    font-size: 0.78rem;
+    padding: 11px 12px;
+    line-height: 1.3;
+    text-align: center;
+  }
+
+  .size-result-card {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .size-result-badge {
+    min-width: 56px;
+    height: 56px;
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .brand-sub {
+    display: none;
+  }
+  .prod-price {
+    font-size: 0.83rem;
+  }
+  .hero-cta-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Accessibility: Reduced Motion */

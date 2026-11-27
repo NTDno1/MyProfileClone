@@ -467,23 +467,23 @@
             (pin, idx) => `
           <div class="look-piece-card ${idx === 0 ? 'highlighted' : ''}" data-piece-idx="${idx}" data-id="${escapeAttr(pin.prod.id)}">
             <img src="${escapeAttr((pin.prod.images && pin.prod.images[0]) || '/media/bio-link/girlfriend-1.jpg')}" alt="${escapeAttr(pin.prod.name)}" />
-            <div style="flex:1;">
-              <div style="font-size:0.7rem; font-weight:700; color:var(--cherry);">Món số 0${idx + 1}</div>
-              <div style="font-weight:700; font-size:0.86rem;">${escapeHtml(pin.prod.name)}</div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:0.69rem; font-weight:700; color:var(--cherry);">Món số 0${idx + 1}</div>
+              <div class="look-piece-title">${escapeHtml(pin.prod.name)}</div>
               <div style="font-weight:800; font-size:0.88rem; color:var(--cherry); margin-top:2px;">${vnd(pin.prod.price)}</div>
             </div>
-            <button type="button" class="prod-detail-btn btn-look-view" data-id="${escapeAttr(pin.prod.id)}">Xem chi tiết</button>
+            <button type="button" class="prod-detail-btn btn-look-view" data-id="${escapeAttr(pin.prod.id)}">Xem</button>
           </div>
         `
           )
           .join('')}
 
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:8px; border-top:1px dashed var(--line-strong); flex-wrap:wrap;">
+        <div class="look-set-footer">
           <div>
             <span style="font-size:0.75rem; color:var(--ink-muted);">Trọn bộ ${uniquePins.length} món:</span>
             <strong style="font-size:1.1rem; color:var(--cherry); margin-left:6px;">${vnd(totalSetPrice)}</strong>
           </div>
-          <button type="button" class="cta-ribbon shimmer-sheen" id="btn-buy-whole-look" style="padding:10px 18px; font-size:0.81rem;">
+          <button type="button" class="cta-ribbon shimmer-sheen" id="btn-buy-whole-look">
             <span>Thêm trọn Set vào Túi Đồ</span>
           </button>
         </div>
@@ -1011,11 +1011,11 @@
 
     content.innerHTML = `
       <button type="button" class="modal-close-btn" id="close-prod-modal" aria-label="Đóng">✕</button>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 26px;">
+      <div class="detail-modal-grid">
         <div>
-          <div style="position:relative; border-radius:20px; overflow:hidden; border:1px solid var(--line); background:#ffffff; cursor:zoom-in;" id="detail-zoom-trigger">
-            <img id="detail-main-img" src="${escapeAttr(initialMainImg)}" alt="${escapeAttr(p.name)}" style="width:100%; aspect-ratio:1/1; object-fit:contain; object-position:center; background:#ffffff; display:block;" />
-            <span style="position:absolute; right:10px; bottom:10px; background:rgba(255,255,255,0.92); font-size:0.68rem; font-weight:700; padding:4px 10px; border-radius:999px; border:1px solid var(--line);">Chạm phóng to ảnh</span>
+          <div class="detail-main-img-box" id="detail-zoom-trigger">
+            <img id="detail-main-img" src="${escapeAttr(initialMainImg)}" alt="${escapeAttr(p.name)}" />
+            <span class="detail-zoom-hint">Chạm phóng to ảnh</span>
           </div>
 
           <div style="display:flex; gap:8px; margin-top:10px; overflow-x:auto; padding-bottom:4px;">
@@ -1734,7 +1734,7 @@
     if (tableBox) tableBox.innerHTML = '';
   }
 
-  ['btn-open-size-guide', 'hero-btn-size'].forEach((id) => {
+  ['btn-open-size-guide', 'hero-btn-size', 'mob-open-size'].forEach((id) => {
     document.getElementById(id)?.addEventListener('click', () => {
       openSizeAdvisorModal(null);
     });
@@ -1758,7 +1758,7 @@
   function openLuckyModal() {
     document.getElementById('lucky-modal')?.classList.add('open');
   }
-  ['btn-open-lucky', 'btn-voucher-lucky'].forEach((id) => {
+  ['btn-open-lucky', 'btn-voucher-lucky', 'mob-open-lucky'].forEach((id) => {
     document.getElementById(id)?.addEventListener('click', openLuckyModal);
   });
   document.getElementById('btn-close-lucky')?.addEventListener('click', () => {
@@ -2380,7 +2380,7 @@
     });
 
     // Order Tracking Modal
-    ['btn-open-track', 'footer-open-track'].forEach((id) => {
+    ['btn-open-track', 'footer-open-track', 'mob-open-track'].forEach((id) => {
       document.getElementById(id)?.addEventListener('click', () => {
         renderSavedOrderChips();
         document.getElementById('track-modal').classList.add('open');

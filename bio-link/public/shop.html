@@ -18,7 +18,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,500;1,600;1,700&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="/css/shop.css?v=6" />
+  <link rel="stylesheet" href="/css/shop.css?v=7" />
 </head>
 
 <body>
@@ -134,26 +134,25 @@
       </div>
 
       <nav class="header-actions" aria-label="Tiện ích cửa hàng">
-        <a href="/" class="nav-pill" title="Về trang Bio NA 2HAND">
+        <a href="/" class="nav-pill desktop-only-nav" title="Về trang Bio NA 2HAND">
           <span>Bio</span>
         </a>
-        <a href="/tu-do" class="nav-pill" title="Góc Đồ Xinh &amp; Tủ Đồ Tuyển Chọn">
-          <span class="hide-sm">Góc Đồ Xinh</span>
-          <span class="show-sm-only" style="display:none;">Tủ Đồ</span>
+        <a href="/tu-do" class="nav-pill desktop-only-nav" title="Góc Đồ Xinh &amp; Tủ Đồ Tuyển Chọn">
+          <span>Góc Đồ Xinh</span>
         </a>
-        <button type="button" class="nav-pill" id="btn-open-size-guide" title="Bảng tính Size chuẩn dáng">
+        <button type="button" class="nav-pill desktop-only-nav" id="btn-open-size-guide" title="Bảng tính Size chuẩn dáng">
           <svg width="15" height="15">
             <use href="#ico-ruler"></use>
           </svg>
           <span class="hide-sm">Tính Size</span>
         </button>
-        <button type="button" class="nav-pill" id="btn-open-lucky" title="Mở Hộp Quà Nơ May Mắn">
+        <button type="button" class="nav-pill desktop-only-nav" id="btn-open-lucky" title="Mở Hộp Quà Nơ May Mắn">
           <svg width="15" height="15">
             <use href="#ico-gift"></use>
           </svg>
           <span class="hide-sm">Quà Nơ</span>
         </button>
-        <button type="button" class="nav-pill" id="btn-open-track" title="Tra cứu & lịch sử đơn hàng">
+        <button type="button" class="nav-pill desktop-only-nav" id="btn-open-track" title="Tra cứu & lịch sử đơn hàng">
           <svg width="15" height="15">
             <use href="#ico-receipt"></use>
           </svg>
@@ -714,7 +713,31 @@
   <!-- Global Toast Feedback -->
   <div class="shop-toast" id="shop-toast"></div>
 
-  <script src="/js/shop.js?v=8"></script>
+  <!-- MOBILE APP BOTTOM NAVIGATION BAR (Visible <= 768px, replaces cluttered header icon pills) -->
+  <nav class="mobile-bottom-nav" aria-label="Tiện ích nhanh trên điện thoại">
+    <a href="/" class="mob-nav-item">
+      <svg width="18" height="18"><use href="#ico-star4"></use></svg>
+      <span>Trang Bio</span>
+    </a>
+    <a href="/tu-do" class="mob-nav-item">
+      <svg width="19" height="17"><use href="#ico-bow"></use></svg>
+      <span>Góc Đồ</span>
+    </a>
+    <button type="button" class="mob-nav-item" id="mob-open-size">
+      <svg width="18" height="18"><use href="#ico-ruler"></use></svg>
+      <span>Bảng Size</span>
+    </button>
+    <button type="button" class="mob-nav-item" id="mob-open-lucky">
+      <svg width="18" height="18"><use href="#ico-gift"></use></svg>
+      <span>Quà Nơ</span>
+    </button>
+    <button type="button" class="mob-nav-item" id="mob-open-track">
+      <svg width="18" height="18"><use href="#ico-receipt"></use></svg>
+      <span>Đơn Hàng</span>
+    </button>
+  </nav>
+
+  <script src="/js/shop.js?v=9"></script>
 </body>
 
 </html>

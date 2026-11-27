@@ -166,20 +166,6 @@
       loginOverlay.style.display = 'none';
       shopData = data.store;
 
-      // DB Badge
-      const dbBadge = document.getElementById('db-badge');
-      if (dbBadge) {
-        if (data.mongoConnected) {
-          dbBadge.textContent = `🟢 MongoDB Atlas: ${data.mongoDbName || 'na2hand_shop'}`;
-          dbBadge.style.background = '#e6f9ed';
-          dbBadge.style.color = '#157f3d';
-        } else {
-          dbBadge.textContent = `🟡 Dự phòng Local JSON (${data.mongoDbName || 'na2hand_shop'})`;
-          dbBadge.style.background = '#fef3c7';
-          dbBadge.style.color = '#92400e';
-        }
-      }
-
       // KPIs
       const m = data.metrics || {};
       document.getElementById('kpi-rev').textContent = formatVnd(m.totalRevenue);
@@ -918,7 +904,7 @@
         const hasRealImg = /^https?:\/\//i.test(String(img || ''));
         const missingImgWarn =
           tag === 'shopee' && !hasRealImg
-            ? `<div style="font-size:0.7rem; color:#be123c; font-weight:700; margin-top:2px;">⚠️ Dữ liệu từ dấu trang cũ thiếu ảnh gốc — hãy xóa dấu trang cũ &amp; chạy bản V3 (Tự quét lại)!</div>`
+            ? `<div style="font-size:0.7rem; color:#be123c; font-weight:700; margin-top:2px;">⚠️ Thiếu ảnh sản phẩm — hãy bấm đồng bộ lại từ Shopee.</div>`
             : '';
 
         return `
@@ -1112,29 +1098,29 @@
 
       const needResyncCount = shopeeList.filter((x) => !x.hasRealImg || !x.slugOk || !x.deepSynced).length;
       const syncKey = res.syncKey || shopData?.settings?.syncApiKey || '';
-      const v3BookmarkletHref = buildLiveBookmarkletHref(window.location.origin, syncKey);
+      const bookmarkletHref = buildLiveBookmarkletHref(window.location.origin, syncKey);
 
       box.innerHTML = `
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(165px, 1fr)); gap:10px; margin-bottom:14px;">
           <div style="background:#fff5f9; border:1px solid #f7c6da; border-radius:14px; padding:10px 12px;">
-            <div style="font-size:0.73rem; color:var(--muted); font-weight:700;">🎀 1. Hàng tự đăng</div>
+            <div style="font-size:0.73rem; color:var(--muted); font-weight:700;">🎀 Hàng tự đăng</div>
             <div style="font-size:1.25rem; font-weight:800; color:#be185d;">${c.manual || 0} SP</div>
-            <div style="font-size:0.7rem; color:#15803d;">🛡️ Độc lập, không bị xóa khi kéo sàn</div>
+            <div style="font-size:0.7rem; color:#15803d;">Giữ riêng trên web</div>
           </div>
           <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:14px; padding:10px 12px;">
-            <div style="font-size:0.73rem; color:#9a3412; font-weight:700;">🧡 2. Hàng Shopee</div>
+            <div style="font-size:0.73rem; color:#9a3412; font-weight:700;">🧡 Hàng Shopee</div>
             <div style="font-size:1.25rem; font-weight:800; color:#c2410c;">${c.shopee || 0} SP</div>
-            <div style="font-size:0.7rem; color:#9a3412;">✅ Chuẩn V6 (Đủ kho từng phân hệ): ${sh.deepSyncedComplete || 0}/${c.shopee || 0} SP</div>
+            <div style="font-size:0.7rem; color:#9a3412;">Đã đủ thông tin: ${sh.deepSyncedComplete || 0}/${c.shopee || 0} SP</div>
           </div>
           <div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:14px; padding:10px 12px;">
-            <div style="font-size:0.73rem; color:#6b21a8; font-weight:700;">🎵 3. Hàng TikTok</div>
+            <div style="font-size:0.73rem; color:#6b21a8; font-weight:700;">🎵 Hàng TikTok</div>
             <div style="font-size:1.25rem; font-weight:800; color:#7e22ce;">${c.tiktok || 0} SP</div>
-            <div style="font-size:0.7rem; color:#6b21a8;">🔄 Chế độ đồng bộ 2 chiều 1-1</div>
+            <div style="font-size:0.7rem; color:#6b21a8;">Đồng bộ từ TikTok Shop</div>
           </div>
           <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:10px 12px;">
-            <div style="font-size:0.73rem; color:#1d4ed8; font-weight:700;">💙 4. Lazada / Khác</div>
+            <div style="font-size:0.73rem; color:#1d4ed8; font-weight:700;">💙 Nguồn khác</div>
             <div style="font-size:1.25rem; font-weight:800; color:#1e40af;">${(c.lazada || 0) + (c.other || 0)} SP</div>
-            <div style="font-size:0.7rem; color:#1d4ed8;">🏷️ Phân loại mở rộng</div>
+            <div style="font-size:0.7rem; color:#1d4ed8;">Lazada &amp; khác</div>
           </div>
         </div>
 
@@ -1142,42 +1128,28 @@
           <div style="font-weight:800; color:${needResyncCount > 0 ? '#be123c' : '#15803d'}; margin-bottom:6px;">
             ${
               needResyncCount > 0
-                ? `⚠️ Có ${needResyncCount}/${c.shopee || 0} SP Shopee cần bấm chạy lại 1 lượt Đồng Bộ 1-1 (V6) để cập nhật chuẩn tồn kho từng phân hệ &amp; từng Size (báo hết hàng chuẩn xác và loại sạch ảnh avatar).`
-                : `✅ Tuyệt vời! Toàn bộ ${c.shopee || 0}/${c.shopee || 0} sản phẩm Shopee trên Web đã đồng bộ chuẩn 1-1 V6 (ảnh 1:1 sạch avatar, đủ phân hệ + ma trận Size &amp; tồn kho thật)!`
+                ? `⚠️ Có ${needResyncCount}/${c.shopee || 0} sản phẩm Shopee cần bấm đồng bộ lại để cập nhật đủ hình ảnh và số lượng kho.`
+                : `✅ Toàn bộ ${c.shopee || 0}/${c.shopee || 0} sản phẩm Shopee trên web đã cập nhật đầy đủ hình ảnh, phân loại và số lượng tồn kho!`
             }
           </div>
-          <div style="font-size:0.78rem; color:var(--text); line-height:1.55; margin-bottom:10px;">
-            🚨 <strong>Lưu ý cực quan trọng:</strong> Nếu trên thanh Dấu trang (Bookmarks Bar) trình duyệt của bạn vẫn đang để nút kéo từ lần trước, hãy <strong>chuột phải XÓA dấu trang cũ đó đi</strong> (vì dấu trang cũ lưu code tĩnh đời đầu chưa có tự quét lại; server hiện đã chặn dấu trang cũ để bảo vệ dữ liệu). Hãy kéo nút <strong>V3 (Tự Quét Lại)</strong> dưới đây lên thay thế — bản V3 sẽ tự kiểm tra từng SP, nếu SP nào mạng chậm thiếu ảnh hoặc thiếu phân hệ sẽ <strong>tự động xếp hàng quét lại tối đa 4 lượt cho đến khi đủ 100%</strong>!
+          <div style="font-size:0.79rem; color:var(--text); line-height:1.55; margin-bottom:10px;">
+            💡 <strong>Hướng dẫn nhanh:</strong> Giữ chuột kéo nút hồng <strong>🪄 Đồng Bộ Shopee</strong> bên dưới thả lên <strong>Thanh dấu trang</strong> phía trên trình duyệt (chỉ cần kéo 1 lần). Sau đó mở trang Shop Shopee và bấm vào dấu trang đó để tự động cập nhật sản phẩm.
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-            <a href="https://shopee.vn/na2hand3" target="_blank" rel="noopener" class="btn btn-sm">🔗 Mở shopee.vn/na2hand3</a>
-            <a id="audit-v3-bookmarklet" href="${escapeHtml(v3BookmarkletHref)}" class="btn btn-sm btn-primary" title="Kéo nút V3 này thả lên thanh Dấu Trang trình duyệt">
-              🪄 Đồng Bộ 1-1 V3 — Tự Quét Lại (Kéo lên Dấu Trang)
+            <a href="https://shopee.vn/na2hand3" target="_blank" rel="noopener" class="btn btn-sm">🔗 Mở Shop Shopee</a>
+            <a id="audit-bookmarklet-btn" href="${escapeHtml(bookmarkletHref)}" class="btn btn-sm btn-primary" title="Giữ chuột kéo nút này thả lên Thanh dấu trang của trình duyệt">
+              🪄 Đồng Bộ Shopee (Kéo lên Thanh Dấu Trang)
             </a>
-            <button type="button" class="btn btn-sm" id="audit-btn-copy-v3" style="border-color:#e14b85; color:#be185d;">
-              ⚡ Copy Lệnh V3 Tự Quét Lại (Dán F12 Console)
-            </button>
           </div>
         </div>
       `;
 
-      box.querySelector('#audit-v3-bookmarklet')?.addEventListener('click', (ev) => {
+      box.querySelector('#audit-bookmarklet-btn')?.addEventListener('click', (ev) => {
         ev.preventDefault();
-        alert('Hãy XÓA dấu trang cũ trên thanh Bookmarks Bar, sau đó giữ chuột KÉO nút hồng "🪄 Đồng Bộ 1-1 V3 — Tự Quét Lại" này thả lên thanh Dấu trang trình duyệt nhé!');
-      });
-
-      box.querySelector('#audit-btn-copy-v3')?.addEventListener('click', async () => {
-        try {
-          const code = buildDeepHarvesterScript(window.location.origin, syncKey);
-          await navigator.clipboard.writeText(code);
-          startLiveSyncPolling();
-          showToast('Đã copy Lệnh V3 (Tự quét lại khi lỗi)! Sang tab shopee.vn/na2hand3 nhấn F12 -> Console -> Ctrl+V -> Enter nhé! 🚀');
-        } catch {
-          showToast('Không thể copy tự động, hãy kéo nút Dấu trang V3 bên cạnh nhé!', true);
-        }
+        alert('Cách gắn 1 lần duy nhất:\n1. Bấm Ctrl + Shift + B để hiện Thanh dấu trang (nếu đang ẩn).\n2. Giữ chuột KÉO nút hồng "🪄 Đồng Bộ Shopee" thả lên Thanh dấu trang.\n3. Mở trang Shop Shopee rồi bấm vào dấu trang vừa lưu để tự động kéo sản phẩm về web!');
       });
     } catch {
-      box.textContent = 'Không thể tải báo cáo kiểm tra đối chiếu.';
+      box.textContent = 'Không thể tải thống kê sản phẩm.';
     }
   }
 
@@ -1221,8 +1193,8 @@
           : ''
       }
       <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-top:8px;">
-        <span style="font-size:0.78rem; color:var(--muted);">Đã lưu trực tiếp vào MongoDB Atlas (<code>na2hand_shop</code>).</span>
-        <button type="button" class="btn btn-sm btn-primary" id="btn-jump-to-products">👗 Mở Danh Sách Sản Phẩm Vừa Kéo</button>
+        <span style="font-size:0.78rem; color:var(--muted);">Đã lưu tự động vào cửa hàng.</span>
+        <button type="button" class="btn btn-sm btn-primary" id="btn-jump-to-products">👗 Xem Danh Sách Sản Phẩm</button>
       </div>
     `;
   }
@@ -1324,107 +1296,39 @@
       const finalShopUrl = res.resolvedUrl || targetUrl;
       if (urlInput && res.resolvedUrl) urlInput.value = res.resolvedUrl;
       const syncKey = res.syncKey || shopData?.settings?.syncApiKey || '';
-      const harvesterCode = buildDeepHarvesterScript(window.location.origin, syncKey);
       const bookmarkletHref = buildLiveBookmarkletHref(window.location.origin, syncKey);
 
       logBox.innerHTML = `
         <div style="margin-bottom:10px;">
-          <strong style="color:#9d174d;">✨ Đã nhận diện đúng địa chỉ:</strong>
+          <strong style="color:#9d174d;">✨ Địa chỉ Shop cần đồng bộ:</strong>
           <a href="${escapeHtml(finalShopUrl)}" target="_blank" rel="noopener" style="color:var(--pri); font-weight:800; word-break:break-all;">${escapeHtml(finalShopUrl)} ↗</a>
         </div>
 
-        <!-- DEEP VARIANT SYNC (Kéo cả sản phẩm ngoài + toàn bộ phân hệ con LS1..LS15 ở trong!) -->
-        <div style="background:linear-gradient(135deg,#fff0f6,#fdf4ff); border:1.5px solid #f0abc6; border-radius:14px; padding:13px 15px; margin-bottom:12px;">
-          <div style="font-weight:800; color:#be185d; font-size:0.88rem; margin-bottom:5px;">
-            🧩 Cách Kéo Đầy Đủ Cả Sản Phẩm Lẫn Toàn Bộ Phân Hệ Ở Trong (Mẫu LS1..LS15, Ảnh Riêng &amp; Kho Từng Mẫu):
+        <div style="background:linear-gradient(135deg,#fff0f6,#fdf4ff); border:1.5px solid #f0abc6; border-radius:14px; padding:14px 16px;">
+          <div style="font-weight:800; color:#be185d; font-size:0.88rem; margin-bottom:6px;">
+            🪄 3 bước đồng bộ sản phẩm bằng Thanh dấu trang:
           </div>
-          <div style="font-size:0.79rem; color:var(--text); margin-bottom:10px; line-height:1.55;">
-            • <strong>Cách tự động quét hết cả Shop (Khuyên dùng):</strong> Kéo nút hồng <strong>🪄 Hút Sâu Cả Shop &amp; Phân Hệ</strong> bên dưới thả lên <strong>Thanh Dấu Trang (Bookmarks Bar)</strong> trình duyệt (chỉ làm 1 lần duy nhất). Sau đó mở trang <a href="${escapeHtml(finalShopUrl)}" target="_blank" rel="noopener" style="color:var(--pri);font-weight:700;">Shop Shopee ↗</a> rồi bấm vào dấu trang đó — trình duyệt sẽ <strong>tự mở lần lượt từng sản phẩm trong Shop, tự click lấy đủ mọi phân hệ LS1..LS15, ảnh HD từng mẫu &amp; tồn kho</strong> đẩy thẳng về đây!<br/>
-            • <em>(Hoặc nếu không bật thanh Dấu trang: bấm <strong>Copy Lệnh Quét Sâu</strong> &rarr; sang tab Shopee nhấn <strong>F12 &rarr; Console &rarr; Ctrl+V &rarr; Enter</strong> là chạy tự động y hệt!)</em>
+          <div style="font-size:0.81rem; color:var(--text); margin-bottom:12px; line-height:1.6;">
+            <strong>Bước 1 (chỉ làm lần đầu):</strong> Giữ chuột kéo nút hồng <strong>🪄 Đồng Bộ Shopee</strong> bên dưới thả lên <strong>Thanh dấu trang</strong> phía trên trình duyệt.<br/>
+            <strong>Bước 2:</strong> Bấm <strong>🔗 Mở Trang Shop</strong> để mở trang trên trình duyệt.<br/>
+            <strong>Bước 3:</strong> Bấm vào nút <strong>🪄 Đồng Bộ Shopee</strong> trên thanh dấu trang, chờ vài giây sản phẩm sẽ tự động cập nhật về web!
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
             <a href="${escapeHtml(finalShopUrl)}" target="_blank" rel="noopener" class="btn btn-sm">
-              🔗 1. Mở Trang Shop / Sản Phẩm
+              🔗 1. Mở Trang Shop
             </a>
-            <a id="deep-bookmarklet-btn" href="${escapeHtml(bookmarkletHref)}" class="btn btn-sm btn-primary" title="Kéo nút này thả lên thanh Dấu Trang (Bookmarks Bar) của trình duyệt">
-              🪄 Đồng Bộ 1-1 V3 — Tự Quét Lại (Kéo lên Dấu Trang)
+            <a id="deep-bookmarklet-btn" href="${escapeHtml(bookmarkletHref)}" class="btn btn-sm btn-primary" title="Giữ chuột kéo nút này thả lên Thanh dấu trang của trình duyệt">
+              🪄 2. Đồng Bộ Shopee (Kéo lên Thanh Dấu Trang)
             </a>
-            <button type="button" class="btn btn-sm" id="btn-copy-deep-script" style="border-color:#e14b85; color:#be185d;">
-              ⚡ Copy Lệnh Quét Sâu Hết Phân Hệ (F12 Console)
-            </button>
           </div>
         </div>
-
-        <!-- QUICK CLIPBOARD PASTE (Works for both Shop listing AND single Product Detail page with LS1..LS15!) -->
-        <div style="font-size:0.79rem; color:var(--muted); margin-bottom:8px;">
-          💡 <strong>Hoặc Copy-Dán nhanh (Ctrl+A &rarr; Ctrl+C):</strong> Nếu bạn nhấn <code>Ctrl+A</code> rồi <code>Ctrl+C</code> ngay trên <strong>trang Chi tiết 1 sản phẩm Shopee</strong> (trang có hiện các nút <code>LS1..LS15</code>), rồi bấm nút dưới đây — hệ thống cũng tự bóc tách luôn cả 15 phân hệ <code>LS1..LS15</code> kèm ảnh HD từng mẫu!
-        </div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-          <button type="button" class="btn btn-sm" id="btn-read-clipboard-sync">
-            📋 Hút Ngay Nội Dung Vừa Copy (Ctrl+A, Ctrl+C)
-          </button>
-        </div>
-        <div
-          id="paste-drop-zone"
-          contenteditable="true"
-          style="min-height:42px; max-height:84px; overflow:hidden; padding:9px 12px; border-radius:12px; border:1.5px dashed #e5b8cc; background:#fdf7fa; color:var(--muted); font-size:0.78rem; outline:none;"
-        >Hoặc click vào ô này rồi nhấn <strong>Ctrl + V</strong> sau khi Ctrl+A, Ctrl+C ở trang Sản phẩm / trang Shop...</div>
       `;
 
       logBox.querySelector('#deep-bookmarklet-btn')?.addEventListener('click', (ev) => {
         ev.preventDefault();
         alert(
-          'Hãy giữ chuột KÉO nút hồng "🪄 Hút Sâu Cả Shop & Phân Hệ" này thả lên Thanh Dấu Trang (Bookmarks Bar - bấm Ctrl+Shift+B để hiện thanh dấu trang) phía trên trình duyệt nhé!\n\nSau đó khi đang mở trang Shop Shopee (shopee.vn/na2hand3) hoặc trang sản phẩm lẻ, bạn chỉ cần bấm 1 click vào dấu trang đó là toàn bộ sản phẩm + các phân hệ LS1..LS15 tự động kéo hết về Shop!'
+          'Cách gắn 1 lần duy nhất:\n1. Bấm Ctrl + Shift + B để hiện Thanh dấu trang (nếu đang ẩn).\n2. Giữ chuột KÉO nút hồng "🪄 Đồng Bộ Shopee" thả lên Thanh dấu trang.\n3. Mở trang Shop Shopee rồi bấm vào dấu trang vừa lưu để tự động kéo sản phẩm về web!'
         );
-      });
-
-      logBox.querySelector('#btn-copy-deep-script')?.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(harvesterCode);
-          startLiveSyncPolling();
-          showToast('Đã copy lệnh Quét Sâu! Hãy sang tab Shopee nhấn F12 -> Console -> Ctrl+V -> Enter nhé! 🚀');
-        } catch {
-          showToast('Không thể copy tự động, hãy thử kéo nút Dấu Trang bên cạnh nhé!', true);
-        }
-      });
-
-      logBox.querySelector('#btn-read-clipboard-sync')?.addEventListener('click', async () => {
-        try {
-          let htmlStr = '';
-          let textStr = '';
-          if (navigator.clipboard && navigator.clipboard.read) {
-            const clipItems = await navigator.clipboard.read();
-            for (const item of clipItems) {
-              if (item.types.includes('text/html')) {
-                const blob = await item.getType('text/html');
-                htmlStr += await blob.text();
-              }
-              if (item.types.includes('text/plain')) {
-                const blob = await item.getType('text/plain');
-                textStr += await blob.text();
-              }
-            }
-          } else if (navigator.clipboard && navigator.clipboard.readText) {
-            textStr = await navigator.clipboard.readText();
-          }
-          if (!htmlStr && !textStr) {
-            showToast('Bộ nhớ tạm đang trống — hãy nhấn Ctrl+A rồi Ctrl+C ở trang Shopee trước nhé!', true);
-            return;
-          }
-          await importCopiedShopContent(finalShopUrl, htmlStr, textStr, logBox);
-        } catch {
-          const zone = logBox.querySelector('#paste-drop-zone');
-          if (zone) zone.focus();
-          showToast('Hãy nhấn Ctrl + V trực tiếp vào ô nét đứt bên dưới nhé!');
-        }
-      });
-
-      const pasteZone = logBox.querySelector('#paste-drop-zone');
-      pasteZone?.addEventListener('paste', async (ev) => {
-        ev.preventDefault();
-        const htmlStr = ev.clipboardData?.getData('text/html') || '';
-        const textStr = ev.clipboardData?.getData('text/plain') || '';
-        await importCopiedShopContent(finalShopUrl, htmlStr, textStr, logBox);
       });
 
       startLiveSyncPolling();

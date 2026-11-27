@@ -176,7 +176,6 @@
       <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
         <img src="/images/brand-logo.jpg?v=2" alt="NA 2HAND Logo" class="brand-logo-avatar" />
         <strong style="font-size: 1.05rem;">NA 2HAND Shop Admin</strong>
-        <span class="badge" id="db-badge" style="background: #e6f9ed; color: #157f3d;">🟢 MongoDB: na2hand_shop</span>
       </div>
       <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
         <a href="/shop" target="_blank" class="btn btn-primary btn-sm">🛍️ Xem Web Bán Hàng (/shop)</a>
@@ -434,19 +433,19 @@
       </div>
     </section>
 
-    <!-- PANE 3: SINGLE ZERO-INSTALL AUTO SYNC FROM SHOPEE & TIKTOK SHOP -->
+    <!-- PANE 3: AUTO SYNC FROM SHOPEE & TIKTOK SHOP -->
     <section class="tab-pane" id="pane-sync" style="display: none;">
-      <div class="card" style="background: linear-gradient(135deg, #fff6fa, #fdf2ff); border-color: #f3b8d2; padding: 28px 24px;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
-          <div style="max-width: 780px;">
-            <h3 style="font-size:1.2rem; margin-bottom:6px;">🚀 Tự Động Kéo Sản Phẩm Từ Link Shop (Shopee &amp; TikTok Shop)</h3>
-            <p style="font-size:0.84rem; color:var(--muted); line-height:1.55;">
-              Chỉ cần dán đường dẫn Shop (hoặc link sản phẩm) vào ô bên dưới rồi bấm <strong>Tự Động Kéo Toàn Bộ Sản Phẩm</strong> — hệ thống tự giải mã link rút gọn và đồng bộ thẳng vào cửa hàng, <strong>không cần cài đặt thêm bất kỳ công cụ hay tiện ích nào</strong>.
+      <div class="card" style="background: linear-gradient(135deg, #fff6fa, #fdf2ff); border-color: #f3b8d2; padding: 24px 22px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+          <div style="max-width: 720px;">
+            <h3 style="font-size:1.15rem; margin-bottom:5px;">🚀 Đồng Bộ Sản Phẩm Từ Shopee &amp; TikTok Shop</h3>
+            <p style="font-size:0.83rem; color:var(--muted); line-height:1.5;">
+              Dán đường dẫn Shop (hoặc sản phẩm) vào ô bên dưới rồi bấm <strong>Đồng Bộ Sản Phẩm</strong> để cập nhật về cửa hàng.
             </p>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button type="button" class="btn btn-sm" id="btn-quick-shopee">🧡 Điền Link Shop Shopee Của Tôi</button>
-            <button type="button" class="btn btn-sm" id="btn-quick-tiktok">🎵 Điền Link TikTok Shop Của Tôi</button>
+            <button type="button" class="btn btn-sm" id="btn-quick-shopee">🧡 Điền Link Shop Shopee</button>
+            <button type="button" class="btn btn-sm" id="btn-quick-tiktok">🎵 Điền Link TikTok Shop</button>
           </div>
         </div>
 
@@ -455,27 +454,27 @@
             type="url"
             id="sync-target-url"
             class="input"
-            style="flex: 1 1 320px; margin-bottom:0; padding: 13px 16px; font-size: 0.95rem; background:#fff;"
-            placeholder="Dán link Shop Shopee hoặc TikTok Shop vào đây (VD: https://s.shopee.vn/8VAfrswNOG hoặc https://www.tiktok.com/@na2hand3)..."
+            style="flex: 1 1 320px; margin-bottom:0; padding: 12px 15px; font-size: 0.92rem; background:#fff;"
+            placeholder="Dán link Shop Shopee hoặc TikTok Shop vào đây..."
             required
           />
-          <button type="submit" class="btn btn-primary" id="btn-auto-sync-now" style="padding: 13px 24px; font-size: 0.92rem; white-space: nowrap;">
-            🚀 Tự Động Kéo Toàn Bộ Sản Phẩm
+          <button type="submit" class="btn btn-primary" id="btn-auto-sync-now" style="padding: 12px 22px; font-size: 0.9rem; white-space: nowrap;">
+            🚀 Đồng Bộ Sản Phẩm
           </button>
         </form>
 
-        <div id="sync-live-log" style="display:none; margin-top:16px; padding:16px; border-radius:16px; background:#fff; border:1.5px solid var(--border); font-size:0.84rem; line-height:1.6;"></div>
+        <div id="sync-live-log" style="display:none; margin-top:14px; padding:15px; border-radius:16px; background:#fff; border:1.5px solid var(--border); font-size:0.84rem; line-height:1.6;"></div>
       </div>
 
       <div class="card" id="sync-audit-card">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
           <div>
-            <h3 style="font-size:1.04rem;">🔍 Bảng Kiểm Tra Đối Chiếu Dữ Liệu Trên Web &amp; Trên Sàn (1-1 Audit)</h3>
-            <p style="font-size:0.77rem; color:var(--muted);">Tự động thống kê số lượng từng Tag nguồn hàng và kiểm tra tính toàn vẹn link/ảnh/phân hệ của các sản phẩm Shopee trên Web.</p>
+            <h3 style="font-size:1.04rem;">📊 Tình Trạng Sản Phẩm Trong Cửa Hàng</h3>
+            <p style="font-size:0.78rem; color:var(--muted);">Thống kê số lượng sản phẩm hiện có và công cụ cập nhật nhanh trên thanh dấu trang.</p>
           </div>
-          <button type="button" class="btn btn-sm" id="btn-refresh-audit">🔄 Kiểm tra lại ngay</button>
+          <button type="button" class="btn btn-sm" id="btn-refresh-audit">🔄 Làm mới</button>
         </div>
-        <div id="sync-audit-panel" style="font-size:0.82rem; color:var(--muted);">Đang tải dữ liệu đối chiếu...</div>
+        <div id="sync-audit-panel" style="font-size:0.82rem; color:var(--muted);">Đang tải dữ liệu...</div>
       </div>
     </section>
 
@@ -814,6 +813,6 @@
   <div class="toast" id="toast">Đã lưu thành công!</div>
 
   <script src="/js/shopee-harvester-runtime.js?v=6"></script>
-  <script src="/js/shop-admin.js?v=11"></script>
+  <script src="/js/shop-admin.js?v=12"></script>
 </body>
 </html>

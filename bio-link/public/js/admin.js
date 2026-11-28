@@ -505,7 +505,7 @@
     document.getElementById('seo-title').value = seo.pageTitle || '';
     document.getElementById('seo-desc').value = seo.metaDescription || '';
     const footerInput = document.getElementById('seo-footer');
-    if (footerInput) footerInput.value = seo.footerText !== undefined ? seo.footerText : 'Made with ♡ by My Love';
+    if (footerInput) footerInput.value = 'Made with ♡ by My Love';
     document.getElementById('seo-share-btn').checked = seo.showShareButton !== false;
 
     // 5. Render Dynamic Lists
@@ -994,10 +994,9 @@
     });
   });
 
-  // SEO bindings
+  // SEO bindings (footerText locked across all pages)
   bindInput('seo-title', (el) => { state.seo.pageTitle = el.value; });
   bindInput('seo-desc', (el) => { state.seo.metaDescription = el.value; });
-  bindInput('seo-footer', (el) => { state.seo.footerText = el.value; });
   bindInput('seo-share-btn', (el) => { state.seo.showShareButton = el.checked; });
 
   // Password Change

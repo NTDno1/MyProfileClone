@@ -18,7 +18,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,500;1,600;1,700&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="/css/shop.css?v=11" />
+  <link rel="stylesheet" href="/css/shop.css?v=12" />
 </head>
 
 <body>
@@ -413,10 +413,21 @@
     <div class="modal-card modal-lg" id="product-modal-content"></div>
   </div>
 
-  <!-- FULLSCREEN IMAGE ZOOM LIGHTBOX -->
-  <div class="lightbox-backdrop" id="image-lightbox">
-    <button type="button" class="lightbox-close" id="btn-close-lightbox" aria-label="Đóng ảnh phóng to">✕</button>
-    <img id="lightbox-img" src="" alt="Phóng to chi tiết sản phẩm" />
+  <!-- FULLSCREEN IMAGE ZOOM & MULTI-VARIANT GALLERY LIGHTBOX -->
+  <div class="lightbox-backdrop" id="image-lightbox" role="dialog" aria-modal="true">
+    <div class="lightbox-topbar">
+      <div class="lightbox-caption-pill" id="lightbox-caption">1 / 1</div>
+      <button type="button" class="lightbox-close" id="btn-close-lightbox" aria-label="Đóng ảnh phóng to">✕</button>
+    </div>
+
+    <div class="lightbox-stage" id="lightbox-stage">
+      <button type="button" class="lightbox-nav prev" id="lightbox-prev" aria-label="Ảnh trước">‹</button>
+      <img id="lightbox-img" src="" alt="Phóng to chi tiết sản phẩm" draggable="false" />
+      <button type="button" class="lightbox-nav next" id="lightbox-next" aria-label="Ảnh tiếp theo">›</button>
+    </div>
+
+    <div class="lightbox-hint-sub" id="lightbox-hint">Vuốt trái / phải / lên / xuống hoặc bấm phím mũi tên để xem các mẫu khác</div>
+    <div class="lightbox-thumbs-bar" id="lightbox-thumbs"></div>
   </div>
 
   <!-- INTERACTIVE SMART SIZE ADVISOR & MULTI-GARMENT SIZE CHARTS MODAL -->
@@ -758,7 +769,7 @@
     </button>
   </nav>
 
-  <script src="/js/shop.js?v=14"></script>
+  <script src="/js/shop.js?v=16"></script>
 </body>
 
 </html>

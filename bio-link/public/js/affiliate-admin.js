@@ -151,13 +151,6 @@
       storeData = data.store;
       nextAutoCode = data.nextCode || '01';
 
-      const dbBadge = document.getElementById('db-badge');
-      if (dbBadge) {
-        dbBadge.textContent = data.mongoConnected
-          ? `🟢 MongoDB Atlas: ${data.mongoDbName || 'na2hand_shop'}`
-          : `🟡 Local JSON (${data.mongoDbName || 'na2hand_shop'})`;
-      }
-
       const m = data.metrics || {};
       document.getElementById('kpi-items').textContent = m.totalItems || 0;
       document.getElementById('kpi-clicks').textContent = m.totalClicks || 0;

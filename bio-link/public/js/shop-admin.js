@@ -358,52 +358,67 @@
   function getPrintSheetCss(tpl) {
     const pageRule =
       tpl === 'label_a6'
-        ? '@page { size: 100mm 150mm; margin: 4mm; }'
+        ? '@page { size: 100mm 150mm; margin: 3mm; }'
         : tpl === 'thermal_k80'
-        ? '@page { size: 80mm auto; margin: 3mm; }'
-        : '@page { size: A5 portrait; margin: 8mm; }';
+        ? '@page { size: 80mm auto; margin: 2mm; }'
+        : '@page { size: A4 portrait; margin: 8mm 10mm; }';
 
     return `
       * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       ${pageRule}
+      html, body { margin: 0; padding: 0; }
       .print-sheet {
         background: #ffffff;
         color: #181115;
         font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
         margin: 0 auto;
         box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+        page-break-inside: avoid;
+        break-inside: avoid;
+        page-break-after: avoid;
+        break-after: avoid;
       }
       .print-sheet.tpl-invoice_a5 {
         width: 100%;
-        max-width: 680px;
-        padding: 24px 26px;
+        max-width: 720px;
+        padding: 18px 22px;
         border: 1.5px solid #ead5de;
-        border-radius: 14px;
+        border-radius: 12px;
       }
       .print-sheet.tpl-label_a6 {
-        width: 378px;
-        min-height: 555px;
-        padding: 12px 13px;
+        width: 360px;
+        padding: 9px 10px;
         border: 2px solid #111;
         border-radius: 6px;
-        font-size: 12px;
+        font-size: 11px;
       }
       .print-sheet.tpl-thermal_k80 {
-        width: 302px;
-        padding: 12px 10px;
+        width: 296px;
+        padding: 10px 8px;
         border: 1px dashed #333;
-        font-size: 12px;
+        font-size: 11.5px;
       }
       .p-table { width: 100%; border-collapse: collapse; }
-      .p-table th { background: #23141b; color: #fff; font-size: 11px; text-transform: uppercase; padding: 7px 8px; text-align: left; }
-      .p-table td { padding: 7px 8px; border-bottom: 1px solid #ead8e0; font-size: 12.5px; vertical-align: top; }
+      .p-table th { background: #23141b; color: #fff; font-size: 10.5px; text-transform: uppercase; padding: 6px 8px; text-align: left; }
+      .p-table td { padding: 6px 8px; border-bottom: 1px solid #ead8e0; font-size: 12px; vertical-align: top; }
       @media print {
-        body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
-        .print-sheet { box-shadow: none !important; margin: 0 auto !important; border-radius: 0 !important; page-break-after: always; break-after: page; }
-        .print-sheet:last-child { page-break-after: auto; break-after: auto; }
-        .print-sheet.tpl-invoice_a5 { max-width: none; border: 1px solid #ddd; padding: 14px 16px; }
-        .print-sheet.tpl-label_a6 { width: 100%; min-height: auto; }
-        .print-sheet.tpl-thermal_k80 { width: 100%; border: none; }
+        html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; height: auto !important; }
+        .print-sheet {
+          box-shadow: none !important;
+          margin: 0 auto !important;
+          border-radius: 0 !important;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+          page-break-after: avoid !important;
+          break-after: avoid !important;
+        }
+        .print-sheet + .print-sheet {
+          page-break-before: always !important;
+          break-before: page !important;
+        }
+        .print-sheet.tpl-invoice_a5 { max-width: none; border: 1px solid #ddd; padding: 12px 15px; }
+        .print-sheet.tpl-label_a6 { width: 100%; max-height: 143mm; overflow: hidden; padding: 7px 8px; }
+        .print-sheet.tpl-thermal_k80 { width: 100%; border: none; padding: 6px 4px; }
       }
     `;
   }
@@ -446,35 +461,35 @@
 
       return `
         <div class="print-sheet tpl-label_a6">
-          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #111; padding-bottom:7px; margin-bottom:7px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1.5px solid #111; padding-bottom:5px; margin-bottom:5px;">
             <div>
-              <div style="font-weight:900; font-size:14px; letter-spacing:0.02em;">${escapeHtml(sender.shopName.toUpperCase())}</div>
-              <div style="font-size:10.5px; color:#333;">Ngày đơn: ${escapeHtml(createdStr)}</div>
+              <div style="font-weight:900; font-size:13px; letter-spacing:0.02em;">${escapeHtml(sender.shopName.toUpperCase())}</div>
+              <div style="font-size:9.5px; color:#333;">Ngày đơn: ${escapeHtml(createdStr)}</div>
             </div>
-            <div style="background:#111; color:#fff; font-weight:800; font-size:11px; padding:4px 8px; border-radius:4px;">
+            <div style="background:#111; color:#fff; font-weight:800; font-size:10px; padding:3px 7px; border-radius:4px;">
               ${escapeHtml((o.shippingRegionLabel || o.province || 'TOÀN QUỐC').toUpperCase())}
             </div>
           </div>
 
-          <div style="display:flex; flex-direction:column; align-items:center; border-bottom:2px solid #111; padding-bottom:7px; margin-bottom:7px;">
-            ${renderBarcodeSvg(o.orderCode, 34)}
-            <div style="font-weight:900; font-size:14px; letter-spacing:2px; margin-top:3px;">MÃ ĐƠN: #${escapeHtml(o.orderCode)}</div>
+          <div style="display:flex; flex-direction:column; align-items:center; border-bottom:1.5px solid #111; padding-bottom:5px; margin-bottom:5px;">
+            ${renderBarcodeSvg(o.orderCode, 26)}
+            <div style="font-weight:900; font-size:12.5px; letter-spacing:1.5px; margin-top:2px;">MÃ ĐƠN: #${escapeHtml(o.orderCode)}</div>
           </div>
 
-          <div style="border-bottom:1.5px dashed #111; padding-bottom:6px; margin-bottom:6px; font-size:11px;">
+          <div style="border-bottom:1px dashed #111; padding-bottom:4px; margin-bottom:5px; font-size:10.5px;">
             <div style="font-weight:800; text-transform:uppercase; color:#444;">TỪ (NGƯỜI GỬI):</div>
             <div><strong>${escapeHtml(sender.shopName)}</strong> — SĐT: <strong>${escapeHtml(sender.senderPhone)}</strong></div>
             <div>${escapeHtml(sender.senderAddress)}</div>
           </div>
 
-          <div style="border:2px solid #111; padding:7px 9px; border-radius:5px; margin-bottom:7px; background:#fafafa;">
-            <div style="font-weight:800; font-size:10.5px; text-transform:uppercase;">ĐẾN (NGƯỜI NHẬN):</div>
-            <div style="font-weight:900; font-size:14.5px; margin:2px 0;">${escapeHtml(o.customerName)} — ${escapeHtml(o.customerPhone)}</div>
-            <div style="font-size:12px; font-weight:600; line-height:1.35;">${escapeHtml(fullAddress)}</div>
+          <div style="border:1.5px solid #111; padding:5px 8px; border-radius:5px; margin-bottom:5px; background:#fafafa;">
+            <div style="font-weight:800; font-size:10px; text-transform:uppercase;">ĐẾN (NGƯỜI NHẬN):</div>
+            <div style="font-weight:900; font-size:13.5px; margin:1px 0;">${escapeHtml(o.customerName)} — ${escapeHtml(o.customerPhone)}</div>
+            <div style="font-size:11px; font-weight:600; line-height:1.3;">${escapeHtml(fullAddress)}</div>
           </div>
 
-          <div style="margin-bottom:7px;">
-            <div style="display:flex; justify-content:space-between; font-weight:800; font-size:11px; background:#eee; padding:4px 6px;">
+          <div style="margin-bottom:5px;">
+            <div style="display:flex; justify-content:space-between; font-weight:800; font-size:10.5px; background:#eee; padding:3px 6px;">
               <span>NỘI DUNG HÀNG HÓA (KIỂM ĐÓNG GÓI)</span>
               <span>TỔNG SL: ${totalQty}</span>
             </div>
@@ -483,7 +498,7 @@
 
           ${
             o.scentChoice || o.giftWrap || o.note
-              ? `<div style="border:1px dashed #555; padding:5px 7px; margin-bottom:8px; font-size:10.5px; line-height:1.4;">
+              ? `<div style="border:1px dashed #555; padding:4px 6px; margin-bottom:6px; font-size:10px; line-height:1.35;">
                   ${o.scentChoice ? `<div>• Hương giấy gói: <strong>${escapeHtml(o.scentChoice)}</strong></div>` : ''}
                   ${o.giftWrap ? `<div>• <strong>GÓI HỘP QUÀ NƠ</strong> — Thiệp: "${escapeHtml(o.giftCardMessage || '')}"</div>` : ''}
                   ${o.note ? `<div>• Ghi chú giao: <strong>${escapeHtml(o.note)}</strong></div>` : ''}
@@ -491,17 +506,17 @@
               : ''
           }
 
-          <div style="display:grid; grid-template-columns:1.35fr 1fr; gap:8px; align-items:stretch; margin-top:auto;">
-            <div style="border:2.5px solid #111; padding:7px; text-align:center;">
-              <div style="font-size:10px; font-weight:800; text-transform:uppercase;">TIỀN THU HỘ (COD)</div>
-              <div style="font-size:20px; font-weight:900; margin-top:3px;">${codCollect > 0 ? formatVnd(codCollect) : '0đ'}</div>
-              <div style="font-size:9.5px; font-weight:700; margin-top:2px;">
+          <div style="display:grid; grid-template-columns:1.35fr 1fr; gap:6px; align-items:stretch;">
+            <div style="border:2px solid #111; padding:5px; text-align:center;">
+              <div style="font-size:9.5px; font-weight:800; text-transform:uppercase;">TIỀN THU HỘ (COD)</div>
+              <div style="font-size:18px; font-weight:900; margin-top:2px;">${codCollect > 0 ? formatVnd(codCollect) : '0đ'}</div>
+              <div style="font-size:9px; font-weight:700; margin-top:1px;">
                 ${isPaidQr ? '(KHÁCH ĐÃ CHUYỂN KHOẢN ĐỦ)' : o.paymentMethod === 'qr' ? '(CHỜ ĐỐI SOÁT QR / THU HỘ NẾU CHƯA CK)' : '(THU TIỀN MẶT KHI GIAO)'}
               </div>
             </div>
-            <div style="border:1px solid #111; padding:6px; text-align:center; display:flex; flex-direction:column; justify-content:space-between;">
-              <div style="font-size:9.5px; font-weight:800;">CHỮ KÝ NGƯỜI NHẬN</div>
-              <div style="font-size:8.5px; color:#555; margin-top:26px;">Xác nhận hàng nguyên vẹn</div>
+            <div style="border:1px solid #111; padding:5px; text-align:center; display:flex; flex-direction:column; justify-content:space-between;">
+              <div style="font-size:9px; font-weight:800;">CHỮ KÝ NGƯỜI NHẬN</div>
+              <div style="font-size:8px; color:#555; margin-top:18px;">Xác nhận hàng nguyên vẹn</div>
             </div>
           </div>
         </div>
@@ -682,14 +697,14 @@
         </div>
 
         <!-- Signatures -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; text-align:center; font-size:11.5px; margin:10px 0 38px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; text-align:center; font-size:11px; margin:8px 0 24px;">
           <div>
             <strong>ĐẠI DIỆN CỬA HÀNG</strong>
-            <div style="font-size:10.5px; color:#777;">(Ký &amp; đóng dấu xác nhận)</div>
+            <div style="font-size:10px; color:#777;">(Ký &amp; đóng dấu xác nhận)</div>
           </div>
           <div>
             <strong>KHÁCH HÀNG / NGƯỜI NHẬN</strong>
-            <div style="font-size:10.5px; color:#777;">(Kiểm tra gói hàng &amp; ký nhận)</div>
+            <div style="font-size:10px; color:#777;">(Kiểm tra gói hàng &amp; ký nhận)</div>
           </div>
         </div>
 
@@ -769,6 +784,9 @@
         ? `Don-Hang-${ordersToPrint[0].orderCode}`
         : `In-Hang-Loat-${ordersToPrint.length}-Don`;
 
+    const maxTargetPx =
+      activePrintTemplate === 'label_a6' ? 520 : activePrintTemplate === 'thermal_k80' ? 0 : 980;
+
     win.document.write(`<!DOCTYPE html>
       <html lang="vi">
       <head>
@@ -776,15 +794,23 @@
         <title>${escapeHtml(docTitle)}</title>
         <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
         <style>${getPrintSheetCss(activePrintTemplate)}</style>
-      </head>
-      <body style="margin:0; padding:12px; background:#fff;">
-        ${sheetsHtml}
         <script>
-          window.onload = function () {
-            setTimeout(function () { window.focus(); window.print(); }, 250);
-          };
+          window.addEventListener('load', function () {
+            var maxH = ${maxTargetPx};
+            if (maxH > 0) {
+              var sheets = document.querySelectorAll('.print-sheet');
+              sheets.forEach(function (el) {
+                var h = el.offsetHeight;
+                if (h > maxH) {
+                  el.style.zoom = String(Math.max(0.68, (maxH / h) * 0.97));
+                }
+              });
+            }
+            setTimeout(function () { window.focus(); window.print(); }, 220);
+          });
         <\/script>
-      </body>
+      </head>
+      <body>${sheetsHtml}</body>
       </html>`);
     win.document.close();
   }

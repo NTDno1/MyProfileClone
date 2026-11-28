@@ -659,7 +659,9 @@ function requireAuth(req, res, next) {
 app.get('/api/config', async (req, res) => {
   const config = loadConfigFromFile();
   if (!config.seo) config.seo = {};
-  config.seo.footerText = 'Made with ♡ by My Love';
+  if (config.seo.footerText === undefined) {
+    config.seo.footerText = 'Made with ♡ by My Love';
+  }
 
   if (req.query.track === '1') {
     config.analytics.totalViews = (Number(config.analytics.totalViews) || 0) + 1;
@@ -1001,8 +1003,7 @@ app.put('/api/config', requireAuth, async (req, res) => {
       socials: Array.isArray(incoming.socials) ? incoming.socials : current.socials,
       seo: {
         ...current.seo,
-        ...(incoming.seo || {}),
-        footerText: 'Made with ♡ by My Love'
+        ...(incoming.seo || {})
       },
       analytics: current.analytics
     };

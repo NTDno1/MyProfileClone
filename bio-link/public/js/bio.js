@@ -290,11 +290,12 @@
     socialsTop.style.display = hasEnabledSocials && (pos === 'top' || pos === 'both') ? 'flex' : 'none';
     socialsBottom.style.display = hasEnabledSocials && (pos === 'bottom' || pos === 'both') ? 'flex' : 'none';
 
-    // 12. Footer (Locked permanently to 'Made with ♡ by My Love')
+    // 12. Footer
     const footerEl = document.getElementById('bio-footer');
     if (footerEl) {
-      footerEl.textContent = 'Made with ♡ by My Love';
-      footerEl.style.display = 'block';
+      const fTxt = config.seo && config.seo.footerText !== undefined ? String(config.seo.footerText) : 'Made with ♡ by My Love';
+      footerEl.textContent = fTxt;
+      footerEl.style.display = fTxt.trim() ? 'block' : 'none';
     }
   }
 

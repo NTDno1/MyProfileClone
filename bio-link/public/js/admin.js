@@ -115,7 +115,7 @@
         }
         renderAnalyticsLogsTable(ana.ipFlows || [], ana.pagination || { page: 1, pageSize: ANA_PAGE_SIZE, totalItems: 0, totalPages: 1 });
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   function renderStepChip(step) {
@@ -154,13 +154,15 @@
     tbody.innerHTML = ipFlows
       .map((row) => {
         const lastDt = new Date(row.lastSeen);
-        const timeStr = lastDt.toLocaleString('vi-VN', {
+        const clockStr = lastDt.toLocaleTimeString('vi-VN', {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
-          day: '2-digit',
-          month: '2-digit'
+          hour12: false
         });
+        const dd = String(lastDt.getDate()).padStart(2, '0');
+        const mm = String(lastDt.getMonth() + 1).padStart(2, '0');
+        const dateStr = `${dd}/${mm}`;
 
         const steps = Array.isArray(row.steps) ? row.steps : [];
         const isExpanded = expandedIps.has(row.ip);
@@ -181,8 +183,11 @@
         return `
           <tr style="border-bottom: 1px solid #f5eaee;">
             <td style="padding: 10px 8px; white-space: nowrap; color: var(--adm-muted);">
-              <div style="font-weight:700; color:#4b2535;">${timeStr}</div>
-              <div style="font-size:0.7rem;">${steps.length} bước (${row.viewCount} xem · ${row.clickCount} bấm)</div>
+              <div style="display:inline-flex; align-items:center; gap:6px; white-space:nowrap; font-variant-numeric:tabular-nums;">
+                <span style="font-weight:800; color:#3d1a28; font-size:0.82rem; letter-spacing:0.01em;">${clockStr}</span>
+                <span style="padding:1px 7px; border-radius:6px; background:#f9ebf1; border:1px solid #ecd0dc; color:#a62c5c; font-size:0.71rem; font-weight:700;">${dateStr}</span>
+              </div>
+              <div style="font-size:0.7rem; margin-top:2px;">${steps.length} bước (${row.viewCount} xem · ${row.clickCount} bấm)</div>
             </td>
             <td style="padding: 10px 8px;">
               <div style="display:flex; align-items:center; flex-wrap:${isExpanded ? 'wrap' : 'nowrap'}; gap:2px; overflow-x:auto; max-width:clamp(240px, 32vw, 520px); scrollbar-width:thin;">
@@ -223,7 +228,7 @@
 
       pagerEl.innerHTML = `
         <div style="color: var(--adm-muted);">
-          Hiển thị <strong>${from}–${to}</strong> trên tổng <strong>${totalItems}</strong> địa chỉ IP (30 dòng / trang)
+          Hiển thị <strong>${from}–${to}</strong> trên tổng <strong>${totalItems}</strong> khách ghé trang
         </div>
         <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
           <button type="button" class="btn btn-outline btn-sm ana-page-btn" data-p="${page - 1}" ${page <= 1 ? 'disabled style="opacity:.45;padding:4px 10px;"' : 'style="padding:4px 10px;"'}>&larr; Trước</button>
@@ -327,7 +332,7 @@
   });
 
   document.getElementById('btn-logout').addEventListener('click', () => {
-    fetch('/api/logout', { method: 'POST' }).catch(() => {});
+    fetch('/api/logout', { method: 'POST' }).catch(() => { });
     localStorage.removeItem(TOKEN_KEY);
     authToken = '';
     loginOverlay.style.display = 'flex';
@@ -500,7 +505,7 @@
     document.getElementById('seo-title').value = seo.pageTitle || '';
     document.getElementById('seo-desc').value = seo.metaDescription || '';
     const footerInput = document.getElementById('seo-footer');
-    if (footerInput) footerInput.value = 'Made with ♡ by My Love';
+    if (footerInput) footerInput.value = seo.footerText !== undefined ? seo.footerText : 'Made with ♡ by My Love';
     document.getElementById('seo-share-btn').checked = seo.showShareButton !== false;
 
     // 5. Render Dynamic Lists
@@ -989,9 +994,10 @@
     });
   });
 
-  // SEO bindings (footerText is permanently locked to 'Made with ♡ by My Love')
+  // SEO bindings
   bindInput('seo-title', (el) => { state.seo.pageTitle = el.value; });
   bindInput('seo-desc', (el) => { state.seo.metaDescription = el.value; });
+  bindInput('seo-footer', (el) => { state.seo.footerText = el.value; });
   bindInput('seo-share-btn', (el) => { state.seo.showShareButton = el.checked; });
 
   // Password Change
@@ -1145,7 +1151,7 @@
         `;
         doc.head.appendChild(fixStyle);
       }
-    } catch (e) {}
+    } catch (e) { }
     syncPreview();
   });
 

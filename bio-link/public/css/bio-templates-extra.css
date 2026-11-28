@@ -5,8 +5,11 @@
 
 :root {
   --subtitle-color: var(--text-color);
+  --bio-color: var(--subtitle-color, var(--text-color));
   --quote-color: var(--text-color);
-  --quote-font: inherit;
+  --subtitle-font: var(--body-font);
+  --bio-font: var(--body-font);
+  --quote-font: var(--body-font);
   --btn-border-color: rgba(255, 255, 255, 0.75);
   --social-bg-color: #ffffff;
   --social-icon-color: var(--primary-color);
@@ -32,29 +35,50 @@
 }
 
 /* ==========================================================================
-   DEEP COLOR & TYPOGRAPHY OVERRIDES (Applied smoothly across ALL templates)
+   DEEP COLOR & TYPOGRAPHY OVERRIDES (Applied across ALL templates 1–20)
    ========================================================================== */
 .bio-phone-card .profile-subtitle {
-  color: var(--subtitle-color, var(--text-color));
+  color: var(--subtitle-color, var(--text-color)) !important;
+  font-family: var(--subtitle-font, var(--body-font)) !important;
+}
+
+.bio-phone-card .curved-arc-bottom .curved-arc-text {
+  fill: var(--subtitle-color, var(--text-color)) !important;
+  font-family: var(--subtitle-font, var(--body-font)) !important;
 }
 
 .bio-phone-card .profile-bio {
-  font-family: var(--body-font);
+  font-family: var(--bio-font, var(--body-font)) !important;
   font-size: clamp(0.74rem, 3.05vw, 0.82rem);
   line-height: 1.48;
-  color: var(--subtitle-color, var(--text-color));
-  opacity: 0.92;
+  color: var(--bio-color, var(--subtitle-color, var(--text-color))) !important;
+  opacity: 0.96;
   max-width: 295px;
   margin: 6px auto 0;
   word-break: break-word;
 }
 
 .bio-phone-card .bio-quote {
-  color: var(--quote-color, var(--text-color));
-  font-family: var(--quote-font, inherit);
+  color: var(--quote-color, var(--text-color)) !important;
+  font-family: var(--quote-font, var(--body-font)) !important;
 }
 
-/* Cursive script fonts get natural line-height & subtle letter-spacing automatically */
+/* Cursive script fonts get natural line-height, non-uppercase & subtle spacing automatically */
+.has-script-subtitle .profile-subtitle,
+.has-script-subtitle .curved-arc-bottom .curved-arc-text {
+  text-transform: none !important;
+  letter-spacing: 0.02em !important;
+  font-weight: 400 !important;
+  font-size: clamp(1.2rem, 4.8vw, 1.48rem);
+}
+
+.has-script-bio .profile-bio {
+  text-transform: none !important;
+  letter-spacing: 0.01em !important;
+  font-size: clamp(1.12rem, 4.5vw, 1.38rem);
+  line-height: 1.32;
+}
+
 .has-script-quote .bio-quote {
   font-size: clamp(1.35rem, 5.6vw, 1.7rem);
   letter-spacing: 0.01em;

@@ -1854,22 +1854,75 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  z-index: 4;
+  gap: 10px;
+  z-index: 6;
 }
 
 .lightbox-caption-pill {
   background: rgba(255, 255, 255, 0.14);
   border: 1px solid rgba(255, 255, 255, 0.24);
   color: #ffffff;
-  font-size: 0.8rem;
+  font-size: 0.79rem;
   font-weight: 700;
-  padding: 6px 14px;
+  padding: 6px 13px;
   border-radius: 999px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: calc(100vw - 88px);
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.lightbox-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lightbox-zoom-bar {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(8px);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.lb-zoom-btn,
+.lb-zoom-pct {
+  border: none;
+  background: transparent;
+  color: #ffffff;
+  font-family: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  transition: background 0.16s ease, transform 0.16s ease;
+}
+
+.lb-zoom-btn {
+  width: 30px;
+  height: 30px;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.lb-zoom-pct {
+  padding: 0 8px;
+  height: 30px;
+  font-size: 0.72rem;
+  min-width: 46px;
+}
+
+.lb-zoom-btn:hover,
+.lb-zoom-pct:hover {
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .lightbox-close {
@@ -1905,6 +1958,9 @@ body::before {
   align-items: center;
   justify-content: center;
   margin: 8px 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
 }
 
 .lightbox-stage img {
@@ -1914,7 +1970,18 @@ body::before {
   object-fit: contain;
   background: #ffffff;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
-  transition: transform 0.22s ease, opacity 0.18s ease;
+  transition: transform 0.2s ease, opacity 0.18s ease;
+  cursor: zoom-in;
+  will-change: transform;
+  transform-origin: center center;
+}
+
+.lightbox-stage.is-zoomed img {
+  cursor: grab;
+}
+
+.lightbox-stage.is-zoomed.is-panning img {
+  cursor: grabbing;
 }
 
 .lightbox-nav {

@@ -531,8 +531,22 @@
 
     document.getElementById('theme-heading-font').value = t.headingFont || 'Cormorant Garamond';
     document.getElementById('theme-body-font').value = t.bodyFont || 'Plus Jakarta Sans';
+    const subFontEl = document.getElementById('theme-subtitle-font');
+    if (subFontEl) subFontEl.value = t.subtitleFont || 'inherit';
+    const bioFontEl = document.getElementById('theme-bio-font');
+    if (bioFontEl) bioFontEl.value = t.bioFont || 'inherit';
     const quoteFontEl = document.getElementById('theme-quote-font');
     if (quoteFontEl) quoteFontEl.value = t.quoteFont || 'inherit';
+
+    // Sync Tab 2 inline font selectors
+    const pNameFont = document.getElementById('prof-name-font');
+    if (pNameFont) pNameFont.value = t.headingFont || 'Cormorant Garamond';
+    const pSubFont = document.getElementById('prof-subtitle-font');
+    if (pSubFont) pSubFont.value = t.subtitleFont || 'inherit';
+    const pBioFont = document.getElementById('prof-bio-font');
+    if (pBioFont) pBioFont.value = t.bioFont || 'inherit';
+    const pQuoteFont = document.getElementById('prof-quote-font');
+    if (pQuoteFont) pQuoteFont.value = t.quoteFont || 'inherit';
 
     const upperEl = document.getElementById('theme-uppercase-links');
     if (upperEl) upperEl.checked = t.uppercaseLinks !== false;
@@ -548,24 +562,35 @@
     if (btnOpacitySlider) btnOpacitySlider.value = btnOpacityVal;
     if (btnOpacityLabel) btnOpacityLabel.textContent = btnOpacityVal;
 
-    // Deep Color Pickers + Hex Badges
+    // Deep Color Pickers + Hex Badges (Both Tab 3 & Tab 2 inline bars!)
     const mainTextHex = normalizeHexColor(t.textColor, '#ffffff');
+    const subTextHex = normalizeHexColor(t.subtitleColor || mainTextHex, mainTextHex);
+    const bioTextHex = normalizeHexColor(t.bioColor || subTextHex, subTextHex);
+    const quoteTextHex = normalizeHexColor(t.quoteColor || mainTextHex, mainTextHex);
     const primHex = normalizeHexColor(t.primaryColor, '#d97793');
+
     setColorPickerValue('theme-bg-grad-start', 'hex-bg-grad-start', t.bgGradientStart, '#f6c4d2');
     setColorPickerValue('theme-bg-grad-mid', 'hex-bg-grad-mid', t.bgGradientMid, '#e89ab2');
     setColorPickerValue('theme-bg-grad-end', 'hex-bg-grad-end', t.bgGradientEnd, '#c8738e');
     setColorPickerValue('theme-overlay-color', 'hex-overlay-color', t.bgOverlayColor, '#7a354b');
     setColorPickerValue('theme-primary-color', 'hex-primary-color', primHex, '#d97793');
     setColorPickerValue('theme-text-color', 'hex-text-color', mainTextHex, '#ffffff');
-    setColorPickerValue('theme-subtitle-color', 'hex-subtitle-color', t.subtitleColor || mainTextHex, mainTextHex);
-    setColorPickerValue('theme-quote-color', 'hex-quote-color', t.quoteColor || mainTextHex, mainTextHex);
+    setColorPickerValue('theme-subtitle-color', 'hex-subtitle-color', subTextHex, mainTextHex);
+    setColorPickerValue('theme-bio-color', 'hex-bio-color', bioTextHex, subTextHex);
+    setColorPickerValue('theme-quote-color', 'hex-quote-color', quoteTextHex, mainTextHex);
     setColorPickerValue('theme-btn-bg-color', 'hex-btn-bg-color', t.buttonBgColor, '#ffffff');
     setColorPickerValue('theme-btn-text-color', 'hex-btn-text-color', t.buttonTextColor, '#522938');
     setColorPickerValue('theme-btn-border-color', 'hex-btn-border-color', t.buttonBorderColor, '#ffffff');
     setColorPickerValue('theme-social-bg-color', 'hex-social-bg-color', t.socialBgColor, '#ffffff');
     setColorPickerValue('theme-social-icon-color', 'hex-social-icon-color', t.socialIconColor || primHex, primHex);
 
-    // Deep Typography Sliders
+    // Sync Tab 2 inline color pickers
+    setColorPickerValue('prof-name-color', 'hex-prof-name-color', mainTextHex, '#ffffff');
+    setColorPickerValue('prof-subtitle-color', 'hex-prof-subtitle-color', subTextHex, mainTextHex);
+    setColorPickerValue('prof-bio-color', 'hex-prof-bio-color', bioTextHex, subTextHex);
+    setColorPickerValue('prof-quote-color', 'hex-prof-quote-color', quoteTextHex, mainTextHex);
+
+    // Deep Typography Sliders (Both Tab 3 & Tab 2 inline bars!)
     setTypoSliderValue('theme-name-size', 'val-name-size', t.nameFontSize, 30, 'px', false);
     setTypoSliderValue('theme-name-spacing', 'val-name-spacing', t.nameLetterSpacing, 1.5, 'px', true);
     setTypoSliderValue('theme-subtitle-size', 'val-subtitle-size', t.subtitleFontSize, 13, 'px', false);
@@ -575,6 +600,11 @@
     setTypoSliderValue('theme-quote-size', 'val-quote-size', t.quoteFontSize, 15, 'px', false);
     setTypoSliderValue('theme-btn-height', 'val-btn-height', t.buttonMinHeight, 46, 'px', false);
     setTypoSliderValue('theme-btn-gap', 'val-btn-gap', t.buttonGap, 11, 'px', false);
+
+    setTypoSliderValue('prof-name-size', 'val-prof-name-size', t.nameFontSize, 30, 'px', false);
+    setTypoSliderValue('prof-subtitle-size', 'val-prof-subtitle-size', t.subtitleFontSize, 13, 'px', false);
+    setTypoSliderValue('prof-bio-size', 'val-prof-bio-size', t.bioFontSize, 13, 'px', false);
+    setTypoSliderValue('prof-quote-size', 'val-prof-quote-size', t.quoteFontSize, 15, 'px', false);
 
     document.getElementById('theme-social-position').value = t.socialPosition || 'bottom';
     const socStyleEl = document.getElementById('theme-social-style');
@@ -742,6 +772,7 @@
       buttonBorderColor: p.buttonBorderColor || p.textColor || '#ffffff',
       textColor: p.textColor,
       subtitleColor: p.subtitleColor || p.textColor,
+      bioColor: p.bioColor || p.subtitleColor || p.textColor,
       quoteColor: p.quoteColor || p.textColor,
       socialBgColor: p.socialBgColor || '#ffffff',
       socialIconColor: p.socialIconColor || p.primaryColor,
@@ -1176,9 +1207,47 @@
     state.theme.bgBlur = Number(el.value);
     document.getElementById('bg-blur-val').textContent = el.value;
   });
-  bindInput('theme-heading-font', (el) => { state.theme.headingFont = el.value; });
+  bindInput('theme-heading-font', (el) => {
+    state.theme.headingFont = el.value;
+    const mirror = document.getElementById('prof-name-font');
+    if (mirror) mirror.value = el.value;
+  });
+  bindInput('prof-name-font', (el) => {
+    state.theme.headingFont = el.value;
+    const mirror = document.getElementById('theme-heading-font');
+    if (mirror) mirror.value = el.value;
+  });
   bindInput('theme-body-font', (el) => { state.theme.bodyFont = el.value; });
-  bindInput('theme-quote-font', (el) => { state.theme.quoteFont = el.value; });
+  bindInput('theme-subtitle-font', (el) => {
+    state.theme.subtitleFont = el.value;
+    const mirror = document.getElementById('prof-subtitle-font');
+    if (mirror) mirror.value = el.value;
+  });
+  bindInput('prof-subtitle-font', (el) => {
+    state.theme.subtitleFont = el.value;
+    const mirror = document.getElementById('theme-subtitle-font');
+    if (mirror) mirror.value = el.value;
+  });
+  bindInput('theme-bio-font', (el) => {
+    state.theme.bioFont = el.value;
+    const mirror = document.getElementById('prof-bio-font');
+    if (mirror) mirror.value = el.value;
+  });
+  bindInput('prof-bio-font', (el) => {
+    state.theme.bioFont = el.value;
+    const mirror = document.getElementById('theme-bio-font');
+    if (mirror) mirror.value = el.value;
+  });
+  bindInput('theme-quote-font', (el) => {
+    state.theme.quoteFont = el.value;
+    const mirror = document.getElementById('prof-quote-font');
+    if (mirror) mirror.value = el.value;
+  });
+  bindInput('prof-quote-font', (el) => {
+    state.theme.quoteFont = el.value;
+    const mirror = document.getElementById('theme-quote-font');
+    if (mirror) mirror.value = el.value;
+  });
   bindInput('theme-uppercase-links', (el) => { state.theme.uppercaseLinks = el.checked; });
   bindInput('theme-show-decorations', (el) => { state.theme.showDecorations = el.checked; });
   bindInput('theme-button-style', (el) => { state.theme.buttonStyle = el.value; });
@@ -1189,11 +1258,19 @@
     if (lbl) lbl.textContent = el.value;
   });
 
-  function bindColorPicker(inputId, hexBadgeId, applyFn) {
+  function bindColorPicker(inputId, hexBadgeId, applyFn, mirrorInputId, mirrorBadgeId) {
     bindInput(inputId, (el) => {
       applyFn(el.value);
       const badge = document.getElementById(hexBadgeId);
       if (badge) badge.textContent = String(el.value || '').toUpperCase();
+      if (mirrorInputId) {
+        const mIn = document.getElementById(mirrorInputId);
+        if (mIn) mIn.value = el.value;
+      }
+      if (mirrorBadgeId) {
+        const mBg = document.getElementById(mirrorBadgeId);
+        if (mBg) mBg.textContent = String(el.value || '').toUpperCase();
+      }
     });
   }
 
@@ -1202,9 +1279,14 @@
   bindColorPicker('theme-bg-grad-end', 'hex-bg-grad-end', (v) => { state.theme.bgGradientEnd = v; });
   bindColorPicker('theme-overlay-color', 'hex-overlay-color', (v) => { state.theme.bgOverlayColor = v; });
   bindColorPicker('theme-primary-color', 'hex-primary-color', (v) => { state.theme.primaryColor = v; });
-  bindColorPicker('theme-text-color', 'hex-text-color', (v) => { state.theme.textColor = v; });
-  bindColorPicker('theme-subtitle-color', 'hex-subtitle-color', (v) => { state.theme.subtitleColor = v; });
-  bindColorPicker('theme-quote-color', 'hex-quote-color', (v) => { state.theme.quoteColor = v; });
+  bindColorPicker('theme-text-color', 'hex-text-color', (v) => { state.theme.textColor = v; }, 'prof-name-color', 'hex-prof-name-color');
+  bindColorPicker('prof-name-color', 'hex-prof-name-color', (v) => { state.theme.textColor = v; }, 'theme-text-color', 'hex-text-color');
+  bindColorPicker('theme-subtitle-color', 'hex-subtitle-color', (v) => { state.theme.subtitleColor = v; }, 'prof-subtitle-color', 'hex-prof-subtitle-color');
+  bindColorPicker('prof-subtitle-color', 'hex-prof-subtitle-color', (v) => { state.theme.subtitleColor = v; }, 'theme-subtitle-color', 'hex-subtitle-color');
+  bindColorPicker('theme-bio-color', 'hex-bio-color', (v) => { state.theme.bioColor = v; }, 'prof-bio-color', 'hex-prof-bio-color');
+  bindColorPicker('prof-bio-color', 'hex-prof-bio-color', (v) => { state.theme.bioColor = v; }, 'theme-bio-color', 'hex-bio-color');
+  bindColorPicker('theme-quote-color', 'hex-quote-color', (v) => { state.theme.quoteColor = v; }, 'prof-quote-color', 'hex-prof-quote-color');
+  bindColorPicker('prof-quote-color', 'hex-prof-quote-color', (v) => { state.theme.quoteColor = v; }, 'theme-quote-color', 'hex-quote-color');
   bindColorPicker('theme-btn-bg-color', 'hex-btn-bg-color', (v) => { state.theme.buttonBgColor = v; });
   bindColorPicker('theme-btn-text-color', 'hex-btn-text-color', (v) => { state.theme.buttonTextColor = v; });
   bindColorPicker('theme-btn-border-color', 'hex-btn-border-color', (v) => { state.theme.buttonBorderColor = v; });
@@ -1225,23 +1307,35 @@
     });
   }
 
-  // Deep Typography Slider Bindings
-  function bindTypoSlider(inputId, badgeId, propName) {
+  // Deep Typography Slider Bindings (Two-way mirrored between Tab 2 & Tab 3)
+  function bindTypoSlider(inputId, badgeId, propName, mirrorInputId, mirrorBadgeId) {
     bindInput(inputId, (el) => {
       const val = Number(el.value);
       state.theme[propName] = val;
       const badge = document.getElementById(badgeId);
       if (badge) badge.textContent = `${val}px`;
+      if (mirrorInputId) {
+        const mIn = document.getElementById(mirrorInputId);
+        if (mIn) mIn.value = val;
+      }
+      if (mirrorBadgeId) {
+        const mBg = document.getElementById(mirrorBadgeId);
+        if (mBg) mBg.textContent = `${val}px`;
+      }
     });
   }
 
-  bindTypoSlider('theme-name-size', 'val-name-size', 'nameFontSize');
+  bindTypoSlider('theme-name-size', 'val-name-size', 'nameFontSize', 'prof-name-size', 'val-prof-name-size');
+  bindTypoSlider('prof-name-size', 'val-prof-name-size', 'nameFontSize', 'theme-name-size', 'val-name-size');
   bindTypoSlider('theme-name-spacing', 'val-name-spacing', 'nameLetterSpacing');
-  bindTypoSlider('theme-subtitle-size', 'val-subtitle-size', 'subtitleFontSize');
-  bindTypoSlider('theme-bio-size', 'val-bio-size', 'bioFontSize');
+  bindTypoSlider('theme-subtitle-size', 'val-subtitle-size', 'subtitleFontSize', 'prof-subtitle-size', 'val-prof-subtitle-size');
+  bindTypoSlider('prof-subtitle-size', 'val-prof-subtitle-size', 'subtitleFontSize', 'theme-subtitle-size', 'val-subtitle-size');
+  bindTypoSlider('theme-bio-size', 'val-bio-size', 'bioFontSize', 'prof-bio-size', 'val-prof-bio-size');
+  bindTypoSlider('prof-bio-size', 'val-prof-bio-size', 'bioFontSize', 'theme-bio-size', 'val-bio-size');
   bindTypoSlider('theme-btn-size', 'val-btn-size', 'buttonFontSize');
   bindTypoSlider('theme-btn-sub-size', 'val-btn-sub-size', 'buttonSubFontSize');
-  bindTypoSlider('theme-quote-size', 'val-quote-size', 'quoteFontSize');
+  bindTypoSlider('theme-quote-size', 'val-quote-size', 'quoteFontSize', 'prof-quote-size', 'val-prof-quote-size');
+  bindTypoSlider('prof-quote-size', 'val-prof-quote-size', 'quoteFontSize', 'theme-quote-size', 'val-quote-size');
   bindTypoSlider('theme-btn-height', 'val-btn-height', 'buttonMinHeight');
   bindTypoSlider('theme-btn-gap', 'val-btn-gap', 'buttonGap');
 

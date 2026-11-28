@@ -18,7 +18,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,500;1,600;1,700&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="/css/shop.css?v=12" />
+  <link rel="stylesheet" href="/css/shop.css?v=13" />
 </head>
 
 <body>
@@ -417,7 +417,14 @@
   <div class="lightbox-backdrop" id="image-lightbox" role="dialog" aria-modal="true">
     <div class="lightbox-topbar">
       <div class="lightbox-caption-pill" id="lightbox-caption">1 / 1</div>
-      <button type="button" class="lightbox-close" id="btn-close-lightbox" aria-label="Đóng ảnh phóng to">✕</button>
+      <div class="lightbox-actions-right">
+        <div class="lightbox-zoom-bar" role="group" aria-label="Thu phóng chi tiết ảnh">
+          <button type="button" class="lb-zoom-btn" id="lb-zoom-out" title="Thu nhỏ (−)" aria-label="Thu nhỏ">−</button>
+          <button type="button" class="lb-zoom-pct" id="lb-zoom-reset" title="Đặt lại 100%">100%</button>
+          <button type="button" class="lb-zoom-btn" id="lb-zoom-in" title="Phóng to (+)" aria-label="Phóng to">+</button>
+        </div>
+        <button type="button" class="lightbox-close" id="btn-close-lightbox" aria-label="Đóng ảnh phóng to">✕</button>
+      </div>
     </div>
 
     <div class="lightbox-stage" id="lightbox-stage">
@@ -426,7 +433,7 @@
       <button type="button" class="lightbox-nav next" id="lightbox-next" aria-label="Ảnh tiếp theo">›</button>
     </div>
 
-    <div class="lightbox-hint-sub" id="lightbox-hint">Vuốt trái / phải / lên / xuống hoặc bấm phím mũi tên để xem các mẫu khác</div>
+    <div class="lightbox-hint-sub" id="lightbox-hint">Cuộn chuột / Chạm đúp / Dùng 2 ngón tay để thu phóng • Vuốt để xem mẫu khác</div>
     <div class="lightbox-thumbs-bar" id="lightbox-thumbs"></div>
   </div>
 
@@ -769,7 +776,7 @@
     </button>
   </nav>
 
-  <script src="/js/shop.js?v=16"></script>
+  <script src="/js/shop.js?v=17"></script>
 </body>
 
 </html>

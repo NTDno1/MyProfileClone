@@ -641,6 +641,64 @@
       white-space: nowrap;
     }
 
+    /* Inline Typography & Color Bar directly under Profile inputs (Tab 2) */
+    .inline-field-style-bar {
+      display: grid;
+      grid-template-columns: minmax(150px, 1.3fr) auto minmax(145px, 1fr);
+      align-items: center;
+      gap: 10px;
+      margin-top: 7px;
+      padding: 8px 11px;
+      border-radius: 12px;
+      background: #fdf6f9;
+      border: 1px dashed #e6c6d3;
+    }
+
+    @media (max-width: 680px) {
+      .inline-field-style-bar {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 8px;
+      }
+    }
+
+    .inline-style-cell {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .inline-style-lbl {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #6e4553;
+      white-space: nowrap;
+    }
+
+    .inline-style-select {
+      flex: 1;
+      min-width: 0;
+      padding: 6px 9px;
+      border-radius: 9px;
+      border: 1px solid #e2c5d0;
+      background: #fff;
+      font-size: 0.77rem;
+      font-family: inherit;
+      color: var(--adm-text);
+      outline: none;
+    }
+
+    .inline-style-color {
+      width: 34px;
+      height: 28px;
+      padding: 2px;
+      border-radius: 7px;
+      border: 1px solid #e2c5d0;
+      background: #fff;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
     /* Theme Preset Swatches */
     .preset-grid {
       display: grid;
@@ -1094,14 +1152,68 @@
             </div>
           </div>
 
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label">Tên hiển thị chính</label>
-              <input type="text" id="prof-name" class="form-input" placeholder="HIKARI MAEVE" />
+          <div class="form-group">
+            <label class="form-label">Tên hiển thị chính</label>
+            <input type="text" id="prof-name" class="form-input" placeholder="HIKARI MAEVE" />
+            <div class="inline-field-style-bar">
+              <div class="inline-style-cell">
+                <span class="inline-style-lbl">Font:</span>
+                <select id="prof-name-font" class="inline-style-select">
+                  <option value="Cormorant Garamond">Cormorant Garamond (Thanh mảnh)</option>
+                  <option value="Playfair Display">Playfair Display (Tạp chí)</option>
+                  <option value="Cinzel">Cinzel (Cổ điển quý phái)</option>
+                  <option value="Bodoni Moda">Bodoni Moda (Thời trang)</option>
+                  <option value="Great Vibes">Great Vibes (Chữ ký mềm)</option>
+                  <option value="Dancing Script">Dancing Script (Viết tay)</option>
+                  <option value="Sacramento">Sacramento (Chữ ký mảnh)</option>
+                  <option value="Montserrat">Montserrat (Hiện đại)</option>
+                  <option value="Plus Jakarta Sans">Plus Jakarta Sans (Trẻ trung)</option>
+                  <option value="Quicksand">Quicksand (Bo tròn)</option>
+                </select>
+              </div>
+              <div class="inline-style-cell">
+                <span class="inline-style-lbl">Màu chữ:</span>
+                <input type="color" id="prof-name-color" class="inline-style-color" />
+                <span class="color-hex-tag" id="hex-prof-name-color">#FFFFFF</span>
+              </div>
+              <div class="inline-style-cell">
+                <span class="inline-style-lbl">Cỡ:</span>
+                <input type="range" id="prof-name-size" min="16" max="54" step="1" style="flex:1; accent-color:var(--adm-primary);" />
+                <span class="typo-val-badge" id="val-prof-name-size">Tự động</span>
+              </div>
             </div>
-            <div class="form-group">
-              <label class="form-label">Chức danh / Dòng mô tả ngắn (Subtitle)</label>
-              <input type="text" id="prof-subtitle" class="form-input" placeholder="Fashion | Lifestyle | Influencer" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Chức danh / Dòng mô tả ngắn (Subtitle)</label>
+            <input type="text" id="prof-subtitle" class="form-input" placeholder="Fashion | Lifestyle | Influencer" />
+            <div class="inline-field-style-bar">
+              <div class="inline-style-cell">
+                <span class="inline-style-lbl">Font:</span>
+                <select id="prof-subtitle-font" class="inline-style-select">
+                  <option value="inherit">Theo font nội dung (Mặc định)</option>
+                  <option value="Montserrat">Montserrat (Hiện đại sắc nét)</option>
+                  <option value="Plus Jakarta Sans">Plus Jakarta Sans (Gọn gàng)</option>
+                  <option value="Quicksand">Quicksand (Tròn nữ tính)</option>
+                  <option value="Cormorant Garamond">Cormorant Garamond (Serif mảnh)</option>
+                  <option value="Playfair Display">Playfair Display (Tạp chí)</option>
+                  <option value="Cinzel">Cinzel (Cổ điển)</option>
+                  <option value="Bodoni Moda">Bodoni Moda (Cao cấp)</option>
+                  <option value="Great Vibes">Great Vibes (Chữ ký mềm)</option>
+                  <option value="Dancing Script">Dancing Script (Viết tay)</option>
+                  <option value="Sacramento">Sacramento (Chữ ký mảnh)</option>
+                </select>
+              </div>
+              <div class="inline-style-cell">
+                <span class="inline-style-lbl">Màu chữ:</span>
+                <input type="color" id="prof-subtitle-color" class="inline-style-color" />
+                <span class="color-hex-tag" id="hex-prof-subtitle-color">#FFFFFF</span>
+              </div>
+              <div class="inline-style-cell">
+                <span class="inline-style-lbl">Cỡ:</span>
+                <input type="range" id="prof-subtitle-size" min="9" max="24" step="1" style="flex:1; accent-color:var(--adm-primary);" />
+                <span class="typo-val-badge" id="val-prof-subtitle-size">Tự động</span>
+              </div>
             </div>
           </div>
 
@@ -1109,12 +1221,68 @@
             <label class="form-label">Đoạn giới thiệu ngắn dưới chức danh (Bio mở rộng - Tùy chọn, để trống sẽ tự ẩn)</label>
             <textarea id="prof-bio" rows="2" class="form-textarea"
               placeholder="VD: I create ADV and organic contents for your brand / Sáng tạo nội dung & thời trang chọn lọc"></textarea>
+            <div class="inline-field-style-bar">
+              <div class="inline-style-cell">
+                <span class="inline-style-lbl">Font:</span>
+                <select id="prof-bio-font" class="inline-style-select">
+                  <option value="inherit">Theo font nội dung (Mặc định)</option>
+                  <option value="Plus Jakarta Sans">Plus Jakarta Sans (Hiện đại)</option>
+                  <option value="Montserrat">Montserrat (Thanh lịch)</option>
+                  <option value="Quicksand">Quicksand (Nữ tính)</option>
+                  <option value="Cormorant Garamond">Cormorant Garamond (Thơ mộng)</option>
+                  <option value="Playfair Display">Playfair Display (Tạp chí)</option>
+                  <option value="Cinzel">Cinzel (Cổ điển)</option>
+                  <option value="Bodoni Moda">Bodoni Moda (Cao cấp)</option>
+                  <option value="Great Vibes">Great Vibes (Chữ ký mềm)</option>
+                  <option value="Dancing Script">Dancing Script (Viết tay)</option>
+                  <option value="Sacramento">Sacramento (Chữ ký mảnh)</option>
+                </select>
+              </div>
+              <div class="inline-style-cell">
+                <span class="inline-style-lbl">Màu chữ:</span>
+                <input type="color" id="prof-bio-color" class="inline-style-color" />
+                <span class="color-hex-tag" id="hex-prof-bio-color">#FFFFFF</span>
+              </div>
+              <div class="inline-style-cell">
+                <span class="inline-style-lbl">Cỡ:</span>
+                <input type="range" id="prof-bio-size" min="10" max="22" step="1" style="flex:1; accent-color:var(--adm-primary);" />
+                <span class="typo-val-badge" id="val-prof-bio-size">Tự động</span>
+              </div>
+            </div>
           </div>
 
           <div class="form-group">
             <label class="form-label">Câu trích dẫn / Lời nhắn cuối trang (VD: let's be friends! / CONTACT ME)</label>
             <textarea id="prof-quote" rows="2" class="form-textarea"
               placeholder="Fashion inspo for the girl who's always on the go"></textarea>
+            <div class="inline-field-style-bar">
+              <div class="inline-style-cell">
+                <span class="inline-style-lbl">Font:</span>
+                <select id="prof-quote-font" class="inline-style-select">
+                  <option value="inherit">Theo font nội dung (Mặc định)</option>
+                  <option value="Great Vibes">Great Vibes (Chữ ký "let's be friends!")</option>
+                  <option value="Dancing Script">Dancing Script (Viết tay tự nhiên)</option>
+                  <option value="Sacramento">Sacramento (Chữ ký thanh mảnh)</option>
+                  <option value="Cormorant Garamond">Cormorant Garamond (Thơ mộng)</option>
+                  <option value="Playfair Display">Playfair Display (Tạp chí)</option>
+                  <option value="Cinzel">Cinzel (Cổ điển)</option>
+                  <option value="Bodoni Moda">Bodoni Moda (Cao cấp)</option>
+                  <option value="Montserrat">Montserrat (Hiện đại)</option>
+                  <option value="Plus Jakarta Sans">Plus Jakarta Sans (Trẻ trung)</option>
+                  <option value="Quicksand">Quicksand (Bo tròn)</option>
+                </select>
+              </div>
+              <div class="inline-style-cell">
+                <span class="inline-style-lbl">Màu chữ:</span>
+                <input type="color" id="prof-quote-color" class="inline-style-color" />
+                <span class="color-hex-tag" id="hex-prof-quote-color">#FFFFFF</span>
+              </div>
+              <div class="inline-style-cell">
+                <span class="inline-style-lbl">Cỡ:</span>
+                <input type="range" id="prof-quote-size" min="11" max="32" step="1" style="flex:1; accent-color:var(--adm-primary);" />
+                <span class="typo-val-badge" id="val-prof-quote-size">Tự động</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1241,10 +1409,17 @@
               </div>
             </div>
             <div class="color-field-card">
-              <label for="theme-subtitle-color">Màu Chức danh &amp; Bio</label>
+              <label for="theme-subtitle-color">Màu chữ Chức danh</label>
               <div class="color-input-wrap">
                 <input type="color" id="theme-subtitle-color" />
                 <span class="color-hex-tag" id="hex-subtitle-color">#FFFFFF</span>
+              </div>
+            </div>
+            <div class="color-field-card">
+              <label for="theme-bio-color">Màu chữ Đoạn Bio</label>
+              <div class="color-input-wrap">
+                <input type="color" id="theme-bio-color" />
+                <span class="color-hex-tag" id="hex-bio-color">#FFFFFF</span>
               </div>
             </div>
             <div class="color-field-card">
@@ -1333,6 +1508,38 @@
               </select>
             </div>
             <div class="form-group">
+              <label class="form-label">Font chữ Chức danh (Subtitle)</label>
+              <select id="theme-subtitle-font" class="form-select">
+                <option value="inherit">Theo font nội dung (Mặc định)</option>
+                <option value="Montserrat">Montserrat (Hiện đại sắc nét)</option>
+                <option value="Plus Jakarta Sans">Plus Jakarta Sans (Gọn gàng)</option>
+                <option value="Quicksand">Quicksand (Tròn nữ tính)</option>
+                <option value="Cormorant Garamond">Cormorant Garamond (Serif mảnh)</option>
+                <option value="Playfair Display">Playfair Display (Tạp chí)</option>
+                <option value="Cinzel">Cinzel (Cổ điển quý phái)</option>
+                <option value="Bodoni Moda">Bodoni Moda (Cao cấp)</option>
+                <option value="Great Vibes">Great Vibes (Chữ ký mềm)</option>
+                <option value="Dancing Script">Dancing Script (Viết tay)</option>
+                <option value="Sacramento">Sacramento (Chữ ký mảnh)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Font chữ Đoạn giới thiệu Bio</label>
+              <select id="theme-bio-font" class="form-select">
+                <option value="inherit">Theo font nội dung (Mặc định)</option>
+                <option value="Plus Jakarta Sans">Plus Jakarta Sans (Hiện đại)</option>
+                <option value="Montserrat">Montserrat (Thanh lịch)</option>
+                <option value="Quicksand">Quicksand (Nữ tính)</option>
+                <option value="Cormorant Garamond">Cormorant Garamond (Thơ mộng)</option>
+                <option value="Playfair Display">Playfair Display (Tạp chí)</option>
+                <option value="Cinzel">Cinzel (Cổ điển)</option>
+                <option value="Bodoni Moda">Bodoni Moda (Cao cấp)</option>
+                <option value="Great Vibes">Great Vibes (Chữ ký mềm)</option>
+                <option value="Dancing Script">Dancing Script (Viết tay)</option>
+                <option value="Sacramento">Sacramento (Chữ ký mảnh)</option>
+              </select>
+            </div>
+            <div class="form-group">
               <label class="form-label">Font chữ Câu trích dẫn cuối trang</label>
               <select id="theme-quote-font" class="form-select">
                 <option value="inherit">Theo font nội dung (Mặc định)</option>
@@ -1341,6 +1548,11 @@
                 <option value="Sacramento">Sacramento (Chữ ký thanh mảnh)</option>
                 <option value="Cormorant Garamond">Cormorant Garamond (Thơ mộng tinh tế)</option>
                 <option value="Playfair Display">Playfair Display (Điểm nhấn tạp chí)</option>
+                <option value="Cinzel">Cinzel (Cổ điển)</option>
+                <option value="Bodoni Moda">Bodoni Moda (Cao cấp)</option>
+                <option value="Montserrat">Montserrat (Hiện đại)</option>
+                <option value="Plus Jakarta Sans">Plus Jakarta Sans (Trẻ trung)</option>
+                <option value="Quicksand">Quicksand (Bo tròn)</option>
               </select>
             </div>
           </div>
@@ -1707,7 +1919,7 @@
       </div>
       <div class="iphone-mockup">
         <div class="iphone-screen">
-          <iframe src="/?preview=1&v=8" id="preview-iframe" title="Bio Live Preview"></iframe>
+          <iframe src="/?preview=1&v=9" id="preview-iframe" title="Bio Live Preview"></iframe>
         </div>
       </div>
     </aside>
@@ -1726,8 +1938,8 @@
   <!-- Toast Notification -->
   <div class="toast-msg" id="toast-msg">Đã lưu thay đổi thành công! ✨</div>
 
-  <script src="/js/icons.js?v=4"></script>
-  <script src="/js/admin.js?v=11"></script>
+  <script src="/js/icons.js?v=5"></script>
+  <script src="/js/admin.js?v=12"></script>
 </body>
 
 </html>

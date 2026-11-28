@@ -125,11 +125,22 @@
 
     // 2. CSS Variables (Colors, Fonts & Deep Typography Sliders)
     const root = document.documentElement;
+    const SCRIPT_FONTS = ['Great Vibes', 'Dancing Script', 'Sacramento'];
     const headingFontName = theme.headingFont || 'Cormorant Garamond';
     const bodyFontName = theme.bodyFont || 'Plus Jakarta Sans';
+    const subtitleFontName = theme.subtitleFont && theme.subtitleFont !== 'inherit' ? theme.subtitleFont : '';
+    const bioFontName = theme.bioFont && theme.bioFont !== 'inherit' ? theme.bioFont : '';
     const quoteFontName = theme.quoteFont && theme.quoteFont !== 'inherit' ? theme.quoteFont : '';
-    const isScriptHeading = ['Great Vibes', 'Dancing Script', 'Sacramento'].includes(headingFontName);
-    const isScriptQuote = ['Great Vibes', 'Dancing Script', 'Sacramento'].includes(quoteFontName);
+
+    const isScriptHeading = SCRIPT_FONTS.includes(headingFontName);
+    const isScriptSubtitle = SCRIPT_FONTS.includes(subtitleFontName);
+    const isScriptBio = SCRIPT_FONTS.includes(bioFontName);
+    const isScriptQuote = SCRIPT_FONTS.includes(quoteFontName);
+
+    const resolvedTextCol = theme.textColor || '#ffffff';
+    const resolvedSubCol = theme.subtitleColor || resolvedTextCol;
+    const resolvedBioCol = theme.bioColor || resolvedSubCol;
+    const resolvedQuoteCol = theme.quoteColor || resolvedTextCol;
 
     root.style.setProperty('--primary-color', theme.primaryColor || '#d97793');
     root.style.setProperty('--secondary-color', theme.secondaryColor || '#f7d6e0');
@@ -143,14 +154,17 @@
     root.style.setProperty('--btn-bg-rgba', hexToRgba(theme.buttonBgColor || '#ffffff', theme.buttonBgOpacity ?? 88));
     root.style.setProperty('--btn-text-color', theme.buttonTextColor || '#522938');
     root.style.setProperty('--btn-border-color', theme.buttonBorderColor || 'rgba(255, 255, 255, 0.78)');
-    root.style.setProperty('--text-color', theme.textColor || '#ffffff');
-    root.style.setProperty('--subtitle-color', theme.subtitleColor || theme.textColor || '#ffffff');
-    root.style.setProperty('--quote-color', theme.quoteColor || theme.textColor || '#ffffff');
+    root.style.setProperty('--text-color', resolvedTextCol);
+    root.style.setProperty('--subtitle-color', resolvedSubCol);
+    root.style.setProperty('--bio-color', resolvedBioCol);
+    root.style.setProperty('--quote-color', resolvedQuoteCol);
     root.style.setProperty('--social-bg-color', theme.socialBgColor || '#ffffff');
     root.style.setProperty('--social-icon-color', theme.socialIconColor || theme.primaryColor || '#d97793');
     root.style.setProperty('--heading-font', `'${headingFontName}', Georgia, serif`);
     root.style.setProperty('--body-font', `'${bodyFontName}', sans-serif`);
-    root.style.setProperty('--quote-font', quoteFontName ? `'${quoteFontName}', cursive, serif` : 'inherit');
+    root.style.setProperty('--subtitle-font', subtitleFontName ? `'${subtitleFontName}', serif, sans-serif` : `'${bodyFontName}', sans-serif`);
+    root.style.setProperty('--bio-font', bioFontName ? `'${bioFontName}', serif, sans-serif` : `'${bodyFontName}', sans-serif`);
+    root.style.setProperty('--quote-font', quoteFontName ? `'${quoteFontName}', cursive, serif` : `'${bodyFontName}', sans-serif`);
     root.style.setProperty('--avatar-size', `${Number(theme.avatarSize || 124)}px`);
 
     const nameSize = Number(theme.nameFontSize || 0);
@@ -185,6 +199,8 @@
       theme.uppercaseLinks !== false ? 'uppercase-links' : '',
       theme.showDecorations === false ? 'hide-decorations' : '',
       isScriptHeading ? 'has-script-heading' : '',
+      isScriptSubtitle ? 'has-script-subtitle' : '',
+      isScriptBio ? 'has-script-bio' : '',
       isScriptQuote ? 'has-script-quote' : '',
       nameSize > 0 ? 'has-custom-name-size' : '',
       hasCustomSpacing ? 'has-custom-name-spacing' : '',

@@ -1,0 +1,1187 @@
+/* ==========================================================================
+   EXTENDED CANVA BIO TEMPLATES (Templates 4–20) & DEEP CUSTOMIZATION STUDIO
+   Zero Regression: Templates 1, 2, 3 remain 100% governed by styles.css
+   ========================================================================== */
+
+:root {
+  --subtitle-color: var(--text-color);
+  --quote-color: var(--text-color);
+  --quote-font: inherit;
+  --btn-border-color: rgba(255, 255, 255, 0.75);
+  --social-bg-color: #ffffff;
+  --social-icon-color: var(--primary-color);
+  --name-font-size: 30px;
+  --subtitle-font-size: 13px;
+  --bio-font-size: 13px;
+  --btn-font-size: 13.5px;
+  --btn-sub-font-size: 11px;
+  --quote-font-size: 14px;
+  --name-letter-spacing: 0.08em;
+  --btn-min-height: 46px;
+  --btn-gap: 11px;
+}
+
+/* Optional structural slots stay hidden unless explicitly activated */
+.bio-cover-banner,
+.bio-deco-frame,
+.curved-arc-wrap,
+.profile-bio,
+.featured-card-cta,
+.featured-card-side-media {
+  display: none;
+}
+
+/* ==========================================================================
+   DEEP COLOR & TYPOGRAPHY OVERRIDES (Applied smoothly across ALL templates)
+   ========================================================================== */
+.bio-phone-card .profile-subtitle {
+  color: var(--subtitle-color, var(--text-color));
+}
+
+.bio-phone-card .profile-bio {
+  font-family: var(--body-font);
+  font-size: clamp(0.74rem, 3.05vw, 0.82rem);
+  line-height: 1.48;
+  color: var(--subtitle-color, var(--text-color));
+  opacity: 0.92;
+  max-width: 295px;
+  margin: 6px auto 0;
+  word-break: break-word;
+}
+
+.bio-phone-card .bio-quote {
+  color: var(--quote-color, var(--text-color));
+  font-family: var(--quote-font, inherit);
+}
+
+/* Cursive script fonts get natural line-height & subtle letter-spacing automatically */
+.has-script-quote .bio-quote {
+  font-size: clamp(1.35rem, 5.6vw, 1.7rem);
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  max-width: 310px;
+}
+
+.has-script-heading .profile-name {
+  letter-spacing: 0.01em;
+  font-weight: 400;
+  line-height: 1.18;
+}
+
+/* Explicit User Slider Overrides (Only active when slider > 0 so Template 1–3 defaults never shift) */
+.has-custom-name-size .profile-name {
+  font-size: clamp(16px, calc(var(--name-font-size) * 0.85 + 1.2vw), var(--name-font-size)) !important;
+}
+.has-custom-name-size .curved-arc-top .curved-arc-text {
+  font-size: clamp(13px, var(--name-font-size), 28px) !important;
+}
+.has-custom-name-spacing .profile-name,
+.has-custom-name-spacing .curved-arc-top .curved-arc-text {
+  letter-spacing: var(--name-letter-spacing) !important;
+}
+.has-custom-subtitle-size .profile-subtitle {
+  font-size: clamp(9px, var(--subtitle-font-size), 24px) !important;
+}
+.has-custom-subtitle-size .curved-arc-bottom .curved-arc-text {
+  font-size: clamp(9px, var(--subtitle-font-size), 19px) !important;
+}
+.has-custom-bio-size .profile-bio {
+  font-size: clamp(10px, var(--bio-font-size), 22px) !important;
+}
+.has-custom-btn-size .bio-link-btn .link-title {
+  font-size: clamp(10px, var(--btn-font-size), 21px) !important;
+}
+.has-custom-btn-sub-size .bio-link-btn .link-subtitle {
+  font-size: clamp(9px, var(--btn-sub-font-size), 17px) !important;
+}
+.has-custom-quote-size .bio-quote {
+  font-size: clamp(11px, var(--quote-font-size), 34px) !important;
+}
+.has-custom-btn-height .bio-link-btn {
+  min-height: var(--btn-min-height) !important;
+}
+.has-custom-btn-gap .links-list {
+  gap: var(--btn-gap) !important;
+}
+
+/* ==========================================================================
+   EXTENDED SOCIAL ICON STYLES & COLORS
+   ========================================================================== */
+.bio-phone-card .social-circle-btn {
+  background: var(--social-bg-color, #ffffff);
+  color: var(--social-icon-color, var(--primary-color));
+}
+
+.social-style-outline-circle .social-circle-btn {
+  background: transparent !important;
+  border: 1.3px solid var(--btn-border-color, rgba(255, 255, 255, 0.82));
+  color: var(--social-icon-color, var(--text-color)) !important;
+  box-shadow: none;
+}
+
+.social-style-minimal-icon .social-circle-btn {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  width: 36px;
+  height: 36px;
+  color: var(--social-icon-color, var(--text-color)) !important;
+}
+.social-style-minimal-icon .social-circle-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.social-style-accent-circle .social-circle-btn {
+  background: var(--primary-color) !important;
+  color: var(--btn-text-color, #111111) !important;
+}
+
+/* ==========================================================================
+   EXTENDED AVATAR FRAMES (Usable on any template)
+   ========================================================================== */
+.frame-thick-ring .avatar-img {
+  border: 4.5px solid var(--btn-border-color, #ffffff);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+}
+
+/* Arch-top Window Portrait */
+.frame-arch .avatar-container {
+  width: clamp(128px, 38vw, calc(var(--avatar-size) * 1.18));
+  height: clamp(158px, 47vw, calc(var(--avatar-size) * 1.46));
+  border-radius: 999px 999px 0 0;
+}
+.frame-arch .avatar-img {
+  border-radius: 999px 999px 0 0;
+  border: none;
+}
+
+/* Tall Vertical Oval Portrait (Juliana Minimal) */
+.frame-tall-oval .avatar-container {
+  width: clamp(118px, 35vw, calc(var(--avatar-size) * 1.08));
+  height: clamp(156px, 46vw, calc(var(--avatar-size) * 1.42));
+  border-radius: 50%;
+}
+.frame-tall-oval .avatar-img {
+  border-radius: 50%;
+  border: none;
+}
+
+/* Vertical Rectangular Portrait Card (Creator Portrait Card) */
+.frame-portrait-rect .avatar-container {
+  width: clamp(124px, 37vw, calc(var(--avatar-size) * 1.12));
+  height: clamp(150px, 44vw, calc(var(--avatar-size) * 1.36));
+  border-radius: 6px;
+}
+.frame-portrait-rect .avatar-img {
+  border-radius: 6px;
+  border: none;
+}
+
+/* Horizon Bisect Line Behind Circular Avatar */
+.frame-horizon-line {
+  width: calc(100% + 44px);
+  margin-left: -22px;
+  margin-right: -22px;
+}
+.frame-horizon-line::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: var(--primary-color);
+  z-index: 1;
+}
+.frame-horizon-line .avatar-img {
+  border: 2px solid var(--bg-grad-mid, #111215);
+}
+
+/* Star Emblem Flanking Lines (—✦ Avatar ✦—) */
+.frame-star-emblem {
+  width: 100%;
+}
+.bio-phone-card:not(.hide-decorations) .frame-star-emblem::before,
+.bio-phone-card:not(.hide-decorations) .frame-star-emblem::after {
+  content: '✦';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--btn-border-color, #f5efe6);
+  font-size: 13px;
+  line-height: 1;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bio-phone-card:not(.hide-decorations) .frame-star-emblem::before {
+  left: 0;
+  right: calc(50% + clamp(54px, 16vw, calc(var(--avatar-size) * 0.56)));
+  justify-content: flex-end;
+  background: linear-gradient(var(--btn-border-color, #f5efe6), var(--btn-border-color, #f5efe6)) left center / calc(100% - 16px) 1px no-repeat;
+}
+.bio-phone-card:not(.hide-decorations) .frame-star-emblem::after {
+  right: 0;
+  left: calc(50% + clamp(54px, 16vw, calc(var(--avatar-size) * 0.56)));
+  justify-content: flex-start;
+  background: linear-gradient(var(--btn-border-color, #f5efe6), var(--btn-border-color, #f5efe6)) right center / calc(100% - 16px) 1px no-repeat;
+}
+
+/* ==========================================================================
+   EXTENDED BUTTON RADII & BUTTON STYLES (Usable on any template)
+   ========================================================================== */
+.radius-sharp .bio-link-btn {
+  border-radius: 0px !important;
+}
+.radius-ellipse .bio-link-btn {
+  border-radius: 50% !important;
+}
+
+.btn-style-sharp-outline .bio-link-btn {
+  background: var(--btn-bg-rgba);
+  color: var(--btn-text-color);
+  border: 1px solid var(--btn-border-color, #2b2b2b);
+  border-radius: 0px;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.btn-style-thin-outline .bio-link-btn {
+  background: var(--btn-bg-rgba);
+  color: var(--btn-text-color);
+  border: 1px solid var(--btn-border-color, rgba(255, 255, 255, 0.78));
+  box-shadow: none;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Celestial Wireframe Ellipse Ring Button */
+.btn-style-ellipse-ring .bio-link-btn {
+  background: var(--btn-bg-rgba);
+  color: var(--btn-text-color);
+  border: 1px solid var(--btn-border-color, #dfd6c7);
+  border-radius: 50% !important;
+  min-height: 48px;
+  box-shadow: none;
+  overflow: visible;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.bio-phone-card:not(.hide-decorations).btn-style-ellipse-ring .bio-link-btn:nth-child(odd)::before {
+  content: '✦';
+  position: absolute;
+  top: 2px;
+  right: 17%;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--btn-border-color, #f5efe6);
+  pointer-events: none;
+}
+.bio-phone-card:not(.hide-decorations).btn-style-ellipse-ring .bio-link-btn:nth-child(even)::before {
+  content: '✦';
+  position: absolute;
+  top: 3px;
+  left: 17%;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--btn-border-color, #f5efe6);
+  pointer-events: none;
+}
+
+/* Atelier Ticket-Notch Solid Button */
+.btn-style-ticket-notch .bio-link-btn {
+  background:
+    radial-gradient(circle at 0 50%, transparent 7px, var(--btn-bg-rgba) 7.7px) left center / 51% 100% no-repeat,
+    radial-gradient(circle at 100% 50%, transparent 7px, var(--btn-bg-rgba) 7.7px) right center / 51% 100% no-repeat !important;
+  color: var(--btn-text-color);
+  border: none !important;
+  border-radius: 4px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* ==========================================================================
+   TOP COVER BANNER, CURVED SVG ARCS & SPLIT FEATURED CARD
+   ========================================================================== */
+.bio-cover-banner {
+  position: relative;
+  width: calc(100% + 44px);
+  margin-left: -22px;
+  margin-right: -22px;
+  margin-top: -28px;
+  height: 152px;
+  overflow: hidden;
+  flex-shrink: 0;
+  z-index: 1;
+}
+.bio-cover-banner-img {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 30%;
+  transition: transform 0.4s ease;
+}
+.bio-cover-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.18) 0%, rgba(0, 0, 0, 0.34) 100%);
+}
+
+/* Curved SVG Typography Arcs (Mathematically Concentric around Avatar Center) */
+.curved-arc-wrap {
+  width: 100%;
+  max-width: 260px;
+  margin: 0 auto;
+  pointer-events: none;
+  z-index: 3;
+}
+.curved-arc-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+.curved-arc-top .curved-arc-text {
+  font-family: var(--heading-font);
+  font-size: 18.5px;
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  fill: var(--text-color);
+  text-transform: uppercase;
+}
+.curved-arc-bottom .curved-arc-text {
+  font-family: var(--body-font);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  fill: var(--subtitle-color, var(--text-color));
+  text-transform: uppercase;
+}
+
+/* Split Lead Promo Featured Card (Template 6 or user-selected split-lead style) */
+.featured-card.featured-split-lead {
+  height: auto;
+  min-height: 118px;
+  background: var(--btn-bg-rgba, #ffffff);
+  color: var(--btn-text-color, #141414);
+  border: 1.5px solid var(--btn-border-color, rgba(255, 255, 255, 0.9));
+  border-radius: 14px;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: space-between;
+  padding: 12px 12px 12px 15px;
+  gap: 10px;
+  overflow: hidden;
+}
+.featured-card.featured-split-lead .featured-card-bg,
+.featured-card.featured-split-lead .featured-card-overlay {
+  display: none;
+}
+.featured-card.featured-split-lead .featured-card-content {
+  flex: 1 1 56%;
+  min-width: 0;
+  text-align: left;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+.featured-card.featured-split-lead .featured-card-title {
+  color: var(--btn-text-color, #141414);
+  text-shadow: none;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-weight: 700;
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+.featured-card.featured-split-lead .featured-card-subtitle {
+  color: var(--btn-text-color, #333333);
+  opacity: 0.8;
+  text-shadow: none;
+  font-style: italic;
+  font-size: 0.69rem;
+  line-height: 1.3;
+  margin-top: 3px;
+}
+.featured-card.featured-split-lead .featured-card-cta {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.featured-card.featured-split-lead .featured-card-side-media {
+  display: block !important;
+  flex: 0 0 92px;
+  width: 92px;
+  height: 104px;
+  border-radius: 10px;
+  border: 3px solid #161618;
+  overflow: hidden;
+  transform: rotate(-3deg);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.24);
+  background: #222;
+}
+.featured-card.featured-split-lead .featured-card-side-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+  display: block;
+}
+
+/* ==========================================================================
+   DECORATIVE CELESTIAL & CATHEDRAL FRAMES (#bio-deco-frame)
+   ========================================================================== */
+.bio-phone-card:not(.hide-decorations) .bio-deco-frame.deco-starlight-rect {
+  display: block;
+  position: absolute;
+  top: 76px;
+  left: 14px;
+  right: 14px;
+  bottom: 38px;
+  border: 1px solid var(--btn-border-color, rgba(245, 239, 230, 0.72));
+  pointer-events: none;
+  z-index: 1;
+}
+.bio-phone-card:not(.hide-decorations) .bio-deco-frame.deco-cathedral-arch {
+  display: block;
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  bottom: 38px;
+  border: 1px solid var(--btn-border-color, rgba(245, 239, 230, 0.78));
+  border-radius: 190px 190px 4px 4px;
+  pointer-events: none;
+  z-index: 1;
+}
+.bio-deco-star {
+  position: absolute;
+  color: var(--btn-border-color, #f5efe6);
+  line-height: 1;
+  user-select: none;
+}
+
+/* ==========================================================================
+   TEMPLATE 4: SPLIT ARCH STUDIO (Image 1 Phone 1 - Sara Split Arch)
+   ========================================================================== */
+.template-template4 .bio-cover-banner {
+  display: block;
+  height: 138px;
+  margin-bottom: -116px;
+  opacity: 0.42;
+  mask-image: linear-gradient(180deg, #000 35%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 35%, transparent 100%);
+}
+.template-template4 .bio-content {
+  display: grid;
+  grid-template-columns: minmax(118px, 44%) minmax(0, 56%);
+  column-gap: 0px;
+  align-items: start;
+}
+.template-template4 .socials-top,
+.template-template4 .bio-cover-banner,
+.template-template4 .profile-header,
+.template-template4 .bio-quote,
+.template-template4 .featured-card,
+.template-template4 .socials-bottom,
+.template-template4 .bio-footer {
+  grid-column: 1 / -1;
+}
+.template-template4 .profile-header {
+  position: relative;
+  z-index: 3;
+  margin-top: 10px;
+  margin-bottom: 16px;
+}
+.template-template4 .profile-name {
+  font-size: clamp(2.1rem, 8.5vw, 2.7rem);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+.template-template4 .profile-subtitle {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.73rem;
+}
+.template-template4 .avatar-wrapper {
+  grid-column: 1;
+  margin: 0;
+  width: 100%;
+  align-self: center;
+  z-index: 2;
+}
+.template-template4 .avatar-container {
+  width: 100%;
+  height: clamp(225px, 64vw, 275px);
+  border-radius: 999px 999px 0 0;
+}
+.template-template4 .avatar-img {
+  border-radius: 999px 999px 0 0;
+  border: none;
+  object-position: center 18%;
+}
+.template-template4 .links-list {
+  grid-column: 2;
+  align-self: center;
+  width: calc(100% + 14px);
+  margin-left: -14px;
+  margin-bottom: 0;
+  z-index: 4;
+  gap: 10px;
+}
+.template-template4 .bio-link-btn {
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 999px 12px 12px 999px;
+}
+.template-template4 .bio-link-btn .link-icon-left {
+  position: static;
+  margin-right: 6px;
+  width: 15px;
+  height: 15px;
+}
+.template-template4 .bio-link-btn .link-title {
+  font-size: clamp(0.68rem, 2.7vw, 0.76rem);
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+.template-template4 .bio-link-btn .link-badge {
+  position: static;
+  margin-left: 5px;
+  padding: 1.5px 5px;
+  font-size: 0.5rem;
+}
+.template-template4 .bio-quote {
+  margin-top: 18px;
+}
+
+/* ==========================================================================
+   TEMPLATE 5: EDITORIAL SIDE-HEADER (Image 1 Phone 2 & Image 2 Dark/Marble)
+   ========================================================================== */
+.template-template5 .card-bg-image {
+  filter: blur(var(--bg-blur, 0px));
+  transform: scale(1.01) translateZ(0);
+  background-position: center 20%;
+}
+.template-template5 .bio-content {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 14px;
+  align-items: center;
+}
+.template-template5 .socials-top,
+.template-template5 .links-list,
+.template-template5 .bio-quote,
+.template-template5 .featured-card,
+.template-template5 .socials-bottom,
+.template-template5 .bio-footer {
+  grid-column: 1 / -1;
+}
+.template-template5 .profile-header {
+  display: contents;
+}
+.template-template5 .avatar-wrapper {
+  grid-column: 1;
+  margin: 12px 0 14px;
+}
+.template-template5 .avatar-container {
+  width: clamp(86px, 24vw, 102px);
+  height: clamp(86px, 24vw, 102px);
+}
+.template-template5 .profile-name {
+  grid-column: 2;
+  text-align: right;
+  padding-right: 6px;
+  font-size: clamp(2rem, 8.2vw, 2.55rem);
+  margin-bottom: 0;
+  text-shadow: none;
+}
+.template-template5 .profile-subtitle {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+  margin-bottom: 2px;
+  text-shadow: none;
+}
+.template-template5 .profile-bio {
+  grid-column: 1 / -1;
+  text-align: center;
+  margin-bottom: 16px;
+}
+.template-template5 .links-list {
+  margin-top: 8px;
+}
+
+/* ==========================================================================
+   TEMPLATE 6: COVER BANNER + OVERLAPPING AVATAR + SPLIT LEAD CARD (Image 1 #3)
+   ========================================================================== */
+.template-template6 .card-bg-vignette {
+  display: none;
+}
+.template-template6 .bio-cover-banner {
+  display: block;
+  height: 142px;
+}
+.template-template6 .avatar-wrapper {
+  margin-top: -54px;
+  margin-bottom: 10px;
+  z-index: 4;
+}
+.template-template6 .avatar-img {
+  border: 3.5px solid #ffffff;
+}
+.template-template6 .profile-name {
+  font-size: clamp(1.35rem, 5.4vw, 1.65rem);
+  font-weight: 700;
+  text-shadow: none;
+}
+.template-template6 .profile-subtitle {
+  font-weight: 600;
+  font-size: 0.84rem;
+  text-shadow: none;
+}
+.template-template6 .profile-bio {
+  margin-bottom: 6px;
+}
+
+/* ==========================================================================
+   TEMPLATE 7: STARLIGHT INNER FRAME (Image 3 Row 1 Phone 1)
+   ========================================================================== */
+.template-template7 .card-bg-vignette {
+  display: none;
+}
+.template-template7 .bio-content {
+  padding-left: 30px;
+  padding-right: 30px;
+}
+.template-template7 .avatar-wrapper {
+  margin-top: 10px;
+  margin-bottom: 12px;
+  z-index: 4;
+}
+.template-template7 .avatar-container {
+  padding: 6px;
+  background: var(--bg-grad-mid, #191817);
+  border-radius: 50%;
+}
+.template-template7 .profile-name,
+.template-template7 .profile-subtitle {
+  text-shadow: none;
+}
+
+/* ==========================================================================
+   TEMPLATE 8: CATHEDRAL ARCH SOLID (Image 3 Row 1 Phone 2)
+   ========================================================================== */
+.template-template8 .card-bg-vignette {
+  display: none;
+}
+.template-template8 .bio-content {
+  padding-left: 32px;
+  padding-right: 32px;
+}
+.template-template8 .avatar-wrapper {
+  margin-top: 24px;
+  margin-bottom: 12px;
+  z-index: 3;
+}
+.template-template8 .avatar-container {
+  width: clamp(134px, 39vw, 152px);
+  height: clamp(164px, 48vw, 186px);
+  border-radius: 999px 999px 0 0;
+}
+.template-template8 .avatar-img {
+  border-radius: 999px 999px 0 0;
+  border: none;
+}
+.template-template8 .profile-name,
+.template-template8 .profile-subtitle {
+  text-shadow: none;
+}
+
+/* ==========================================================================
+   TEMPLATE 9: CELESTIAL ORBIT RINGS (Image 3 Row 1 Phone 3)
+   ========================================================================== */
+.template-template9 .card-bg-vignette {
+  display: none;
+}
+.template-template9 .curved-arc-top {
+  display: block;
+  margin-top: 6px;
+  margin-bottom: -68px;
+}
+.template-template9 .avatar-wrapper {
+  margin-top: 0;
+  margin-bottom: 14px;
+}
+.template-template9 .avatar-container {
+  width: clamp(136px, 40vw, 150px);
+  height: clamp(166px, 49vw, 186px);
+  border-radius: 999px 999px 0 0;
+}
+.template-template9 .avatar-img {
+  border-radius: 999px 999px 0 0;
+  border: none;
+}
+.template-template9 .profile-name {
+  display: none;
+}
+.template-template9 .links-list {
+  gap: 14px;
+}
+
+/* ==========================================================================
+   TEMPLATE 10: CRESCENT EMBLEM SEAL (Image 3 Row 2 Phone 1)
+   ========================================================================== */
+.template-template10 .card-bg-vignette {
+  display: none;
+}
+.template-template10 .curved-arc-top {
+  display: block;
+  margin-top: 6px;
+  margin-bottom: -58px;
+}
+.template-template10 .avatar-wrapper {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.template-template10 .curved-arc-bottom {
+  display: block;
+  margin-top: -58px;
+  margin-bottom: 8px;
+}
+.template-template10 .profile-name,
+.template-template10 .profile-subtitle {
+  display: none !important;
+}
+.template-template10 .profile-header {
+  margin-bottom: 8px;
+}
+
+/* ==========================================================================
+   TEMPLATE 11: CATHEDRAL ARCH OUTLINE + CURVED NAME (Image 3 Row 2 Phone 2)
+   ========================================================================== */
+.template-template11 .card-bg-vignette {
+  display: none;
+}
+.template-template11 .bio-content {
+  padding-left: 32px;
+  padding-right: 32px;
+}
+.template-template11 .curved-arc-top {
+  display: block;
+  margin-top: 16px;
+  margin-bottom: -66px;
+}
+.template-template11 .avatar-wrapper {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+.template-template11 .avatar-container {
+  width: clamp(130px, 38vw, 144px);
+  height: clamp(158px, 46vw, 178px);
+  border-radius: 999px 999px 0 0;
+}
+.template-template11 .avatar-img {
+  border-radius: 999px 999px 0 0;
+  border: none;
+}
+.template-template11 .profile-name {
+  display: none;
+}
+
+/* ==========================================================================
+   TEMPLATE 12: ATELIER TICKET FRAME (Image 3 Row 2 Phone 3)
+   ========================================================================== */
+.template-template12 .card-bg-vignette {
+  display: none;
+}
+.template-template12 .bio-content {
+  padding-left: 30px;
+  padding-right: 30px;
+}
+.template-template12 .avatar-wrapper {
+  margin-top: 10px;
+  margin-bottom: 12px;
+  z-index: 4;
+}
+.template-template12 .avatar-container {
+  padding: 6px;
+  background: var(--bg-grad-mid, #191817);
+  border-radius: 50%;
+}
+.template-template12 .profile-name,
+.template-template12 .profile-subtitle {
+  text-shadow: none;
+}
+
+/* ==========================================================================
+   TEMPLATE 13: MINIMAL OVAL LUXE (Image 6 Phone 1 - Juliana Minimal Oval)
+   ========================================================================== */
+.template-template13 .card-bg-vignette {
+  display: none;
+}
+.template-template13 .avatar-wrapper {
+  margin-top: 16px;
+  margin-bottom: 12px;
+}
+.template-template13 .avatar-container {
+  width: clamp(120px, 35vw, 138px);
+  height: clamp(158px, 46vw, 182px);
+  border-radius: 50%;
+}
+.template-template13 .avatar-img {
+  border-radius: 50%;
+  border: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+.template-template13 .profile-name {
+  font-size: clamp(2.15rem, 8.6vw, 2.75rem);
+  text-shadow: none;
+  margin-bottom: 2px;
+}
+.template-template13 .profile-subtitle {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  font-weight: 500;
+  text-shadow: none;
+}
+.template-template13 .bio-quote {
+  text-shadow: none;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--btn-border-color, currentColor);
+  display: inline-block;
+  min-width: 140px;
+}
+
+/* ==========================================================================
+   TEMPLATE 14: FROSTED EDITORIAL PORTRAIT (Image 6 Phone 2 - Juliana Mist)
+   ========================================================================== */
+.template-template14 .card-bg-image {
+  filter: blur(var(--bg-blur, 0px));
+  transform: scale(1) translateZ(0);
+  background-position: center 22%;
+}
+.template-template14 .avatar-wrapper {
+  display: none;
+}
+.template-template14 .profile-header {
+  margin-top: 34px;
+  margin-bottom: 26px;
+}
+.template-template14 .profile-name {
+  font-size: clamp(2.2rem, 8.8vw, 2.85rem);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+  margin-bottom: 4px;
+}
+.template-template14 .profile-subtitle {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+.template-template14 .links-list {
+  gap: 15px;
+}
+.template-template14 .bio-link-btn {
+  min-height: 54px;
+}
+.template-template14 .bio-quote {
+  margin-top: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid currentColor;
+}
+
+/* ==========================================================================
+   TEMPLATE 15: SPLIT COVER LUXE (Image 6 Phone 3 - Juliana Black & White)
+   ========================================================================== */
+.template-template15 .card-bg-vignette {
+  display: none;
+}
+.template-template15 .bio-cover-banner {
+  display: block;
+  height: 158px;
+}
+.template-template15 .avatar-wrapper {
+  margin-top: -62px;
+  margin-bottom: 12px;
+  z-index: 4;
+}
+.template-template15 .avatar-container {
+  width: clamp(114px, 33vw, 130px);
+  height: clamp(114px, 33vw, 130px);
+}
+.template-template15 .avatar-img {
+  border: 5px solid #ffffff;
+}
+.template-template15 .profile-name {
+  font-size: clamp(2.1rem, 8.4vw, 2.7rem);
+  text-shadow: none;
+  margin-bottom: 4px;
+}
+.template-template15 .profile-subtitle {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  text-shadow: none;
+}
+
+/* ==========================================================================
+   TEMPLATE 16: CREATOR TOP-TITLE (Image 7 Row 1 #1 & Row 2 #2)
+   ========================================================================== */
+.template-template16 .card-bg-vignette {
+  display: none;
+}
+.template-template16 .socials-top { order: 1; }
+.template-template16 .profile-header {
+  order: 2;
+  margin-top: 18px;
+  margin-bottom: 14px;
+}
+.template-template16 .avatar-wrapper {
+  order: 3;
+  margin-top: 0;
+  margin-bottom: 18px;
+}
+.template-template16 .links-list { order: 4; }
+.template-template16 .bio-quote { order: 5; }
+.template-template16 .featured-card { order: 6; }
+.template-template16 .socials-bottom { order: 7; }
+.template-template16 .bio-footer { order: 8; }
+.template-template16 .profile-name {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-shadow: none;
+}
+.template-template16 .profile-subtitle {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.74rem;
+  text-shadow: none;
+}
+
+/* ==========================================================================
+   TEMPLATE 17: MODERN CURVED SEAL (Image 7 Row 1 Phone 2)
+   ========================================================================== */
+.template-template17 .card-bg-vignette {
+  display: none;
+}
+.template-template17 .curved-arc-top {
+  display: block;
+  margin-top: 8px;
+  margin-bottom: -58px;
+}
+.template-template17 .curved-arc-top .curved-arc-text {
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+.template-template17 .avatar-wrapper {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.template-template17 .curved-arc-bottom {
+  display: block;
+  margin-top: -58px;
+  margin-bottom: 10px;
+}
+.template-template17 .curved-arc-bottom .curved-arc-text {
+  font-weight: 600;
+}
+.template-template17 .profile-name,
+.template-template17 .profile-subtitle {
+  display: none !important;
+}
+.template-template17 .profile-header {
+  margin-bottom: 6px;
+}
+
+/* ==========================================================================
+   TEMPLATE 18: COVER SCRIPT STUDIO (Image 7 Row 1 Phone 3)
+   ========================================================================== */
+.template-template18 .card-bg-vignette {
+  display: none;
+}
+.template-template18 .bio-cover-banner {
+  display: block;
+  height: 164px;
+}
+.template-template18 .avatar-wrapper {
+  margin-top: -42px;
+  margin-bottom: 8px;
+  z-index: 4;
+}
+.template-template18 .avatar-container {
+  width: 84px;
+  height: 84px;
+}
+.template-template18 .avatar-img {
+  border: 3px solid #ffffff;
+}
+.template-template18 .profile-name {
+  font-size: clamp(1.95rem, 7.8vw, 2.4rem);
+  text-shadow: none;
+}
+.template-template18 .profile-subtitle {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  text-shadow: none;
+}
+
+/* ==========================================================================
+   TEMPLATE 19: CREATOR PORTRAIT CARD (Image 7 Row 2 Phone 1)
+   ========================================================================== */
+.template-template19 .card-bg-vignette {
+  display: none;
+}
+.template-template19 .profile-header {
+  display: contents;
+}
+.template-template19 .socials-top { order: 1; }
+.template-template19 .profile-name {
+  order: 2;
+  margin-top: 18px;
+  margin-bottom: 12px;
+  text-align: center;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-shadow: none;
+}
+.template-template19 .avatar-wrapper {
+  order: 3;
+  margin: 0 auto 12px;
+}
+.template-template19 .avatar-container {
+  width: clamp(128px, 37vw, 144px);
+  height: clamp(152px, 44vw, 170px);
+  border-radius: 5px;
+}
+.template-template19 .avatar-img {
+  border-radius: 5px;
+  border: none;
+}
+.template-template19 .profile-subtitle {
+  order: 4;
+  text-align: center;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.74rem;
+  margin-bottom: 12px;
+  text-shadow: none;
+}
+.template-template19 .profile-bio {
+  order: 5;
+  text-align: center;
+  margin-bottom: 14px;
+}
+.template-template19 .links-list { order: 6; }
+.template-template19 .bio-quote { order: 7; }
+.template-template19 .featured-card { order: 8; }
+.template-template19 .socials-bottom { order: 9; }
+.template-template19 .bio-footer { order: 10; }
+
+/* ==========================================================================
+   TEMPLATE 20: HORIZON LINE LUXE (Image 7 Row 2 Phone 4)
+   ========================================================================== */
+.template-template20 .card-bg-vignette {
+  display: none;
+}
+.template-template20 .avatar-wrapper {
+  margin-top: 26px;
+  margin-bottom: 14px;
+  width: calc(100% + 44px);
+  margin-left: -22px;
+  margin-right: -22px;
+}
+.template-template20 .avatar-wrapper::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: var(--primary-color);
+  z-index: 1;
+}
+.template-template20 .avatar-img {
+  border: 2.5px solid var(--bg-grad-mid, #101215);
+}
+.template-template20 .profile-name {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-shadow: none;
+}
+.template-template20 .profile-subtitle {
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-shadow: none;
+}
+
+/* ==========================================================================
+   RESPONSIVE SAFEGUARDS FOR COMPACT & LARGE PHONES (Templates 4–20)
+   ========================================================================== */
+@media (max-width: 360px) {
+  .bio-cover-banner,
+  .frame-horizon-line,
+  .template-template20 .avatar-wrapper {
+    width: calc(100% + 28px);
+    margin-left: -14px;
+    margin-right: -14px;
+  }
+  .template-template7 .bio-content,
+  .template-template8 .bio-content,
+  .template-template11 .bio-content,
+  .template-template12 .bio-content {
+    padding-left: 22px;
+    padding-right: 22px;
+  }
+  .template-template4 .bio-content {
+    grid-template-columns: 42% 58%;
+  }
+  .template-template4 .avatar-container {
+    height: 205px;
+  }
+  .template-template4 .bio-link-btn {
+    min-height: 36px;
+    padding: 6px 10px;
+  }
+  .featured-card.featured-split-lead .featured-card-side-media {
+    flex: 0 0 78px;
+    width: 78px;
+    height: 92px;
+  }
+}
+
+@media (min-width: 412px) and (max-width: 540px) {
+  .bio-cover-banner,
+  .frame-horizon-line,
+  .template-template20 .avatar-wrapper {
+    width: calc(100% + 48px);
+    margin-left: -24px;
+    margin-right: -24px;
+  }
+}

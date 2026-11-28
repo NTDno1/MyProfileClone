@@ -241,6 +241,7 @@ const DEFAULT_CONFIG = {
   profile: {
     name: 'HIKARI MAEVE',
     subtitle: 'Fashion | Lifestyle | Influencer',
+    bio: '',
     quote: "Fashion inspo for the girl who's always on the go ✨",
     avatar: '/media/bio-link/girlfriend-1.jpg',
     verifiedBadge: true
@@ -254,6 +255,7 @@ const DEFAULT_CONFIG = {
     bgType: 'image-overlay',
     bgImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1000&q=80',
     portraitBgImage: '/media/bio-link/girlfriend-1.jpg',
+    coverImage: '',
     bgGradientStart: '#f6c4d2',
     bgGradientMid: '#e89ab2',
     bgGradientEnd: '#c8738e',
@@ -267,12 +269,29 @@ const DEFAULT_CONFIG = {
     buttonBgColor: '#ffffff',
     buttonBgOpacity: 88,
     buttonTextColor: '#522938',
+    buttonBorderColor: '#ffffff',
     textColor: '#ffffff',
+    subtitleColor: '',
+    quoteColor: '',
     headingFont: 'Cormorant Garamond',
     bodyFont: 'Plus Jakarta Sans',
+    quoteFont: 'inherit',
+    nameFontSize: 0,
+    subtitleFontSize: 0,
+    bioFontSize: 0,
+    buttonFontSize: 0,
+    buttonSubFontSize: 0,
+    quoteFontSize: 0,
+    nameLetterSpacing: null,
+    buttonMinHeight: 0,
+    buttonGap: 0,
     uppercaseLinks: true,
+    showDecorations: true,
     particleEffect: 'bokeh',
-    socialPosition: 'bottom'
+    socialPosition: 'bottom',
+    socialStyle: 'filled-circle',
+    socialBgColor: '#ffffff',
+    socialIconColor: ''
   },
   links: [
     {
@@ -322,8 +341,10 @@ const DEFAULT_CONFIG = {
   ],
   featuredCard: {
     enabled: true,
+    style: 'banner',
     title: 'GET MY ENTIRE COLLECTION',
     subtitle: 'Khám phá trọn bộ sưu tập yêu thích của mình',
+    ctaText: 'XEM NGAY',
     url: 'https://shopee.vn',
     image: '/media/bio-link/girlfriend-2.jpg',
     clicks: 0

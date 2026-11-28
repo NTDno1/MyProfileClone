@@ -447,6 +447,39 @@
     reader.readAsDataURL(file);
   }
 
+  let activeTemplateCategory = 'all';
+
+  function normalizeHexColor(val, fallback) {
+    const s = String(val || '').trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(s)) return s.toLowerCase();
+    if (/^#[0-9a-fA-F]{3}$/.test(s)) {
+      return ('#' + s[1] + s[1] + s[2] + s[2] + s[3] + s[3]).toLowerCase();
+    }
+    return fallback || '#ffffff';
+  }
+
+  function setColorPickerValue(inputId, hexBadgeId, rawVal, fallback) {
+    const hex = normalizeHexColor(rawVal, fallback);
+    const inputEl = document.getElementById(inputId);
+    const badgeEl = document.getElementById(hexBadgeId);
+    if (inputEl) inputEl.value = hex;
+    if (badgeEl) badgeEl.textContent = hex.toUpperCase();
+  }
+
+  function setTypoSliderValue(inputId, badgeId, rawVal, defaultSliderVal, unitSuffix, allowZeroOrNeg) {
+    const inputEl = document.getElementById(inputId);
+    const badgeEl = document.getElementById(badgeId);
+    const isSet = allowZeroOrNeg
+      ? rawVal !== null && rawVal !== undefined && rawVal !== ''
+      : Number(rawVal || 0) > 0;
+    if (inputEl) {
+      inputEl.value = isSet ? Number(rawVal) : defaultSliderVal;
+    }
+    if (badgeEl) {
+      badgeEl.textContent = isSet ? `${Number(rawVal)}${unitSuffix}` : 'Tự động';
+    }
+  }
+
   // --- POPULATE EDITORS ---
   function populateAllEditors() {
     if (!state) return;
@@ -457,18 +490,24 @@
     document.getElementById('prof-avatar-preview').src = p.avatar || '';
     document.getElementById('prof-name').value = p.name || '';
     document.getElementById('prof-subtitle').value = p.subtitle || '';
+    const bioInput = document.getElementById('prof-bio');
+    if (bioInput) bioInput.value = p.bio || '';
     document.getElementById('prof-quote').value = p.quote || '';
 
     // 2. Featured Card
     const fc = state.featuredCard || {};
     document.getElementById('fc-enabled').checked = !!fc.enabled;
+    const fcStyleEl = document.getElementById('fc-style');
+    if (fcStyleEl) fcStyleEl.value = fc.style || 'banner';
+    const fcCtaEl = document.getElementById('fc-cta-text');
+    if (fcCtaEl) fcCtaEl.value = fc.ctaText ?? 'XEM NGAY';
     document.getElementById('fc-title').value = fc.title || '';
     document.getElementById('fc-subtitle').value = fc.subtitle || '';
     document.getElementById('fc-url').value = fc.url || '';
     document.getElementById('fc-image').value = fc.image || '';
     document.getElementById('fc-img-preview').src = fc.image || '';
 
-    // 3. Theme & Templates
+    // 3. Theme, Templates, Deep Colors & Deep Typography
     const t = state.theme || {};
     document.getElementById('theme-avatar-frame').value = t.avatarFrame || 'organic';
     document.getElementById('theme-avatar-size').value = t.avatarSize || 124;
@@ -480,6 +519,10 @@
     document.getElementById('theme-bg-preview').src = t.bgImage || '';
     document.getElementById('theme-portrait-image').value = t.portraitBgImage || '';
     document.getElementById('theme-portrait-preview').src = t.portraitBgImage || '';
+    const coverInput = document.getElementById('theme-cover-image');
+    const coverPreview = document.getElementById('theme-cover-preview');
+    if (coverInput) coverInput.value = t.coverImage || '';
+    if (coverPreview) coverPreview.src = t.coverImage || t.bgImage || p.avatar || '';
 
     document.getElementById('theme-overlay-opacity').value = t.bgOverlayOpacity ?? 35;
     document.getElementById('overlay-opacity-val').textContent = t.bgOverlayOpacity ?? 35;
@@ -488,16 +531,56 @@
 
     document.getElementById('theme-heading-font').value = t.headingFont || 'Cormorant Garamond';
     document.getElementById('theme-body-font').value = t.bodyFont || 'Plus Jakarta Sans';
+    const quoteFontEl = document.getElementById('theme-quote-font');
+    if (quoteFontEl) quoteFontEl.value = t.quoteFont || 'inherit';
+
+    const upperEl = document.getElementById('theme-uppercase-links');
+    if (upperEl) upperEl.checked = t.uppercaseLinks !== false;
+    const decoEl = document.getElementById('theme-show-decorations');
+    if (decoEl) decoEl.checked = t.showDecorations !== false;
+
     document.getElementById('theme-button-style').value = t.buttonStyle || 'frosted-light';
     document.getElementById('theme-button-radius').value = t.buttonRadius || 'pill';
 
-    document.getElementById('theme-primary-color').value = t.primaryColor || '#d97793';
-    document.getElementById('theme-btn-bg-color').value = t.buttonBgColor || '#ffffff';
-    document.getElementById('theme-btn-text-color').value = t.buttonTextColor || '#522938';
-    document.getElementById('theme-text-color').value = t.textColor || '#ffffff';
-    document.getElementById('theme-social-position').value = t.socialPosition || 'bottom';
+    const btnOpacityVal = t.buttonBgOpacity ?? 88;
+    const btnOpacitySlider = document.getElementById('theme-btn-bg-opacity');
+    const btnOpacityLabel = document.getElementById('btn-bg-opacity-val');
+    if (btnOpacitySlider) btnOpacitySlider.value = btnOpacityVal;
+    if (btnOpacityLabel) btnOpacityLabel.textContent = btnOpacityVal;
 
-    highlightSelectedTemplate(t.template || 'template2');
+    // Deep Color Pickers + Hex Badges
+    const mainTextHex = normalizeHexColor(t.textColor, '#ffffff');
+    const primHex = normalizeHexColor(t.primaryColor, '#d97793');
+    setColorPickerValue('theme-bg-grad-start', 'hex-bg-grad-start', t.bgGradientStart, '#f6c4d2');
+    setColorPickerValue('theme-bg-grad-mid', 'hex-bg-grad-mid', t.bgGradientMid, '#e89ab2');
+    setColorPickerValue('theme-bg-grad-end', 'hex-bg-grad-end', t.bgGradientEnd, '#c8738e');
+    setColorPickerValue('theme-overlay-color', 'hex-overlay-color', t.bgOverlayColor, '#7a354b');
+    setColorPickerValue('theme-primary-color', 'hex-primary-color', primHex, '#d97793');
+    setColorPickerValue('theme-text-color', 'hex-text-color', mainTextHex, '#ffffff');
+    setColorPickerValue('theme-subtitle-color', 'hex-subtitle-color', t.subtitleColor || mainTextHex, mainTextHex);
+    setColorPickerValue('theme-quote-color', 'hex-quote-color', t.quoteColor || mainTextHex, mainTextHex);
+    setColorPickerValue('theme-btn-bg-color', 'hex-btn-bg-color', t.buttonBgColor, '#ffffff');
+    setColorPickerValue('theme-btn-text-color', 'hex-btn-text-color', t.buttonTextColor, '#522938');
+    setColorPickerValue('theme-btn-border-color', 'hex-btn-border-color', t.buttonBorderColor, '#ffffff');
+    setColorPickerValue('theme-social-bg-color', 'hex-social-bg-color', t.socialBgColor, '#ffffff');
+    setColorPickerValue('theme-social-icon-color', 'hex-social-icon-color', t.socialIconColor || primHex, primHex);
+
+    // Deep Typography Sliders
+    setTypoSliderValue('theme-name-size', 'val-name-size', t.nameFontSize, 30, 'px', false);
+    setTypoSliderValue('theme-name-spacing', 'val-name-spacing', t.nameLetterSpacing, 1.5, 'px', true);
+    setTypoSliderValue('theme-subtitle-size', 'val-subtitle-size', t.subtitleFontSize, 13, 'px', false);
+    setTypoSliderValue('theme-bio-size', 'val-bio-size', t.bioFontSize, 13, 'px', false);
+    setTypoSliderValue('theme-btn-size', 'val-btn-size', t.buttonFontSize, 13.5, 'px', false);
+    setTypoSliderValue('theme-btn-sub-size', 'val-btn-sub-size', t.buttonSubFontSize, 11, 'px', false);
+    setTypoSliderValue('theme-quote-size', 'val-quote-size', t.quoteFontSize, 15, 'px', false);
+    setTypoSliderValue('theme-btn-height', 'val-btn-height', t.buttonMinHeight, 46, 'px', false);
+    setTypoSliderValue('theme-btn-gap', 'val-btn-gap', t.buttonGap, 11, 'px', false);
+
+    document.getElementById('theme-social-position').value = t.socialPosition || 'bottom';
+    const socStyleEl = document.getElementById('theme-social-style');
+    if (socStyleEl) socStyleEl.value = t.socialStyle || 'filled-circle';
+
+    renderTemplateGallery(t.template || 'template2');
     renderThemePresets(t.preset || 'blush-rose');
 
     // 4. SEO
@@ -514,29 +597,227 @@
     updateStatsSummary();
   }
 
-  // --- TEMPLATE & PRESET SELECTORS ---
-  function highlightSelectedTemplate(tpl) {
-    document.querySelectorAll('#template-selector-grid .template-option').forEach((card) => {
-      card.classList.toggle('selected', card.getAttribute('data-template') === tpl);
+  // --- 20-TEMPLATE GALLERY WITH VISUAL MINI-WIREFRAMES ---
+  function buildMiniPhoneThumbHtml(tpl) {
+    const presets = window.THEME_PRESETS || {};
+    const rec = tpl.recommended || {};
+    const p = presets[rec.preset] || presets['blush-rose'] || {};
+    const bg1 = p.bgGradientStart || '#1a1a1c';
+    const bg2 = p.bgGradientEnd || '#111113';
+    const fg = p.textColor || '#ffffff';
+    const btnBg = rec.buttonBgColor || p.buttonBgColor || '#ffffff';
+    const borderCol = rec.buttonBorderColor || p.buttonBorderColor || fg;
+    const id = tpl.id;
+
+    let inner = '';
+    if (id === 'template4') {
+      inner = `
+        <div style="width:72%;height:4px;border-radius:2px;background:${fg};opacity:0.9;margin-bottom:2px;"></div>
+        <div style="display:flex;width:100%;gap:3px;align-items:center;flex:1;">
+          <div style="width:44%;height:38px;border-radius:99px 99px 0 0;background:${fg};opacity:0.35;"></div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:3px;">
+            <div style="height:5px;border-radius:99px;background:${btnBg};"></div>
+            <div style="height:5px;border-radius:99px;background:${btnBg};"></div>
+            <div style="height:5px;border-radius:99px;background:${btnBg};"></div>
+          </div>
+        </div>`;
+    } else if (id === 'template5') {
+      inner = `
+        <div style="display:flex;width:100%;align-items:center;justify-content:space-between;gap:3px;margin-bottom:2px;">
+          <div style="width:15px;height:15px;border-radius:50%;border:1.2px solid ${fg};background:${fg};opacity:0.4;"></div>
+          <div style="width:20px;height:4px;border-radius:2px;background:${fg};"></div>
+        </div>
+        <div style="width:92%;height:5px;border-radius:99px;background:${btnBg};"></div>
+        <div style="width:92%;height:5px;border-radius:99px;background:${btnBg};"></div>
+        <div style="width:92%;height:5px;border-radius:99px;background:${btnBg};"></div>`;
+    } else if (id === 'template6' || id === 'template15' || id === 'template18') {
+      const isOutline = id === 'template15';
+      const barStyle = isOutline ? `border:1px solid ${borderCol};background:transparent;` : `background:${btnBg};border-radius:99px;`;
+      inner = `
+        <div style="position:absolute;top:0;left:0;right:0;height:20px;background:${fg};opacity:0.22;"></div>
+        <div style="width:16px;height:16px;border-radius:50%;border:1.5px solid #fff;background:${fg};opacity:0.65;margin-top:6px;z-index:2;"></div>
+        <div style="width:65%;height:3px;background:${fg};margin:1px 0;"></div>
+        <div style="width:90%;height:5px;${barStyle}"></div>
+        <div style="width:90%;height:5px;${barStyle}"></div>
+        ${id === 'template6' ? `<div style="width:90%;height:11px;border-radius:3px;background:${btnBg};margin-top:2px;"></div>` : `<div style="width:90%;height:5px;${barStyle}"></div>`}`;
+    } else if (id === 'template7' || id === 'template12') {
+      const barStyle = id === 'template12' ? `background:${btnBg};border-radius:1px;` : `border:1px solid ${borderCol};border-radius:2px;`;
+      inner = `
+        <div style="position:absolute;inset:15px 4px 5px 4px;border:1px solid ${borderCol};opacity:0.65;"></div>
+        <div style="width:16px;height:16px;border-radius:50%;background:${fg};opacity:0.75;z-index:2;"></div>
+        <div style="width:58%;height:3px;background:${fg};z-index:2;"></div>
+        <div style="width:80%;height:5px;${barStyle}z-index:2;"></div>
+        <div style="width:80%;height:5px;${barStyle}z-index:2;"></div>
+        <div style="width:80%;height:5px;${barStyle}z-index:2;"></div>`;
+    } else if (id === 'template8' || id === 'template11') {
+      const barStyle = id === 'template8' ? `background:${btnBg};border-radius:99px;` : `border:1px solid ${borderCol};border-radius:99px;`;
+      inner = `
+        <div style="position:absolute;inset:3px 3px 4px 3px;border:1px solid ${borderCol};border-radius:24px 24px 2px 2px;opacity:0.7;"></div>
+        <div style="width:18px;height:21px;border-radius:99px 99px 0 0;background:${fg};opacity:0.65;margin-top:3px;"></div>
+        <div style="width:76%;height:5px;${barStyle}"></div>
+        <div style="width:76%;height:5px;${barStyle}"></div>
+        <div style="width:76%;height:5px;${barStyle}"></div>`;
+    } else if (id === 'template9') {
+      inner = `
+        <div style="width:24px;height:6px;border-top:1.5px solid ${fg};border-radius:50% 50% 0 0;margin-bottom:-2px;"></div>
+        <div style="width:18px;height:21px;border-radius:99px 99px 0 0;background:${fg};opacity:0.65;"></div>
+        <div style="width:86%;height:6px;border:1px solid ${borderCol};border-radius:50%;"></div>
+        <div style="width:86%;height:6px;border:1px solid ${borderCol};border-radius:50%;"></div>
+        <div style="width:86%;height:6px;border:1px solid ${borderCol};border-radius:50%;"></div>`;
+    } else if (id === 'template10' || id === 'template17') {
+      const barStyle = id === 'template10' ? `background:${btnBg};border-radius:2px;` : `border:1px solid ${borderCol};border-radius:99px;`;
+      inner = `
+        <div style="width:22px;height:5px;border-top:1.5px solid ${fg};border-radius:50% 50% 0 0;margin-bottom:-2px;"></div>
+        <div style="width:16px;height:16px;border-radius:50%;background:${fg};opacity:0.75;"></div>
+        <div style="width:22px;height:5px;border-bottom:1.5px solid ${fg};border-radius:0 0 50% 50%;margin-top:-2px;"></div>
+        <div style="width:86%;height:5px;${barStyle}"></div>
+        <div style="width:86%;height:5px;${barStyle}"></div>`;
+    } else if (id === 'template13') {
+      inner = `
+        <div style="width:16px;height:22px;border-radius:50%;background:${fg};opacity:0.55;"></div>
+        <div style="width:62%;height:3px;background:${fg};"></div>
+        <div style="width:86%;height:5px;border:1px solid ${borderCol};"></div>
+        <div style="width:86%;height:5px;border:1px solid ${borderCol};"></div>
+        <div style="width:86%;height:5px;border:1px solid ${borderCol};"></div>`;
+    } else if (id === 'template3' || id === 'template14') {
+      inner = `
+        <div style="width:66%;height:4px;background:${fg};margin-bottom:2px;"></div>
+        <div style="width:88%;height:6px;border-radius:99px;background:${btnBg};opacity:0.85;"></div>
+        <div style="width:88%;height:6px;border-radius:99px;background:${btnBg};opacity:0.85;"></div>
+        <div style="width:88%;height:6px;border-radius:99px;background:${btnBg};opacity:0.85;"></div>`;
+    } else if (id === 'template16') {
+      inner = `
+        <div style="width:74%;height:4px;background:${fg};"></div>
+        <div style="width:17px;height:17px;border-radius:50%;border:1.5px solid #fff;background:${fg};opacity:0.5;margin:1px 0;"></div>
+        <div style="width:88%;height:5px;border-radius:3px;background:${btnBg};"></div>
+        <div style="width:88%;height:5px;border-radius:3px;background:${btnBg};"></div>
+        <div style="width:88%;height:5px;border-radius:3px;background:${btnBg};"></div>`;
+    } else if (id === 'template19') {
+      inner = `
+        <div style="width:72%;height:4px;background:${fg};"></div>
+        <div style="width:18px;height:21px;border-radius:2px;background:${fg};opacity:0.55;"></div>
+        <div style="width:50%;height:2.5px;background:${fg};opacity:0.8;"></div>
+        <div style="width:88%;height:5px;border-radius:2px;border:1px solid ${borderCol};"></div>
+        <div style="width:88%;height:5px;border-radius:2px;border:1px solid ${borderCol};"></div>`;
+    } else if (id === 'template20') {
+      const lineCol = p.primaryColor || '#ef8c4b';
+      inner = `
+        <div style="position:relative;width:100%;display:flex;justify-content:center;align-items:center;margin:2px 0;">
+          <div style="position:absolute;left:-4px;right:-4px;height:1.5px;background:${lineCol};"></div>
+          <div style="width:16px;height:16px;border-radius:50%;background:#ddd;z-index:2;border:1px solid ${bg1};"></div>
+        </div>
+        <div style="width:66%;height:3.5px;background:${lineCol};"></div>
+        <div style="width:88%;height:5px;border-radius:2px;background:${lineCol};"></div>
+        <div style="width:88%;height:5px;border-radius:2px;background:${lineCol};"></div>
+        <div style="width:88%;height:5px;border-radius:2px;background:${lineCol};"></div>`;
+    } else {
+      inner = `
+        <div style="width:17px;height:17px;border-radius:50%;border:1.5px solid #fff;background:${fg};opacity:0.55;"></div>
+        <div style="width:65%;height:3.5px;background:${fg};"></div>
+        <div style="width:88%;height:5px;border-radius:99px;background:${btnBg};"></div>
+        <div style="width:88%;height:5px;border-radius:99px;background:${btnBg};"></div>
+        <div style="width:88%;height:5px;border-radius:99px;background:${btnBg};"></div>`;
+    }
+
+    return `<div class="tpl-mini-phone" style="background:linear-gradient(160deg, ${bg1}, ${bg2});">${inner}</div>`;
+  }
+
+  function applyPresetObjectToTheme(presetKey, p) {
+    if (!p) return;
+    state.theme = {
+      ...state.theme,
+      preset: presetKey,
+      primaryColor: p.primaryColor,
+      secondaryColor: p.secondaryColor,
+      accentColor: p.accentColor,
+      bgGradientStart: p.bgGradientStart,
+      bgGradientMid: p.bgGradientMid,
+      bgGradientEnd: p.bgGradientEnd,
+      bgOverlayColor: p.bgOverlayColor,
+      bgOverlayOpacity: p.bgOverlayOpacity,
+      buttonStyle: p.buttonStyle || state.theme.buttonStyle,
+      buttonBgColor: p.buttonBgColor,
+      buttonBgOpacity: p.buttonBgOpacity ?? 88,
+      buttonTextColor: p.buttonTextColor,
+      buttonBorderColor: p.buttonBorderColor || p.textColor || '#ffffff',
+      textColor: p.textColor,
+      subtitleColor: p.subtitleColor || p.textColor,
+      quoteColor: p.quoteColor || p.textColor,
+      socialBgColor: p.socialBgColor || '#ffffff',
+      socialIconColor: p.socialIconColor || p.primaryColor,
+      socialStyle: p.socialStyle || state.theme.socialStyle || 'filled-circle',
+      particleEffect: p.particleEffect || 'none'
+    };
+  }
+
+  function renderTemplateGallery(selectedTplId) {
+    const grid = document.getElementById('template-selector-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    const templates = window.BIO_TEMPLATES || [];
+    const filtered = activeTemplateCategory === 'all'
+      ? templates
+      : templates.filter((item) => item.group === activeTemplateCategory);
+
+    filtered.forEach((tpl) => {
+      const card = document.createElement('div');
+      card.className = `template-option ${selectedTplId === tpl.id ? 'selected' : ''}`;
+      card.setAttribute('data-template', tpl.id);
+      card.innerHTML = `
+        ${buildMiniPhoneThumbHtml(tpl)}
+        <div style="min-width:0; flex:1;">
+          <span class="template-option-badge">${escapeHtml(tpl.badge || 'Canva')}</span>
+          <div class="template-option-title">${escapeHtml(tpl.title)}</div>
+          <div class="template-option-desc">${escapeHtml(tpl.desc)}</div>
+        </div>
+      `;
+      card.addEventListener('click', () => {
+        const autoStyleToggle = document.getElementById('tpl-auto-apply-style');
+        const shouldAutoApply = !autoStyleToggle || autoStyleToggle.checked;
+        const rec = tpl.recommended || {};
+
+        state.theme.template = tpl.id;
+        if (rec.avatarFrame) state.theme.avatarFrame = rec.avatarFrame;
+        if (rec.socialPosition) state.theme.socialPosition = rec.socialPosition;
+
+        if (shouldAutoApply) {
+          const presets = window.THEME_PRESETS || {};
+          if (rec.preset && presets[rec.preset]) {
+            applyPresetObjectToTheme(rec.preset, presets[rec.preset]);
+          }
+          if (rec.bgType) state.theme.bgType = rec.bgType;
+          if (rec.bgBlur !== undefined) state.theme.bgBlur = rec.bgBlur;
+          if (rec.buttonStyle) state.theme.buttonStyle = rec.buttonStyle;
+          if (rec.buttonRadius) state.theme.buttonRadius = rec.buttonRadius;
+          if (rec.buttonBgColor) state.theme.buttonBgColor = rec.buttonBgColor;
+          if (rec.buttonBgOpacity !== undefined) state.theme.buttonBgOpacity = rec.buttonBgOpacity;
+          if (rec.buttonTextColor) state.theme.buttonTextColor = rec.buttonTextColor;
+          if (rec.buttonBorderColor) state.theme.buttonBorderColor = rec.buttonBorderColor;
+          if (rec.headingFont) state.theme.headingFont = rec.headingFont;
+          if (rec.bodyFont) state.theme.bodyFont = rec.bodyFont;
+          if (rec.quoteFont) state.theme.quoteFont = rec.quoteFont;
+          if (rec.socialStyle) state.theme.socialStyle = rec.socialStyle;
+          if (rec.showDecorations !== undefined) state.theme.showDecorations = rec.showDecorations;
+          if (rec.enableFeatured) state.featuredCard.enabled = true;
+          if (rec.featuredStyle) state.featuredCard.style = rec.featuredStyle;
+        } else if (tpl.id === 'template3') {
+          state.featuredCard.enabled = true;
+        }
+
+        populateAllEditors();
+        syncPreview();
+      });
+      grid.appendChild(card);
     });
   }
 
-  document.querySelectorAll('#template-selector-grid .template-option').forEach((card) => {
-    card.addEventListener('click', () => {
-      const tpl = card.getAttribute('data-template');
-      state.theme.template = tpl;
-      if (tpl === 'template1') {
-        state.theme.avatarFrame = 'circle';
-        state.theme.socialPosition = 'bottom';
-      } else if (tpl === 'template2') {
-        state.theme.avatarFrame = 'organic';
-        state.theme.socialPosition = 'bottom';
-      } else if (tpl === 'template3') {
-        state.theme.socialPosition = 'top';
-        state.featuredCard.enabled = true;
-      }
-      populateAllEditors();
-      syncPreview();
+  document.querySelectorAll('#tpl-category-bar .tpl-cat-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      activeTemplateCategory = btn.getAttribute('data-cat') || 'all';
+      document.querySelectorAll('#tpl-category-bar .tpl-cat-btn').forEach((b) => {
+        b.classList.toggle('active', b === btn);
+      });
+      renderTemplateGallery((state && state.theme && state.theme.template) || 'template2');
     });
   });
 
@@ -556,24 +837,7 @@
         </div>
       `;
       div.addEventListener('click', () => {
-        state.theme = {
-          ...state.theme,
-          preset: key,
-          primaryColor: p.primaryColor,
-          secondaryColor: p.secondaryColor,
-          accentColor: p.accentColor,
-          bgGradientStart: p.bgGradientStart,
-          bgGradientMid: p.bgGradientMid,
-          bgGradientEnd: p.bgGradientEnd,
-          bgOverlayColor: p.bgOverlayColor,
-          bgOverlayOpacity: p.bgOverlayOpacity,
-          buttonStyle: p.buttonStyle,
-          buttonBgColor: p.buttonBgColor,
-          buttonBgOpacity: p.buttonBgOpacity,
-          buttonTextColor: p.buttonTextColor,
-          textColor: p.textColor,
-          particleEffect: p.particleEffect
-        };
+        applyPresetObjectToTheme(key, p);
         populateAllEditors();
         syncPreview();
       });
@@ -753,6 +1017,7 @@
     { key: 'pinterest', label: 'Pinterest' },
     { key: 'telegram', label: 'Telegram' },
     { key: 'spotify', label: 'Spotify' },
+    { key: 'twitter', label: 'Twitter / X' },
     { key: 'globe', label: 'Website riêng' }
   ];
 
@@ -867,10 +1132,13 @@
   });
   bindInput('prof-name', (el) => { state.profile.name = el.value; });
   bindInput('prof-subtitle', (el) => { state.profile.subtitle = el.value; });
+  bindInput('prof-bio', (el) => { state.profile.bio = el.value; });
   bindInput('prof-quote', (el) => { state.profile.quote = el.value; });
 
   // Featured Card bindings
   bindInput('fc-enabled', (el) => { state.featuredCard.enabled = el.checked; });
+  bindInput('fc-style', (el) => { state.featuredCard.style = el.value; });
+  bindInput('fc-cta-text', (el) => { state.featuredCard.ctaText = el.value; });
   bindInput('fc-title', (el) => { state.featuredCard.title = el.value; });
   bindInput('fc-subtitle', (el) => { state.featuredCard.subtitle = el.value; });
   bindInput('fc-url', (el) => { state.featuredCard.url = el.value; });
@@ -879,7 +1147,7 @@
     document.getElementById('fc-img-preview').src = el.value;
   });
 
-  // Theme bindings
+  // Theme, Deep Color & Deep Typography bindings
   bindInput('theme-avatar-frame', (el) => { state.theme.avatarFrame = el.value; });
   bindInput('theme-avatar-size', (el) => {
     state.theme.avatarSize = Number(el.value);
@@ -895,6 +1163,11 @@
     state.theme.portraitBgImage = el.value;
     document.getElementById('theme-portrait-preview').src = el.value;
   });
+  bindInput('theme-cover-image', (el) => {
+    state.theme.coverImage = el.value;
+    const prev = document.getElementById('theme-cover-preview');
+    if (prev) prev.src = el.value || state.theme.bgImage || state.profile.avatar || '';
+  });
   bindInput('theme-overlay-opacity', (el) => {
     state.theme.bgOverlayOpacity = Number(el.value);
     document.getElementById('overlay-opacity-val').textContent = el.value;
@@ -905,13 +1178,94 @@
   });
   bindInput('theme-heading-font', (el) => { state.theme.headingFont = el.value; });
   bindInput('theme-body-font', (el) => { state.theme.bodyFont = el.value; });
+  bindInput('theme-quote-font', (el) => { state.theme.quoteFont = el.value; });
+  bindInput('theme-uppercase-links', (el) => { state.theme.uppercaseLinks = el.checked; });
+  bindInput('theme-show-decorations', (el) => { state.theme.showDecorations = el.checked; });
   bindInput('theme-button-style', (el) => { state.theme.buttonStyle = el.value; });
   bindInput('theme-button-radius', (el) => { state.theme.buttonRadius = el.value; });
-  bindInput('theme-primary-color', (el) => { state.theme.primaryColor = el.value; });
-  bindInput('theme-btn-bg-color', (el) => { state.theme.buttonBgColor = el.value; });
-  bindInput('theme-btn-text-color', (el) => { state.theme.buttonTextColor = el.value; });
-  bindInput('theme-text-color', (el) => { state.theme.textColor = el.value; });
+  bindInput('theme-btn-bg-opacity', (el) => {
+    state.theme.buttonBgOpacity = Number(el.value);
+    const lbl = document.getElementById('btn-bg-opacity-val');
+    if (lbl) lbl.textContent = el.value;
+  });
+
+  function bindColorPicker(inputId, hexBadgeId, applyFn) {
+    bindInput(inputId, (el) => {
+      applyFn(el.value);
+      const badge = document.getElementById(hexBadgeId);
+      if (badge) badge.textContent = String(el.value || '').toUpperCase();
+    });
+  }
+
+  bindColorPicker('theme-bg-grad-start', 'hex-bg-grad-start', (v) => { state.theme.bgGradientStart = v; });
+  bindColorPicker('theme-bg-grad-mid', 'hex-bg-grad-mid', (v) => { state.theme.bgGradientMid = v; });
+  bindColorPicker('theme-bg-grad-end', 'hex-bg-grad-end', (v) => { state.theme.bgGradientEnd = v; });
+  bindColorPicker('theme-overlay-color', 'hex-overlay-color', (v) => { state.theme.bgOverlayColor = v; });
+  bindColorPicker('theme-primary-color', 'hex-primary-color', (v) => { state.theme.primaryColor = v; });
+  bindColorPicker('theme-text-color', 'hex-text-color', (v) => { state.theme.textColor = v; });
+  bindColorPicker('theme-subtitle-color', 'hex-subtitle-color', (v) => { state.theme.subtitleColor = v; });
+  bindColorPicker('theme-quote-color', 'hex-quote-color', (v) => { state.theme.quoteColor = v; });
+  bindColorPicker('theme-btn-bg-color', 'hex-btn-bg-color', (v) => { state.theme.buttonBgColor = v; });
+  bindColorPicker('theme-btn-text-color', 'hex-btn-text-color', (v) => { state.theme.buttonTextColor = v; });
+  bindColorPicker('theme-btn-border-color', 'hex-btn-border-color', (v) => { state.theme.buttonBorderColor = v; });
+  bindColorPicker('theme-social-bg-color', 'hex-social-bg-color', (v) => { state.theme.socialBgColor = v; });
+  bindColorPicker('theme-social-icon-color', 'hex-social-icon-color', (v) => { state.theme.socialIconColor = v; });
+
+  const btnSyncSolidBg = document.getElementById('btn-sync-solid-bg');
+  if (btnSyncSolidBg) {
+    btnSyncSolidBg.addEventListener('click', () => {
+      if (!state || !state.theme) return;
+      const base = state.theme.bgGradientStart || '#121215';
+      state.theme.bgGradientMid = base;
+      state.theme.bgGradientEnd = base;
+      state.theme.bgType = 'gradient';
+      populateAllEditors();
+      syncPreview();
+      showToast('🎯 Đã đồng bộ nền trang về 1 màu phẳng đồng nhất!');
+    });
+  }
+
+  // Deep Typography Slider Bindings
+  function bindTypoSlider(inputId, badgeId, propName) {
+    bindInput(inputId, (el) => {
+      const val = Number(el.value);
+      state.theme[propName] = val;
+      const badge = document.getElementById(badgeId);
+      if (badge) badge.textContent = `${val}px`;
+    });
+  }
+
+  bindTypoSlider('theme-name-size', 'val-name-size', 'nameFontSize');
+  bindTypoSlider('theme-name-spacing', 'val-name-spacing', 'nameLetterSpacing');
+  bindTypoSlider('theme-subtitle-size', 'val-subtitle-size', 'subtitleFontSize');
+  bindTypoSlider('theme-bio-size', 'val-bio-size', 'bioFontSize');
+  bindTypoSlider('theme-btn-size', 'val-btn-size', 'buttonFontSize');
+  bindTypoSlider('theme-btn-sub-size', 'val-btn-sub-size', 'buttonSubFontSize');
+  bindTypoSlider('theme-quote-size', 'val-quote-size', 'quoteFontSize');
+  bindTypoSlider('theme-btn-height', 'val-btn-height', 'buttonMinHeight');
+  bindTypoSlider('theme-btn-gap', 'val-btn-gap', 'buttonGap');
+
+  const btnResetTypo = document.getElementById('btn-reset-typography');
+  if (btnResetTypo) {
+    btnResetTypo.addEventListener('click', () => {
+      if (!state || !state.theme) return;
+      state.theme.nameFontSize = 0;
+      state.theme.nameLetterSpacing = null;
+      state.theme.subtitleFontSize = 0;
+      state.theme.bioFontSize = 0;
+      state.theme.buttonFontSize = 0;
+      state.theme.buttonSubFontSize = 0;
+      state.theme.quoteFontSize = 0;
+      state.theme.buttonMinHeight = 0;
+      state.theme.buttonGap = 0;
+      populateAllEditors();
+      syncPreview();
+      showToast('↺ Đã đặt lại cỡ chữ & kích thước nút về chuẩn tự động của mẫu!');
+    });
+  }
+
   bindInput('theme-social-position', (el) => { state.theme.socialPosition = el.value; });
+  bindInput('theme-social-style', (el) => { state.theme.socialStyle = el.value; });
 
   // Quick background & photo picks
   document.querySelectorAll('.bg-quick-pick').forEach((btn) => {
@@ -953,7 +1307,20 @@
       document.getElementById('theme-portrait-image').value = url;
       document.getElementById('theme-portrait-preview').src = url;
       syncPreview();
-      showToast('📸 Đã chọn ảnh chân dung cho Mẫu 3!');
+      showToast('📸 Đã chọn ảnh chân dung tràn nền!');
+    });
+  });
+
+  document.querySelectorAll('.cover-quick-pick').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const url = btn.getAttribute('data-url');
+      state.theme.coverImage = url;
+      const inp = document.getElementById('theme-cover-image');
+      const prev = document.getElementById('theme-cover-preview');
+      if (inp) inp.value = url;
+      if (prev) prev.src = url;
+      syncPreview();
+      showToast('🖼️ Đã chọn ảnh bìa đầu trang (Cover)!');
     });
   });
 
@@ -993,6 +1360,20 @@
       syncPreview();
     });
   });
+
+  const themeCoverFile = document.getElementById('theme-cover-file');
+  if (themeCoverFile) {
+    themeCoverFile.addEventListener('change', (e) => {
+      compressAndUploadImage(e.target.files[0], (url) => {
+        state.theme.coverImage = url;
+        const inp = document.getElementById('theme-cover-image');
+        const prev = document.getElementById('theme-cover-preview');
+        if (inp) inp.value = url;
+        if (prev) prev.src = url;
+        syncPreview();
+      });
+    });
+  }
 
   // SEO bindings (footerText locked across all pages)
   bindInput('seo-title', (el) => { state.seo.pageTitle = el.value; });

@@ -123,8 +123,14 @@
     const metaTheme = document.getElementById('meta-theme-color');
     if (metaTheme && theme.primaryColor) metaTheme.setAttribute('content', theme.primaryColor);
 
-    // 2. CSS Variables
+    // 2. CSS Variables (Colors, Fonts & Deep Typography Sliders)
     const root = document.documentElement;
+    const headingFontName = theme.headingFont || 'Cormorant Garamond';
+    const bodyFontName = theme.bodyFont || 'Plus Jakarta Sans';
+    const quoteFontName = theme.quoteFont && theme.quoteFont !== 'inherit' ? theme.quoteFont : '';
+    const isScriptHeading = ['Great Vibes', 'Dancing Script', 'Sacramento'].includes(headingFontName);
+    const isScriptQuote = ['Great Vibes', 'Dancing Script', 'Sacramento'].includes(quoteFontName);
+
     root.style.setProperty('--primary-color', theme.primaryColor || '#d97793');
     root.style.setProperty('--secondary-color', theme.secondaryColor || '#f7d6e0');
     root.style.setProperty('--accent-color', theme.accentColor || '#b55672');
@@ -136,12 +142,38 @@
     root.style.setProperty('--bg-blur', `${Number(theme.bgBlur ?? 3)}px`);
     root.style.setProperty('--btn-bg-rgba', hexToRgba(theme.buttonBgColor || '#ffffff', theme.buttonBgOpacity ?? 88));
     root.style.setProperty('--btn-text-color', theme.buttonTextColor || '#522938');
+    root.style.setProperty('--btn-border-color', theme.buttonBorderColor || 'rgba(255, 255, 255, 0.78)');
     root.style.setProperty('--text-color', theme.textColor || '#ffffff');
-    root.style.setProperty('--heading-font', `'${theme.headingFont || 'Cormorant Garamond'}', Georgia, serif`);
-    root.style.setProperty('--body-font', `'${theme.bodyFont || 'Plus Jakarta Sans'}', sans-serif`);
+    root.style.setProperty('--subtitle-color', theme.subtitleColor || theme.textColor || '#ffffff');
+    root.style.setProperty('--quote-color', theme.quoteColor || theme.textColor || '#ffffff');
+    root.style.setProperty('--social-bg-color', theme.socialBgColor || '#ffffff');
+    root.style.setProperty('--social-icon-color', theme.socialIconColor || theme.primaryColor || '#d97793');
+    root.style.setProperty('--heading-font', `'${headingFontName}', Georgia, serif`);
+    root.style.setProperty('--body-font', `'${bodyFontName}', sans-serif`);
+    root.style.setProperty('--quote-font', quoteFontName ? `'${quoteFontName}', cursive, serif` : 'inherit');
     root.style.setProperty('--avatar-size', `${Number(theme.avatarSize || 124)}px`);
 
-    // 3. Phone Card Classes (Template 1, 2, 3 + Button Style + Radius)
+    const nameSize = Number(theme.nameFontSize || 0);
+    const subSize = Number(theme.subtitleFontSize || 0);
+    const bioSize = Number(theme.bioFontSize || 0);
+    const btnSize = Number(theme.buttonFontSize || 0);
+    const btnSubSize = Number(theme.buttonSubFontSize || 0);
+    const quoteSize = Number(theme.quoteFontSize || 0);
+    const btnHeight = Number(theme.buttonMinHeight || 0);
+    const btnGap = Number(theme.buttonGap || 0);
+    const hasCustomSpacing = theme.nameLetterSpacing !== null && theme.nameLetterSpacing !== undefined && theme.nameLetterSpacing !== '';
+
+    if (nameSize > 0) root.style.setProperty('--name-font-size', `${nameSize}px`);
+    if (subSize > 0) root.style.setProperty('--subtitle-font-size', `${subSize}px`);
+    if (bioSize > 0) root.style.setProperty('--bio-font-size', `${bioSize}px`);
+    if (btnSize > 0) root.style.setProperty('--btn-font-size', `${btnSize}px`);
+    if (btnSubSize > 0) root.style.setProperty('--btn-sub-font-size', `${btnSubSize}px`);
+    if (quoteSize > 0) root.style.setProperty('--quote-font-size', `${quoteSize}px`);
+    if (hasCustomSpacing) root.style.setProperty('--name-letter-spacing', `${Number(theme.nameLetterSpacing)}px`);
+    if (btnHeight > 0) root.style.setProperty('--btn-min-height', `${btnHeight}px`);
+    if (btnGap > 0) root.style.setProperty('--btn-gap', `${btnGap}px`);
+
+    // 3. Phone Card Classes (Templates 1–20 + Button Style + Radius + Social Style + Typography Flags)
     const phoneCard = document.getElementById('phone-card');
     const templateName = theme.template || 'template2';
     phoneCard.className = [
@@ -149,15 +181,57 @@
       `template-${templateName}`,
       `radius-${theme.buttonRadius || 'pill'}`,
       `btn-style-${theme.buttonStyle || 'frosted-light'}`,
-      theme.uppercaseLinks !== false ? 'uppercase-links' : ''
+      `social-style-${theme.socialStyle || 'filled-circle'}`,
+      theme.uppercaseLinks !== false ? 'uppercase-links' : '',
+      theme.showDecorations === false ? 'hide-decorations' : '',
+      isScriptHeading ? 'has-script-heading' : '',
+      isScriptQuote ? 'has-script-quote' : '',
+      nameSize > 0 ? 'has-custom-name-size' : '',
+      hasCustomSpacing ? 'has-custom-name-spacing' : '',
+      subSize > 0 ? 'has-custom-subtitle-size' : '',
+      bioSize > 0 ? 'has-custom-bio-size' : '',
+      btnSize > 0 ? 'has-custom-btn-size' : '',
+      btnSubSize > 0 ? 'has-custom-btn-sub-size' : '',
+      quoteSize > 0 ? 'has-custom-quote-size' : '',
+      btnHeight > 0 ? 'has-custom-btn-height' : '',
+      btnGap > 0 ? 'has-custom-btn-gap' : ''
     ].filter(Boolean).join(' ');
 
-    // 4. Background Image
+    // 3b. Decorative Inner Frame (Templates 7, 8, 11, 12)
+    const decoFrame = document.getElementById('bio-deco-frame');
+    if (decoFrame) {
+      if (templateName === 'template7' || templateName === 'template12') {
+        decoFrame.className = 'bio-deco-frame deco-starlight-rect';
+        decoFrame.innerHTML = `
+          <span class="bio-deco-star" style="top: -28px; right: 22px; font-size: 16px;">✦</span>
+          <span class="bio-deco-star" style="top: -18px; right: 12px; font-size: 9px;">✦</span>
+          <span class="bio-deco-star" style="top: 14px; left: 20px; font-size: 13px;">✦</span>
+        `;
+      } else if (templateName === 'template8' || templateName === 'template11') {
+        decoFrame.className = 'bio-deco-frame deco-cathedral-arch';
+        decoFrame.innerHTML = `
+          <span class="bio-deco-star" style="top: 48px; right: 18px; font-size: 15px;">✦</span>
+          <span class="bio-deco-star" style="top: 60px; right: 8px; font-size: 9px;">✦</span>
+          <span class="bio-deco-star" style="top: 118px; left: 14px; font-size: 13px;">✦</span>
+        `;
+      } else {
+        decoFrame.className = 'bio-deco-frame';
+        decoFrame.innerHTML = '';
+      }
+    }
+
+    // 4. Background Image & Top Cover Banner
     const cardBgImage = document.getElementById('card-bg-image');
     const ambientBackdrop = document.getElementById('ambient-backdrop');
+    const coverBannerImg = document.getElementById('bio-cover-banner-img');
+    const isPortraitHeroTemplate = ['template3', 'template5', 'template14'].includes(templateName);
+    const isCoverTemplate = ['template4', 'template6', 'template15', 'template18'].includes(templateName);
+
     let activeBgUrl = '';
-    if (templateName === 'template3') {
-      activeBgUrl = theme.portraitBgImage || profile.avatar || theme.bgImage || '';
+    if (isPortraitHeroTemplate) {
+      if (templateName === 'template3' || theme.bgType !== 'gradient') {
+        activeBgUrl = theme.portraitBgImage || profile.avatar || theme.bgImage || '';
+      }
     } else if (theme.bgType !== 'gradient') {
       activeBgUrl = theme.bgImage || '';
     }
@@ -169,11 +243,17 @@
     } else {
       cardBgImage.style.backgroundImage = 'none';
       cardBgImage.style.display = 'none';
-      ambientBackdrop.style.backgroundImage = 'none';
+      ambientBackdrop.style.backgroundImage = profile.avatar ? `url("${profile.avatar}")` : 'none';
+    }
+
+    if (coverBannerImg && isCoverTemplate) {
+      const coverUrl = theme.coverImage || theme.bgImage || profile.avatar || '';
+      coverBannerImg.style.backgroundImage = coverUrl ? `url("${coverUrl}")` : 'none';
     }
 
     // 5. Particles
-    renderParticles(theme.particleEffect || 'bokeh');
+    const defaultParticle = ['template1', 'template2', 'template3'].includes(templateName) ? 'bokeh' : 'none';
+    renderParticles(theme.particleEffect || defaultParticle);
 
     // 6. Share button visibility
     const topUtility = document.getElementById('top-utility-bar');
@@ -192,15 +272,30 @@
       avatarImg.alt = profile.name || 'Avatar';
     }
 
-    // 8. Profile Name, Subtitle, Quote
+    // 8. Profile Name, Subtitle, Bio Paragraph, Quote & Curved SVG TextPaths
     const nameEl = document.getElementById('profile-name');
     const subEl = document.getElementById('profile-subtitle');
+    const bioEl = document.getElementById('profile-bio');
     const quoteEl = document.getElementById('profile-quote');
+    const curvedNameEl = document.getElementById('curved-name-textpath');
+    const curvedSubEl = document.getElementById('curved-subtitle-textpath');
 
-    if (nameEl) nameEl.textContent = profile.name || 'HIKARI MAEVE';
+    const displayName = profile.name || 'HIKARI MAEVE';
+    const displaySub = profile.subtitle || '';
+    if (nameEl) nameEl.textContent = displayName;
+    if (curvedNameEl) curvedNameEl.textContent = displayName;
+
     if (subEl) {
-      subEl.textContent = profile.subtitle || '';
-      subEl.style.display = profile.subtitle ? 'block' : 'none';
+      subEl.textContent = displaySub;
+      subEl.style.display = displaySub ? 'block' : 'none';
+    }
+    if (curvedSubEl) {
+      curvedSubEl.textContent = displaySub;
+    }
+    if (bioEl) {
+      const bioText = String(profile.bio || '').trim();
+      bioEl.textContent = bioText;
+      bioEl.style.display = bioText ? 'block' : 'none';
     }
     if (quoteEl) {
       quoteEl.textContent = profile.quote || '';
@@ -254,17 +349,23 @@
       linksContainer.appendChild(a);
     });
 
-    // 10. Featured Collection Banner Card
+    // 10. Featured Collection Banner Card (Standard Full-Bleed Banner or Split Promo Card)
     const featuredEl = document.getElementById('featured-card');
     const featuredBg = document.getElementById('featured-card-bg');
     const featuredOverlay = document.getElementById('featured-card-overlay');
     const featuredTitle = document.getElementById('featured-card-title');
     const featuredSub = document.getElementById('featured-card-subtitle');
+    const featuredCta = document.getElementById('featured-card-cta');
+    const featuredSideMedia = document.getElementById('featured-card-side-media');
+    const featuredSideImg = document.getElementById('featured-card-side-img');
 
     if (featured && featured.enabled) {
+      const useSplitLead = featured.style === 'split-lead' || (templateName === 'template6' && !featured.style);
+      featuredEl.classList.toggle('featured-split-lead', useSplitLead);
       featuredEl.style.display = 'flex';
       featuredEl.href = featured.url || '#';
-      featuredBg.style.backgroundImage = featured.image ? `url("${featured.image}")` : 'none';
+      const fImg = featured.image || profile.avatar || '';
+      featuredBg.style.backgroundImage = fImg ? `url("${fImg}")` : 'none';
       featuredOverlay.style.background = `linear-gradient(90deg, ${hexToRgba(theme.primaryColor || '#1f7a9c', 76)} 0%, rgba(0, 0, 0, 0.28) 50%, ${hexToRgba(theme.primaryColor || '#1f7a9c', 76)} 100%)`;
       featuredTitle.textContent = featured.title || 'GET MY ENTIRE COLLECTION';
       if (featured.subtitle) {
@@ -273,20 +374,32 @@
       } else {
         featuredSub.style.display = 'none';
       }
+      if (featuredCta) {
+        const ctaLabel = String(featured.ctaText || '').trim();
+        featuredCta.textContent = ctaLabel || 'XEM NGAY';
+        featuredCta.style.display = useSplitLead && ctaLabel !== 'none' ? 'inline-flex' : 'none';
+      }
+      if (featuredSideMedia && featuredSideImg) {
+        if (useSplitLead && fImg) {
+          featuredSideImg.src = fImg;
+          featuredSideMedia.style.display = 'block';
+        } else {
+          featuredSideMedia.style.display = 'none';
+        }
+      }
     } else {
       featuredEl.style.display = 'none';
     }
 
-    // 11. Social Icons (Top / Bottom / Both)
+    // 11. Social Icons (Top / Bottom / Both / Hidden)
     const socialsTop = document.getElementById('socials-top');
     const socialsBottom = document.getElementById('socials-bottom');
-    // In Template 3, default to top if socialPosition isn't explicitly overridden
     const pos = theme.socialPosition || (templateName === 'template3' ? 'top' : 'bottom');
 
     renderSocialsContainer(socialsTop, socials);
     renderSocialsContainer(socialsBottom, socials);
 
-    const hasEnabledSocials = socials.some((s) => s && s.enabled);
+    const hasEnabledSocials = socials.some((s) => s && s.enabled) && pos !== 'hidden';
     socialsTop.style.display = hasEnabledSocials && (pos === 'top' || pos === 'both') ? 'flex' : 'none';
     socialsBottom.style.display = hasEnabledSocials && (pos === 'bottom' || pos === 'both') ? 'flex' : 'none';
 

@@ -20,12 +20,13 @@
   <meta property="og:description" content="Fashion inspo for the girl who's always on the go ✨ Khám phá Shopee, TikTok Shop & Bộ sưu tập NA 2HAND." />
   <meta property="og:image" content="https://na2hand.com/images/brand-logo.jpg" />
 
-  <!-- Google Fonts: Graceful Serif & Clean Feminine Sans -->
+  <!-- Google Fonts: Graceful Serif, Handwritten Calligraphy & Clean Modern Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400;0,600;1,400&family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Dancing+Script:wght@400;500;600;700&family=Great+Vibes&family=Montserrat:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Sacramento&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="/css/styles.css?v=3" />
+  <link rel="stylesheet" href="/css/bio-templates-extra.css?v=1" />
   <style>
     html, body, .bio-page-wrapper, .bio-phone-card {
       scrollbar-width: none !important;
@@ -66,10 +67,31 @@
           </button>
         </div>
 
+        <!-- Optional Decorative Frame (Starlight / Cathedral Arch for Templates 7, 8, 11, 12) -->
+        <div class="bio-deco-frame" id="bio-deco-frame" aria-hidden="true"></div>
+
+        <!-- Optional Top Cover Banner (Templates 4, 6, 15, 18) -->
+        <div class="bio-cover-banner" id="bio-cover-banner">
+          <div class="bio-cover-banner-img" id="bio-cover-banner-img"></div>
+          <div class="bio-cover-banner-overlay"></div>
+        </div>
+
         <!-- Top Social Icons (Used in Template 3 or when socialPosition = 'top' / 'both') -->
         <nav class="socials-row socials-top" id="socials-top" aria-label="Mạng xã hội phía trên" style="display: none;"></nav>
 
-        <!-- Avatar Section (Template 1 & Template 2) -->
+        <!-- Optional Top Curved SVG Name Arc (Templates 9, 10, 11, 17) -->
+        <div class="curved-arc-wrap curved-arc-top" id="curved-arc-top" aria-hidden="true">
+          <svg viewBox="0 0 260 110" class="curved-arc-svg">
+            <defs>
+              <path id="bio-arc-path-top" d="M 45,98 A 86,86 0 0,1 215,98" />
+            </defs>
+            <text class="curved-arc-text">
+              <textPath href="#bio-arc-path-top" startOffset="50%" text-anchor="middle" id="curved-name-textpath"></textPath>
+            </text>
+          </svg>
+        </div>
+
+        <!-- Avatar Section -->
         <div class="avatar-wrapper frame-organic fade-up" id="avatar-wrapper">
           <div class="avatar-container">
             <img
@@ -81,10 +103,23 @@
           </div>
         </div>
 
-        <!-- Profile Name & Subtitle -->
+        <!-- Optional Bottom Curved SVG Subtitle Arc (Templates 10, 17) -->
+        <div class="curved-arc-wrap curved-arc-bottom" id="curved-arc-bottom" aria-hidden="true">
+          <svg viewBox="0 0 260 110" class="curved-arc-svg">
+            <defs>
+              <path id="bio-arc-path-bottom" d="M 36,20 A 96,96 0 0,0 224,20" />
+            </defs>
+            <text class="curved-arc-text">
+              <textPath href="#bio-arc-path-bottom" startOffset="50%" text-anchor="middle" id="curved-subtitle-textpath"></textPath>
+            </text>
+          </svg>
+        </div>
+
+        <!-- Profile Name, Subtitle & Optional Bio Paragraph -->
         <header class="profile-header fade-up" style="animation-delay: 0.06s;">
           <h1 class="profile-name" id="profile-name">NA 2HAND</h1>
           <p class="profile-subtitle" id="profile-subtitle">LIFESTYLE</p>
+          <p class="profile-bio" id="profile-bio" style="display: none;"></p>
         </header>
 
         <!-- Main Pill Links List -->
@@ -95,7 +130,7 @@
           Fashion inspo for the girl who's always on the go
         </p>
 
-        <!-- Featured Collection Banner Card (Canva Template 3 style or optional on any template) -->
+        <!-- Featured Collection Banner Card (Banner or Split Promo style) -->
         <a
           href="#"
           target="_blank"
@@ -109,6 +144,10 @@
           <div class="featured-card-content">
             <span class="featured-card-title" id="featured-card-title">GET MY ENTIRE COLLECTION</span>
             <span class="featured-card-subtitle" id="featured-card-subtitle"></span>
+            <span class="featured-card-cta" id="featured-card-cta" style="display: none;">XEM NGAY</span>
+          </div>
+          <div class="featured-card-side-media" id="featured-card-side-media" style="display: none;">
+            <img src="" alt="Featured" id="featured-card-side-img" />
           </div>
         </a>
 
@@ -159,7 +198,7 @@
     </div>
   </div>
 
-  <script src="/js/icons.js?v=3"></script>
-  <script src="/js/bio.js?v=7"></script>
+  <script src="/js/icons.js?v=4"></script>
+  <script src="/js/bio.js?v=8"></script>
 </body>
 </html>

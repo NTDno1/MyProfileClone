@@ -8,6 +8,7 @@ const DEFAULT_AFFILIATE_PROFILE = {
   subtitle: 'Tủ đồ xinh & link chính hãng tuyển chọn — nàng gõ mã số ở dưới là thấy ngay nhé ♡',
   avatar: '/media/bio-link/girlfriend-1.jpg',
   layoutMode: 'zigzag', // 'zigzag' (chuẩn Passio so le trái-phải) | 'grid' (lưới 2 cột)
+  displayOrderMode: 'flat', // 'flat' (Hiển thị đúng thứ tự trên-dưới đã sắp xếp) | 'grouped' (Chia cụm danh mục)
   themeTone: 'blush', // 'blush' (Đồng bộ màu Shop NA 2HAND) | 'ivory' | 'oatmeal'
   showPrice: false,
   showPlatformBadge: true,
@@ -266,15 +267,35 @@ function registerAffiliateRoutes(app, { dataDir, getMongoDb, requireAuth, record
     }
   }
 
-  // Sort items: pinned first, then descending numeric code (like 179, 178, 177... on Passio), then newest
+  function legacyCompareItems(a, b) {
+    if (Boolean(a.pinned) !== Boolean(b.pinned)) return a.pinned ? -1 : 1;
+    const na = parseInt(String(a.code || '').replace(/[^\d]/g, ''), 10);
+    const nb = parseInt(String(b.code || '').replace(/[^\d]/g, ''), 10);
+    if (!isNaN(na) && !isNaN(nb) && na !== nb) return nb - na;
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+  }
+
+  // Sort items strictly respecting custom sortOrder (1..N) when present, falling back to legacy order
   function sortAffiliateItems(items) {
-    return [...(items || [])].sort((a, b) => {
-      if (Boolean(a.pinned) !== Boolean(b.pinned)) return a.pinned ? -1 : 1;
-      const na = parseInt(String(a.code || '').replace(/[^\d]/g, ''), 10);
-      const nb = parseInt(String(b.code || '').replace(/[^\d]/g, ''), 10);
-      if (!isNaN(na) && !isNaN(nb) && na !== nb) return nb - na;
-      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    const arr = [...(items || [])];
+    const hasAnySortOrder = arr.some((x) => x && Number.isFinite(Number(x.sortOrder)));
+    if (!hasAnySortOrder) {
+      return arr.sort(legacyCompareItems);
+    }
+    return arr.sort((a, b) => {
+      const sa = Number.isFinite(Number(a.sortOrder)) ? Number(a.sortOrder) : -1;
+      const sb = Number.isFinite(Number(b.sortOrder)) ? Number(b.sortOrder) : -1;
+      if (sa !== sb) return sa - sb;
+      return legacyCompareItems(a, b);
     });
+  }
+
+  function normalizeItemsSortOrder(items) {
+    const sorted = sortAffiliateItems(items);
+    sorted.forEach((it, idx) => {
+      if (it) it.sortOrder = idx + 1;
+    });
+    return sorted;
   }
 
   // =========================================================================
@@ -388,11 +409,12 @@ function registerAffiliateRoutes(app, { dataDir, getMongoDb, requireAuth, record
       badge: String(b.badge || '').trim().slice(0, 24),
       pinned: Boolean(b.pinned),
       enabled: b.enabled !== false,
+      sortOrder: 0,
       clicks: 0,
       createdAt: new Date().toISOString()
     };
 
-    store.items.unshift(newItem);
+    store.items = normalizeItemsSortOrder([newItem, ...sortAffiliateItems(store.items)]);
     await saveAffiliateStore(store);
     res.json({
       success: true,
@@ -466,6 +488,7 @@ function registerAffiliateRoutes(app, { dataDir, getMongoDb, requireAuth, record
       });
     }
 
+    store.items = normalizeItemsSortOrder(store.items);
     await saveAffiliateStore(store);
     res.json({
       success: true,
@@ -532,7 +555,10 @@ function registerAffiliateRoutes(app, { dataDir, getMongoDb, requireAuth, record
         added++;
       }
 
-      if (added > 0) await saveAffiliateStore(store);
+      if (added > 0) {
+        store.items = normalizeItemsSortOrder(store.items);
+        await saveAffiliateStore(store);
+      }
       res.json({
         success: true,
         addedCount: added,
@@ -546,13 +572,78 @@ function registerAffiliateRoutes(app, { dataDir, getMongoDb, requireAuth, record
     }
   });
 
+  // Reorder Affiliate Items (Drag & Drop, Up/Down/Top/Bottom, Direct Position #, or Preset Sort)
+  app.put('/api/affiliate/admin/items/reorder', requireAuth, async (req, res) => {
+    try {
+      const store = await getAffiliateStore();
+      let sorted = normalizeItemsSortOrder(store.items || []);
+      const { orderedIds, itemId, newPosition, preset } = req.body || {};
+
+      if (preset) {
+        if (preset === 'code-desc') {
+          sorted.sort((a, b) => {
+            const na = parseInt(String(a.code || '').replace(/[^\d]/g, ''), 10) || 0;
+            const nb = parseInt(String(b.code || '').replace(/[^\d]/g, ''), 10) || 0;
+            return nb - na;
+          });
+        } else if (preset === 'code-asc') {
+          sorted.sort((a, b) => {
+            const na = parseInt(String(a.code || '').replace(/[^\d]/g, ''), 10) || 0;
+            const nb = parseInt(String(b.code || '').replace(/[^\d]/g, ''), 10) || 0;
+            return na - nb;
+          });
+        } else if (preset === 'clicks-desc') {
+          sorted.sort((a, b) => Number(b.clicks || 0) - Number(a.clicks || 0));
+        } else if (preset === 'pinned-top') {
+          sorted.sort(legacyCompareItems);
+        }
+      } else if (itemId && newPosition !== undefined) {
+        const curIdx = sorted.findIndex((x) => x.id === itemId);
+        if (curIdx !== -1) {
+          const [moved] = sorted.splice(curIdx, 1);
+          const targetIdx = Math.max(0, Math.min(sorted.length, Math.round(Number(newPosition || 1)) - 1));
+          sorted.splice(targetIdx, 0, moved);
+        }
+      } else if (Array.isArray(orderedIds) && orderedIds.length > 0) {
+        const idSet = new Set(orderedIds);
+        const byId = new Map(sorted.map((x) => [x.id, x]));
+        const validOrderedItems = orderedIds.map((id) => byId.get(id)).filter(Boolean);
+        if (validOrderedItems.length === sorted.length) {
+          sorted = validOrderedItems;
+        } else if (validOrderedItems.length > 0) {
+          // Subset reorder (when filtered by category or page): replace only matching slot positions in master list
+          let ptr = 0;
+          sorted = sorted.map((item) => (idSet.has(item.id) ? validOrderedItems[ptr++] : item));
+        }
+      }
+
+      sorted.forEach((it, idx) => {
+        it.sortOrder = idx + 1;
+      });
+      store.items = sorted;
+      await saveAffiliateStore(store);
+
+      res.json({
+        success: true,
+        items: sorted,
+        message: 'Đã lưu thứ tự sắp xếp sản phẩm Affiliate!'
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: 'Lỗi khi sắp xếp: ' + err.message });
+    }
+  });
+
   // Update Affiliate Item
   app.put('/api/affiliate/admin/items/:id', requireAuth, async (req, res) => {
     const store = await getAffiliateStore();
-    const idx = (store.items || []).findIndex((x) => x.id === req.params.id);
+    store.items = normalizeItemsSortOrder(store.items || []);
+    const idx = store.items.findIndex((x) => x.id === req.params.id);
     if (idx === -1) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm Affiliate.' });
 
     const b = req.body || {};
+    const wasPinned = Boolean(store.items[idx].pinned);
+    const nowPinned = b.pinned !== undefined ? Boolean(b.pinned) : wasPinned;
+
     store.items[idx] = {
       ...store.items[idx],
       ...b,
@@ -564,24 +655,35 @@ function registerAffiliateRoutes(app, { dataDir, getMongoDb, requireAuth, record
       updatedAt: new Date().toISOString()
     };
 
+    if (!wasPinned && nowPinned) {
+      store.items[idx].sortOrder = 0;
+      store.items = normalizeItemsSortOrder(store.items);
+    }
+
     await saveAffiliateStore(store);
-    res.json({ success: true, item: store.items[idx], message: 'Đã cập nhật sản phẩm Affiliate!' });
+    res.json({ success: true, item: store.items.find((x) => x.id === req.params.id), message: 'Đã cập nhật sản phẩm Affiliate!' });
   });
 
   // Duplicate Affiliate Item
   app.post('/api/affiliate/admin/items/:id/duplicate', requireAuth, async (req, res) => {
     const store = await getAffiliateStore();
-    const orig = (store.items || []).find((x) => x.id === req.params.id);
-    if (!orig) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm gốc.' });
+    const sorted = normalizeItemsSortOrder(store.items || []);
+    const origIdx = sorted.findIndex((x) => x.id === req.params.id);
+    if (origIdx === -1) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm gốc.' });
 
+    const orig = sorted[origIdx];
     const clone = {
       ...JSON.parse(JSON.stringify(orig)),
       id: `aff_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      code: computeNextCode(store.items),
+      code: computeNextCode(sorted),
       clicks: 0,
       createdAt: new Date().toISOString()
     };
-    store.items.unshift(clone);
+    sorted.splice(origIdx + 1, 0, clone);
+    sorted.forEach((it, i) => {
+      it.sortOrder = i + 1;
+    });
+    store.items = sorted;
     await saveAffiliateStore(store);
     res.json({ success: true, item: clone, message: `Đã nhân bản thành mã #${clone.code}!` });
   });
@@ -589,7 +691,7 @@ function registerAffiliateRoutes(app, { dataDir, getMongoDb, requireAuth, record
   // Delete Affiliate Item
   app.delete('/api/affiliate/admin/items/:id', requireAuth, async (req, res) => {
     const store = await getAffiliateStore();
-    store.items = (store.items || []).filter((x) => x.id !== req.params.id);
+    store.items = normalizeItemsSortOrder((store.items || []).filter((x) => x.id !== req.params.id));
     await saveAffiliateStore(store);
     res.json({ success: true, message: 'Đã xóa sản phẩm Affiliate.' });
   });

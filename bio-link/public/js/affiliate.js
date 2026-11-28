@@ -214,29 +214,46 @@
 
     const layoutMode = profile.layoutMode === 'grid' ? 'grid' : 'zigzag';
     const basePageSize = Number(profile.itemsPerCategory || 12);
-
-    const catsToShow =
-      activeCatId === 'all'
-        ? categories
-        : categories.filter((c) => c.id === activeCatId);
+    const useFlatCustomOrder = activeCatId === 'all' && profile.displayOrderMode !== 'grouped';
 
     const sectionsHtml = [];
-    const matchedCatIds = new Set(catsToShow.map((c) => c.id));
-    const uncategorized = filtered.filter((it) => !matchedCatIds.has(it.categoryId));
+    let groups = [];
 
-    const groups = [
-      ...catsToShow.map((c) => ({
-        id: c.id,
-        name: c.name,
-        items: filtered.filter((it) => it.categoryId === c.id)
-      })),
-      ...(uncategorized.length > 0
-        ? [{ id: '_other', name: 'Thiết kế khác', items: uncategorized }]
-        : [])
-    ].filter((g) => g.items.length > 0);
+    if (useFlatCustomOrder) {
+      groups = [
+        {
+          id: '_all_sorted',
+          name: 'Tủ Đồ Tuyển Chọn',
+          hideHeader: true,
+          items: filtered,
+          pageSize: Math.max(24, basePageSize * 2)
+        }
+      ];
+    } else {
+      const catsToShow =
+        activeCatId === 'all'
+          ? categories
+          : categories.filter((c) => c.id === activeCatId);
+
+      const matchedCatIds = new Set(catsToShow.map((c) => c.id));
+      const uncategorized = filtered.filter((it) => !matchedCatIds.has(it.categoryId));
+
+      groups = [
+        ...catsToShow.map((c) => ({
+          id: c.id,
+          name: c.name,
+          items: filtered.filter((it) => it.categoryId === c.id),
+          pageSize: basePageSize
+        })),
+        ...(uncategorized.length > 0
+          ? [{ id: '_other', name: 'Thiết kế khác', items: uncategorized, pageSize: basePageSize }]
+          : [])
+      ].filter((g) => g.items.length > 0);
+    }
 
     for (const grp of groups) {
-      const limit = qNorm ? grp.items.length : expandedSectionLimits[grp.id] || basePageSize;
+      const stepSize = grp.pageSize || basePageSize;
+      const limit = qNorm ? grp.items.length : expandedSectionLimits[grp.id] || stepSize;
       const visibleItems = grp.items.slice(0, limit);
       const remaining = grp.items.length - visibleItems.length;
 
@@ -247,19 +264,23 @@
 
       sectionsHtml.push(`
         <div class="aff-cat-section" id="sec-${escapeHtml(grp.id)}">
-          <div class="aff-cat-heading-row">
-            <h2 class="aff-cat-heading">
-              <svg width="14" height="14"><use href="#ico-star4"></use></svg>
-              <span>${escapeHtml(grp.name)}</span>
-            </h2>
-            <span class="aff-cat-divider" aria-hidden="true"></span>
-          </div>
+          ${
+            grp.hideHeader
+              ? ''
+              : `<div class="aff-cat-heading-row">
+                  <h2 class="aff-cat-heading">
+                    <svg width="14" height="14"><use href="#ico-star4"></use></svg>
+                    <span>${escapeHtml(grp.name)}</span>
+                  </h2>
+                  <span class="aff-cat-divider" aria-hidden="true"></span>
+                </div>`
+          }
           <div class="${listClass}">
             ${cardsHtml}
           </div>
           ${
             remaining > 0
-              ? `<button type="button" class="aff-see-more-btn" data-sec="${escapeHtml(grp.id)}">Xem thêm ${remaining} mẫu xinh nữa ♡</button>`
+              ? `<button type="button" class="aff-see-more-btn" data-sec="${escapeHtml(grp.id)}" data-step="${stepSize}">Xem thêm ${remaining} mẫu xinh nữa ♡</button>`
               : ''
           }
         </div>
@@ -278,7 +299,8 @@
     rootEl.querySelectorAll('.aff-see-more-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const secId = btn.getAttribute('data-sec');
-        expandedSectionLimits[secId] = (expandedSectionLimits[secId] || basePageSize) + basePageSize;
+        const step = Number(btn.getAttribute('data-step') || basePageSize);
+        expandedSectionLimits[secId] = (expandedSectionLimits[secId] || step) + step;
         renderSections();
       });
     });

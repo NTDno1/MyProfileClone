@@ -163,6 +163,10 @@
       }
 
       renderCategorySelects();
+      const quickOrderEl = document.getElementById('quick-order-mode');
+      if (quickOrderEl && storeData?.profile) {
+        quickOrderEl.value = storeData.profile.displayOrderMode === 'grouped' ? 'grouped' : 'flat';
+      }
       renderItemsTable();
       renderCategoriesAdmin();
       populateProfileForm();
@@ -309,6 +313,74 @@
     renderItemsTable();
   });
 
+  document.getElementById('quick-order-mode')?.addEventListener('change', async (e) => {
+    const mode = e.target.value === 'grouped' ? 'grouped' : 'flat';
+    try {
+      await apiFetch('/api/affiliate/admin/profile', {
+        method: 'PUT',
+        body: JSON.stringify({ displayOrderMode: mode })
+      });
+      if (storeData && storeData.profile) storeData.profile.displayOrderMode = mode;
+      showToast(
+        mode === 'flat'
+          ? '🎯 Trang /tu-do sẽ hiển thị đúng thứ tự trên-dưới bạn đã sắp xếp!'
+          : '🗂️ Trang /tu-do sẽ hiển thị gom theo từng nhóm Danh mục!'
+      );
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  });
+
+  document.getElementById('quick-sort-preset')?.addEventListener('change', async (e) => {
+    const preset = e.target.value;
+    if (!preset) return;
+    e.target.value = '';
+    try {
+      await apiFetch('/api/affiliate/admin/items/reorder', {
+        method: 'PUT',
+        body: JSON.stringify({ preset })
+      });
+      showToast('⇅ Đã sắp xếp lại danh sách sản phẩm!');
+      await loadOverview();
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  });
+
+  async function saveReorderIds(orderedIds, toastMsg = 'Đã cập nhật vị trí sản phẩm! ✨') {
+    try {
+      const res = await apiFetch('/api/affiliate/admin/items/reorder', {
+        method: 'PUT',
+        body: JSON.stringify({ orderedIds })
+      });
+      if (storeData && Array.isArray(res.items)) {
+        storeData.items = res.items;
+      }
+      renderItemsTable();
+      showToast(toastMsg);
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  }
+
+  async function moveItemToExactPosition(itemId, newPos) {
+    try {
+      const res = await apiFetch('/api/affiliate/admin/items/reorder', {
+        method: 'PUT',
+        body: JSON.stringify({ itemId, newPosition: newPos })
+      });
+      if (storeData && Array.isArray(res.items)) {
+        storeData.items = res.items;
+      }
+      renderItemsTable();
+      showToast(`Đã chuyển sản phẩm tới vị trí #${newPos}! ✨`);
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  }
+
+  let draggedItemId = null;
+
   function renderItemsTable() {
     const tbody = document.getElementById('aff-items-tbody');
     const pager = document.getElementById('aff-items-pager');
@@ -317,7 +389,10 @@
     const catMap = {};
     (storeData.categories || []).forEach((c) => (catMap[c.id] = c.name));
 
-    let list = [...(storeData.items || [])];
+    const masterItems = storeData.items || [];
+    const masterPosMap = new Map(masterItems.map((x, idx) => [x.id, idx + 1]));
+
+    let list = [...masterItems];
     if (catFilter !== 'all') list = list.filter((x) => x.categoryId === catFilter);
     if (searchFilter) {
       list = list.filter(
@@ -330,20 +405,46 @@
     document.getElementById('list-total-cnt').textContent = list.length;
 
     if (list.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:28px; color:var(--muted);">Chưa có sản phẩm Affiliate nào khớp bộ lọc.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:28px; color:var(--muted);">Chưa có sản phẩm Affiliate nào khớp bộ lọc.</td></tr>`;
       if (pager) pager.innerHTML = '';
       return;
     }
 
     const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
     if (currentPage > totalPages) currentPage = totalPages;
-    const paged = list.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+    const startOffset = (currentPage - 1) * PAGE_SIZE;
+    const paged = list.slice(startOffset, startOffset + PAGE_SIZE);
 
     tbody.innerHTML = paged
-      .map((it) => {
+      .map((it, localIdx) => {
+        const idxInFiltered = startOffset + localIdx;
+        const globalPos = masterPosMap.get(it.id) || idxInFiltered + 1;
+        const isFirst = idxInFiltered === 0;
+        const isLast = idxInFiltered === list.length - 1;
         const directShare = `${window.location.origin}/tu-do?q=${encodeURIComponent(it.code || it.name)}`;
         return `
-          <tr>
+          <tr class="aff-row-draggable" draggable="true" data-row-id="${escapeHtml(it.id)}">
+            <td>
+              <div class="sort-cell-wrap">
+                <span class="drag-handle-grip" title="Giữ chuột kéo thả dòng này lên / xuống">⋮⋮</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="${masterItems.length}"
+                  value="${globalPos}"
+                  data-orig="${globalPos}"
+                  data-id="${escapeHtml(it.id)}"
+                  class="pos-num-input"
+                  title="Nhập vị trí muốn đặt (1 = Trên cùng) rồi nhấn Enter"
+                />
+                <div class="sort-arrows-grp">
+                  <button type="button" class="sort-mini-btn btn-move-aff" data-act="top" data-idx="${idxInFiltered}" ${isFirst ? 'disabled' : ''} title="Đưa lên đầu tiên">⇈</button>
+                  <button type="button" class="sort-mini-btn btn-move-aff" data-act="up" data-idx="${idxInFiltered}" ${isFirst ? 'disabled' : ''} title="Chuyển lên trên 1 bậc">↑</button>
+                  <button type="button" class="sort-mini-btn btn-move-aff" data-act="down" data-idx="${idxInFiltered}" ${isLast ? 'disabled' : ''} title="Chuyển xuống dưới 1 bậc">↓</button>
+                  <button type="button" class="sort-mini-btn btn-move-aff" data-act="bottom" data-idx="${idxInFiltered}" ${isLast ? 'disabled' : ''} title="Đưa xuống cuối cùng">⇊</button>
+                </div>
+              </div>
+            </td>
             <td>
               <img src="${escapeHtml(it.image || '/media/bio-link/girlfriend-1.jpg')}" style="width:48px; height:48px; border-radius:10px; object-fit:cover; border:1px solid var(--border);" />
             </td>
@@ -380,6 +481,98 @@
         `;
       })
       .join('');
+
+    // Bind Up / Down / Top / Bottom move buttons
+    tbody.querySelectorAll('.btn-move-aff').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = Number(btn.dataset.idx);
+        const act = btn.dataset.act;
+        const arr = list.map((x) => x.id);
+        if (idx < 0 || idx >= arr.length) return;
+        const [movedId] = arr.splice(idx, 1);
+        let nextIdx = idx;
+        if (act === 'top') nextIdx = 0;
+        else if (act === 'up') nextIdx = Math.max(0, idx - 1);
+        else if (act === 'down') nextIdx = Math.min(arr.length, idx + 1);
+        else if (act === 'bottom') nextIdx = arr.length;
+        arr.splice(nextIdx, 0, movedId);
+        saveReorderIds(arr);
+      });
+    });
+
+    // Bind Direct Position Number Input (Enter or Blur)
+    tbody.querySelectorAll('.pos-num-input').forEach((inp) => {
+      const commitPos = () => {
+        const orig = Number(inp.dataset.orig);
+        const next = Math.max(1, Math.min(masterItems.length, Math.round(Number(inp.value || orig))));
+        inp.value = next;
+        if (next !== orig) {
+          moveItemToExactPosition(inp.dataset.id, next);
+        }
+      };
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          inp.blur();
+        }
+      });
+      inp.addEventListener('change', commitPos);
+    });
+
+    // Bind Drag-and-Drop Row Reordering
+    tbody.querySelectorAll('.aff-row-draggable').forEach((row) => {
+      row.addEventListener('dragstart', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.tagName === 'A') {
+          e.preventDefault();
+          return;
+        }
+        draggedItemId = row.dataset.rowId;
+        row.classList.add('dragging');
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', draggedItemId);
+        }
+      });
+
+      row.addEventListener('dragend', () => {
+        draggedItemId = null;
+        tbody.querySelectorAll('.aff-row-draggable').forEach((r) => {
+          r.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom');
+        });
+      });
+
+      row.addEventListener('dragover', (e) => {
+        if (!draggedItemId || row.dataset.rowId === draggedItemId) return;
+        e.preventDefault();
+        const rect = row.getBoundingClientRect();
+        const isTopHalf = e.clientY < rect.top + rect.height / 2;
+        row.classList.toggle('drag-over-top', isTopHalf);
+        row.classList.toggle('drag-over-bottom', !isTopHalf);
+      });
+
+      row.addEventListener('dragleave', () => {
+        row.classList.remove('drag-over-top', 'drag-over-bottom');
+      });
+
+      row.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const targetId = row.dataset.rowId;
+        const placeBefore = row.classList.contains('drag-over-top');
+        row.classList.remove('drag-over-top', 'drag-over-bottom');
+        if (!draggedItemId || !targetId || draggedItemId === targetId) return;
+
+        const arr = list.map((x) => x.id);
+        const fromIdx = arr.indexOf(draggedItemId);
+        if (fromIdx === -1) return;
+        arr.splice(fromIdx, 1);
+
+        const toIdx = arr.indexOf(targetId);
+        if (toIdx === -1) return;
+        arr.splice(placeBefore ? toIdx : toIdx + 1, 0, draggedItemId);
+
+        saveReorderIds(arr, 'Đã kéo thả cập nhật vị trí sản phẩm! ✨');
+      });
+    });
 
     tbody.querySelectorAll('.btn-copy-code-link').forEach((btn) => {
       btn.addEventListener('click', () => {
